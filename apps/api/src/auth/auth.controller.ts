@@ -9,11 +9,14 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
-import { LoginDto } from './dto/login.dto.js';
-import { RegisterDto } from './dto/register.dto.js';
+import {
+  LoginDto,
+  RegisterDto,
+  registerSchema,
+  loginSchema,
+} from './dto/index.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { ZodSerializerInterceptor } from '../common/interceptors/zod-serializer.interceptor.js';
-import { registerSchema, loginSchema } from './schemas/auth.schema.js';
 
 @ApiTags('Authentication')
 @Controller('auth')

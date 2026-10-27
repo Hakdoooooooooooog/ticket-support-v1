@@ -1,9 +1,7 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
-import { LoginDto } from './dto/login.dto.js';
-import { RegisterDto } from './dto/register.dto.js';
+import { LoginDto, RegisterDto, AuthResponseDto, UserResponseDto } from './dto/index.js';
 import { AuthMapper } from './mappers/auth.mapper.js';
-import { AuthResponseDto, UserResponseDto } from './schemas/auth.schema.js';
 import bcrypt from 'bcryptjs';
 
 @Injectable()

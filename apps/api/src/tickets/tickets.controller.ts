@@ -14,16 +14,16 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { TicketsService } from './tickets.service.js';
-import { CreateTicketDto } from './dto/create-ticket.dto.js';
-import { UpdateTicketDto } from './dto/update-ticket.dto.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { ZodSerializerInterceptor } from '../common/interceptors/zod-serializer.interceptor.js';
 import { Serialize } from '../common/decorators/zod-serializer.decorator.js';
 import {
+  CreateTicketDto,
+  UpdateTicketDto,
   createTicketSchema,
   updateTicketSchema,
   ticketResponseSchema,
-} from './schemas/ticket.schema.js';
+} from './dto/index.js';
 
 @ApiTags('Tickets')
 @Controller('tickets')

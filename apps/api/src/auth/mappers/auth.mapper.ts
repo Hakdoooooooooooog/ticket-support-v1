@@ -5,7 +5,7 @@ import {
   authResponseSchema,
   UserResponseDto,
   AuthResponseDto,
-} from '../schemas/auth.schema.js';
+} from '../dto/index.js';
 
 export class AuthMapper {
   /**

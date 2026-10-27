@@ -1,0 +1,38 @@
+import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
+import { dateToIsoString } from '../../common/schemas/common.schema.js';
+import { ticketPriorityEnum } from './create-ticket.dto.js';
+import { ticketStatusEnum } from './update-ticket.dto.js';
+
+export const userSummarySchema = z.object({
+  id: z.string().default('unknown-user'),
+  email: z.string().default(''),
+  fullName: z.string().default('Anonymous User'),
+  role: z.enum(['ADMIN', 'AGENT', 'CUSTOMER']).default('CUSTOMER'),
+});
+
+export const commentResponseSchema = z.object({
+  id: z.string().default(''),
+  content: z.string().default(''),
+  createdAt: dateToIsoString.default(() => new Date().toISOString()),
+  author: userSummarySchema.nullable().default(null),
+});
+
+export const ticketResponseSchema = z.object({
+  id: z.string().default(''),
+  title: z.string().default('Untitled Ticket'),
+  description: z.string().default('No description provided'),
+  status: ticketStatusEnum.default('OPEN'),
+  priority: ticketPriorityEnum.default('MEDIUM'),
+  createdAt: dateToIsoString.default(() => new Date().toISOString()),
+  updatedAt: dateToIsoString.default(() => new Date().toISOString()),
+  creatorId: z.string().optional().default(''),
+  creator: userSummarySchema.nullable().default(null),
+  assigneeId: z.string().nullable().optional().default(null),
+  assignee: userSummarySchema.nullable().default(null),
+  comments: z.array(commentResponseSchema).default([]),
+  tags: z.array(z.any()).default([]),
+});
+
+export class TicketResponseDto extends createZodDto(ticketResponseSchema) {}
+export type TicketResponse = z.infer<typeof ticketResponseSchema>;

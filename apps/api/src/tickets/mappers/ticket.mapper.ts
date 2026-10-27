@@ -5,7 +5,7 @@ import {
   CreateTicketInput,
   UpdateTicketInput,
   TicketResponseDto,
-} from '../schemas/ticket.schema.js';
+} from '../dto/index.js';
 
 export class TicketMapper {
   /**
