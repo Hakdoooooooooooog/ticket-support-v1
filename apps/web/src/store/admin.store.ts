@@ -4,9 +4,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthUser } from '@lib/helpers';
 
+export type AdminSection = 'DASHBOARD' | 'ALL_TICKETS' | 'ASSIGNED_TICKETS';
+
 export interface AdminState {
   agents: AuthUser[];
   hasLoadedAgents: boolean;
+
+  // Navigation section & scope state in Zustand
+  activeSection: AdminSection;
+  assignedScope: 'MINE' | 'ALL_ASSIGNED' | string;
+  assignmentFilter: 'ALL' | 'UNASSIGNED' | 'ASSIGNED';
+
   statusFilter: string;
   priorityFilter: string;
   searchQuery: string;
@@ -17,6 +25,9 @@ export interface AdminState {
   followUpPrompt: string;
 
   setAgents: (agents: AuthUser[]) => void;
+  setActiveSection: (section: AdminSection) => void;
+  setAssignedScope: (scope: 'MINE' | 'ALL_ASSIGNED' | string) => void;
+  setAssignmentFilter: (filter: 'ALL' | 'UNASSIGNED' | 'ASSIGNED') => void;
   setStatusFilter: (statusFilter: string) => void;
   setPriorityFilter: (priorityFilter: string) => void;
   setSearchQuery: (searchQuery: string) => void;
@@ -32,6 +43,11 @@ export const useAdminStore = create<AdminState>()(
     (set, get) => ({
       agents: [],
       hasLoadedAgents: false,
+
+      activeSection: 'DASHBOARD',
+      assignedScope: 'MINE',
+      assignmentFilter: 'ALL',
+
       statusFilter: 'ALL',
       priorityFilter: 'ALL',
       searchQuery: '',
@@ -46,6 +62,12 @@ export const useAdminStore = create<AdminState>()(
           hasLoadedAgents: true,
         });
       },
+
+      setActiveSection: (activeSection: AdminSection) => set({ activeSection }),
+      setAssignedScope: (assignedScope: 'MINE' | 'ALL_ASSIGNED' | string) =>
+        set({ assignedScope }),
+      setAssignmentFilter: (assignmentFilter: 'ALL' | 'UNASSIGNED' | 'ASSIGNED') =>
+        set({ assignmentFilter }),
 
       setStatusFilter: (statusFilter: string) => set({ statusFilter }),
       setPriorityFilter: (priorityFilter: string) => set({ priorityFilter }),
@@ -80,6 +102,7 @@ export const useAdminStore = create<AdminState>()(
         set({
           statusFilter: 'ALL',
           priorityFilter: 'ALL',
+          assignmentFilter: 'ALL',
           searchQuery: '',
         }),
     }),
@@ -89,6 +112,9 @@ export const useAdminStore = create<AdminState>()(
       partialize: (state) => ({
         agents: state.agents,
         hasLoadedAgents: state.hasLoadedAgents,
+        activeSection: state.activeSection,
+        assignedScope: state.assignedScope,
+        assignmentFilter: state.assignmentFilter,
         statusFilter: state.statusFilter,
         priorityFilter: state.priorityFilter,
         commentDrafts: state.commentDrafts,

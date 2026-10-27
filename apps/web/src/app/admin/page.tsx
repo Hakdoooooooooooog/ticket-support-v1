@@ -68,13 +68,19 @@ export default function AdminDashboardPage() {
   const {
     agents: storedAgents,
     hasLoadedAgents,
-    setAgents,
+    activeSection,
+    assignedScope,
+    assignmentFilter,
     statusFilter,
     priorityFilter,
     searchQuery,
     commentDrafts,
     followUpTicketId,
     followUpPrompt,
+    setAgents,
+    setActiveSection,
+    setAssignedScope,
+    setAssignmentFilter,
     setStatusFilter,
     setPriorityFilter,
     setSearchQuery,
@@ -281,33 +287,747 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const filteredTickets = React.useMemo(
-    () => filterTickets(tickets, statusFilter, priorityFilter, searchQuery),
-    [tickets, statusFilter, priorityFilter, searchQuery],
+  // Counts & Subsets across sections
+  const unassignedTickets = React.useMemo(
+    () => tickets.filter((t) => !resolveTicketAssigneeId(t)),
+    [tickets],
+  );
+  const allAssignedTickets = React.useMemo(
+    () => tickets.filter((t) => Boolean(resolveTicketAssigneeId(t))),
+    [tickets],
+  );
+  const myAssignedTickets = React.useMemo(
+    () =>
+      user?.id
+        ? tickets.filter((t) => resolveTicketAssigneeId(t) === user.id)
+        : [],
+    [tickets, user?.id],
   );
 
-  // Automatically load attachments once whenever a ticket accordion is expanded (viewed)
+  // Compute displayed tickets for the active section
+  const displayedTickets = React.useMemo(() => {
+    if (activeSection === 'DASHBOARD') {
+      // On Dashboard Overview, show Unassigned Queue + Urgent/Breached active tickets for immediate triage
+      return filterTickets(
+        tickets.filter(
+          (t) =>
+            !resolveTicketAssigneeId(t) ||
+            ((t.priority === 'URGENT' || t.priority === 'HIGH') &&
+              t.status !== 'RESOLVED' &&
+              t.status !== 'CLOSED'),
+        ),
+        'ALL',
+        'ALL',
+        searchQuery,
+      );
+    }
+
+    if (activeSection === 'ASSIGNED_TICKETS') {
+      const scoped = allAssignedTickets.filter((t) => {
+        const assigneeId = resolveTicketAssigneeId(t);
+        if (assignedScope === 'MINE') {
+          return Boolean(user?.id && assigneeId === user.id);
+        }
+        if (assignedScope === 'ALL_ASSIGNED') {
+          return true;
+        }
+        return assigneeId === assignedScope;
+      });
+      return filterTickets(scoped, statusFilter, priorityFilter, searchQuery);
+    }
+
+    // ALL_TICKETS section
+    const assignmentScoped = tickets.filter((t) => {
+      const hasAssignee = Boolean(resolveTicketAssigneeId(t));
+      if (assignmentFilter === 'UNASSIGNED') return !hasAssignee;
+      if (assignmentFilter === 'ASSIGNED') return hasAssignee;
+      return true;
+    });
+    return filterTickets(assignmentScoped, statusFilter, priorityFilter, searchQuery);
+  }, [
+    activeSection,
+    tickets,
+    allAssignedTickets,
+    assignedScope,
+    assignmentFilter,
+    statusFilter,
+    priorityFilter,
+    searchQuery,
+    user?.id,
+  ]);
+
+  // Automatically load attachments once whenever a displayed ticket accordion is expanded (viewed)
   React.useEffect(() => {
-    filteredTickets.forEach((ticket) => {
+    displayedTickets.forEach((ticket) => {
       if (expandedTicketIds[ticket.id]) {
         void ensureTicketAttachmentsLoaded(ticket);
       }
     });
-  }, [filteredTickets, expandedTicketIds, ensureTicketAttachmentsLoaded]);
+  }, [displayedTickets, expandedTicketIds, ensureTicketAttachmentsLoaded]);
 
   const kpis = React.useMemo(() => computeTicketKpis(tickets), [tickets]);
 
   const allExpanded =
-    filteredTickets.length > 0 &&
-    filteredTickets.every((t) => Boolean(expandedTicketIds[t.id]));
+    displayedTickets.length > 0 &&
+    displayedTickets.every((t) => Boolean(expandedTicketIds[t.id]));
 
   const handleToggleAllAccordions = () => {
-    setAllTicketsExpanded(filteredTickets, !allExpanded);
+    setAllTicketsExpanded(displayedTickets, !allExpanded);
   };
 
   if (!user && isVerifyingSession) {
     return <ContextualLoader context="admin-auth" />;
   }
+
+  const renderAccordionTicketList = (
+    list: Ticket[],
+    emptyMessage: string,
+  ) => {
+    if (showInitialSkeleton) {
+      return <ContextualLoader context="admin-queue" count={3} />;
+    }
+
+    if (list.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-slate-500">
+            {emptyMessage}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return list.map((ticket) => {
+      const isExpanded = Boolean(expandedTicketIds[ticket.id]);
+      const totalAttachments = countTicketAttachments(ticket);
+      const commentCount = ticket.comments?.length || 0;
+      const sla = computeTicketSlaStatus(ticket);
+      const isTicketAssigned = Boolean(resolveTicketAssigneeId(ticket));
+      const initialAttachmentKey = `ticket:${ticket.id}`;
+      const decryptedTicketImg = decryptedAttachments[initialAttachmentKey];
+      const isLoadingTicketImg = Boolean(
+        loadingAttachmentKeys[initialAttachmentKey],
+      );
+      const isTicketImgHidden = Boolean(
+        hiddenAttachmentKeys[initialAttachmentKey],
+      );
+      const isFollowUpOpen = followUpTicketId === ticket.id;
+
+      return (
+        <Card
+          key={ticket.id}
+          className={`transition-colors ${
+            ticket.status === 'NEEDS_INFO'
+              ? 'border-amber-400/80 dark:border-amber-500/60'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          {/* Accordion Summary Header */}
+          <CardHeader className="p-0">
+            <button
+              type="button"
+              aria-expanded={isExpanded}
+              onClick={() => toggleTicketExpanded(ticket.id)}
+              className="w-full text-left p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded-t-xl"
+            >
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex items-center justify-center w-5 h-5 rounded text-slate-400 transition-transform duration-200 ${
+                      isExpanded ? 'rotate-90 text-slate-700 dark:text-slate-200' : ''
+                    }`}
+                    aria-hidden="true"
+                  >
+                    ▸
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">
+                    {formatShortTicketId(ticket.id)}
+                  </span>
+                  <CardTitle className="text-base sm:text-lg font-bold truncate">
+                    {ticket.title}
+                  </CardTitle>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-7 text-xs text-slate-500 dark:text-slate-400">
+                  <span>
+                    Reported by{' '}
+                    <strong className="font-semibold text-slate-700 dark:text-slate-300">
+                      {ticket.creator?.fullName || 'Anonymous'}
+                    </strong>{' '}
+                    ({ticket.creator?.email || 'no-email'})
+                  </span>
+                  <span>•</span>
+                  <span>{formatTicketDateTime(ticket.createdAt)}</span>
+                  <span>•</span>
+                  <span>
+                    Assignee:{' '}
+                    <strong
+                      className={`font-medium ${
+                        isTicketAssigned
+                          ? 'text-slate-700 dark:text-slate-300'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}
+                    >
+                      {ticket.assignee?.fullName || 'Unassigned'}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pl-7 lg:pl-0 shrink-0">
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${
+                    sla.isBreached
+                      ? 'bg-red-500/10 text-red-600 dark:text-red-300 border-red-500/30'
+                      : sla.isResolved
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {sla.label}
+                </span>
+                {commentCount > 0 && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                    {commentCount} {commentCount === 1 ? 'message' : 'messages'}
+                  </span>
+                )}
+                {totalAttachments > 0 && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/20 font-medium">
+                    {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
+                  </span>
+                )}
+                <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                  {ticket.priority}
+                </Badge>
+                <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                  {ticket.status.replace('_', ' ')}
+                </Badge>
+              </div>
+            </button>
+          </CardHeader>
+
+          {/* Accordion Body */}
+          {isExpanded && (
+            <CardContent className="p-4 sm:p-5 pt-0 space-y-5 border-t border-slate-100 dark:border-slate-800/80">
+              {/* 1. Admin Triage & Actions Bar */}
+              <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
+                <div className="flex flex-wrap items-center gap-3">
+                  {isTicketAssigned && (
+                    <div className="flex items-center gap-1.5">
+                      <label
+                        htmlFor={`status-${ticket.id}`}
+                        className="text-xs font-medium text-slate-500"
+                      >
+                        Status:
+                      </label>
+                      <select
+                        id={`status-${ticket.id}`}
+                        value={ticket.status}
+                        onChange={(e) =>
+                          updateTicketMutation.mutate({
+                            id: ticket.id,
+                            payload: {
+                              status: e.target.value as Ticket['status'],
+                            },
+                          })
+                        }
+                        className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                      >
+                        <option value="OPEN">OPEN</option>
+                        <option value="IN_PROGRESS">IN_PROGRESS</option>
+                        <option value="NEEDS_INFO">NEEDS_INFO</option>
+                        <option value="RESOLVED">RESOLVED</option>
+                        <option value="CLOSED">CLOSED</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1.5">
+                    <label
+                      htmlFor={`priority-${ticket.id}`}
+                      className="text-xs font-medium text-slate-500"
+                    >
+                      Priority:
+                    </label>
+                    <select
+                      id={`priority-${ticket.id}`}
+                      value={ticket.priority}
+                      onChange={(e) =>
+                        updateTicketMutation.mutate({
+                          id: ticket.id,
+                          payload: {
+                            priority: e.target.value as Ticket['priority'],
+                          },
+                        })
+                      }
+                      className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                    >
+                      <option value="LOW">LOW</option>
+                      <option value="MEDIUM">MEDIUM</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="URGENT">URGENT</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <label
+                      htmlFor={`assignee-${ticket.id}`}
+                      className="text-xs font-medium text-slate-500"
+                    >
+                      Assignee:
+                    </label>
+                    <select
+                      id={`assignee-${ticket.id}`}
+                      value={resolveTicketAssigneeId(ticket)}
+                      onChange={(e) => {
+                        const nextAssignee = e.target.value || null;
+                        updateTicketMutation.mutate({
+                          id: ticket.id,
+                          payload: {
+                            assigneeId: nextAssignee,
+                            ...(nextAssignee && ticket.status === 'OPEN'
+                              ? { status: 'IN_PROGRESS' as const }
+                              : {}),
+                          },
+                        });
+                      }}
+                      className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                    >
+                      <option value="">Unassigned</option>
+                      {agents.map((agent) => (
+                        <option key={agent.id} value={agent.id}>
+                          {agent.fullName} ({agent.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {user && ticket.assigneeId !== user.id && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        updateTicketMutation.mutate({
+                          id: ticket.id,
+                          payload: {
+                            assigneeId: user.id,
+                            status:
+                              ticket.status === 'OPEN'
+                                ? 'IN_PROGRESS'
+                                : ticket.status,
+                          },
+                        })
+                      }
+                      className="h-8 text-xs"
+                    >
+                      Assign to Me
+                    </Button>
+                  )}
+
+                  {isTicketAssigned && ticket.status !== 'CLOSED' && (
+                    <Button
+                      type="button"
+                      variant={isFollowUpOpen ? 'default' : 'secondary'}
+                      size="sm"
+                      onClick={() => {
+                        if (isFollowUpOpen) {
+                          closeFollowUpComposer();
+                          setFollowUpAttachment(null);
+                        } else {
+                          openFollowUpComposer(ticket.id);
+                          setFollowUpAttachment(null);
+                        }
+                      }}
+                      className="h-8 text-xs"
+                    >
+                      {isFollowUpOpen
+                        ? 'Cancel Follow-Up'
+                        : 'Request Info / Follow-Up'}
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteTicketMutation.mutate(ticket.id)}
+                    className="h-8 text-xs"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+
+              {!isTicketAssigned && (
+                <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    <strong>Assignment Required:</strong> Assign this ticket to
+                    yourself or an IT agent first to unlock status updates,
+                    follow-up requests, and resolution notes.
+                  </span>
+                  {user && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        updateTicketMutation.mutate({
+                          id: ticket.id,
+                          payload: {
+                            assigneeId: user.id,
+                            status:
+                              ticket.status === 'OPEN'
+                                ? 'IN_PROGRESS'
+                                : ticket.status,
+                          },
+                        })
+                      }
+                      className="h-7 text-xs shrink-0"
+                    >
+                      Claim &amp; Assign to Me
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {actionErrors[ticket.id] && (
+                <div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-300">
+                  {actionErrors[ticket.id]}
+                </div>
+              )}
+
+              {/* Inline Follow-Up Request Composer */}
+              {isTicketAssigned && isFollowUpOpen && (
+                <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
+                      Request Customer Follow-Up / Additional Info
+                    </span>
+                    <span className="text-[11px] text-amber-600/80 dark:text-amber-300/80">
+                      Sets ticket status to NEEDS INFO
+                    </span>
+                  </div>
+
+                  <textarea
+                    rows={2}
+                    value={followUpPrompt}
+                    onChange={(e) => setFollowUpPrompt(e.target.value)}
+                    placeholder="Describe what details, steps, or screenshot you need from the customer..."
+                    className="flex w-full rounded-md border border-amber-500/30 bg-white dark:bg-slate-950 px-3 py-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
+                  />
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={(e) =>
+                          setFollowUpAttachment(e.target.files?.[0] || null)
+                        }
+                        className="text-xs h-8 max-w-xs cursor-pointer"
+                      />
+                      {followUpAttachment && (
+                        <span className="text-[11px] text-slate-500">
+                          ({formatByteSize(followUpAttachment.size)})
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          closeFollowUpComposer();
+                          setFollowUpAttachment(null);
+                        }}
+                        className="h-8 text-xs"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={updateTicketMutation.isPending}
+                        onClick={() => handleSendFollowUpRequest(ticket)}
+                        className="h-8 text-xs"
+                      >
+                        {updateTicketMutation.isPending
+                          ? 'Sending...'
+                          : 'Send Follow-Up Request'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Initial Ticket Report Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <span>Initial Ticket Report</span>
+                  <span>Opened {formatTicketDateTime(ticket.createdAt)}</span>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800 space-y-3">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                    {ticket.description}
+                  </p>
+
+                  {ticket.hasAttachment && (
+                    <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">
+                            Initial Attachment
+                          </Badge>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {ticket.attachmentName || 'attachment.png'}
+                          </span>
+                          {ticket.attachmentOriginalSize && (
+                            <span className="text-slate-400">
+                              ({formatByteSize(ticket.attachmentOriginalSize)})
+                            </span>
+                          )}
+                        </div>
+                        {decryptedTicketImg ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              toggleAttachmentVisibility(initialAttachmentKey)
+                            }
+                            className="h-7 text-xs"
+                          >
+                            {isTicketImgHidden ? 'Show Image' : 'Hide Image'}
+                          </Button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">
+                            {isLoadingTicketImg ? 'Loading image...' : ''}
+                          </span>
+                        )}
+                      </div>
+
+                      {decryptedTicketImg && !isTicketImgHidden && (
+                        <div className="pt-1">
+                          <img
+                            src={decryptedTicketImg.dataUrl}
+                            alt={decryptedTicketImg.fileName}
+                            onClick={() => setLightboxImage(decryptedTicketImg)}
+                            title="Click to inspect full-size image"
+                            className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. Chronological Activity & Follow-Up History Timeline */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <span>Activity &amp; Follow-Up History ({commentCount})</span>
+                  <span>Chronological Order</span>
+                </div>
+
+                {commentCount === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-1">
+                    No follow-up requests, customer amendments, or resolution notes yet.
+                  </p>
+                ) : (
+                  <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-800 space-y-3">
+                    {ticket.comments!.map((comment) => {
+                      const parsed = parseTimelineComment(comment.content);
+                      const commentAttachmentKey = `comment:${comment.id}`;
+                      const decryptedCommentImg =
+                        decryptedAttachments[commentAttachmentKey];
+                      const isLoadingCommentImg = Boolean(
+                        loadingAttachmentKeys[commentAttachmentKey],
+                      );
+                      const isCommentImgHidden = Boolean(
+                        hiddenAttachmentKeys[commentAttachmentKey],
+                      );
+                      const isFollowUpReq = parsed.kind === 'FOLLOW_UP';
+                      const isCustomerAmend = parsed.kind === 'AMENDMENT';
+
+                      return (
+                        <div
+                          key={comment.id}
+                          className={`relative p-3 rounded-lg border text-xs space-y-2 ${
+                            isFollowUpReq
+                              ? 'bg-amber-500/10 border-amber-500/30'
+                              : isCustomerAmend
+                                ? 'bg-blue-500/10 border-blue-500/30'
+                                : 'bg-slate-100/80 dark:bg-slate-900/90 border-slate-200/70 dark:border-slate-800'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-slate-900 dark:text-white">
+                                {comment.author?.fullName || 'Support User'}
+                              </span>
+                              {comment.author?.role && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                                  {comment.author.role}
+                                </span>
+                              )}
+                              <Badge
+                                variant={
+                                  isFollowUpReq
+                                    ? 'warning'
+                                    : isCustomerAmend
+                                      ? 'default'
+                                      : 'secondary'
+                                }
+                                className="text-[10px] py-0 px-2"
+                              >
+                                {parsed.badgeLabel}
+                              </Badge>
+                            </div>
+                            <span className="text-[11px] text-slate-400">
+                              {formatCommentTime(comment.createdAt)}
+                            </span>
+                          </div>
+
+                          <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                            {parsed.cleanText}
+                          </p>
+
+                          {/* Per-Message Attachment inside the timeline entry (auto-loaded once when viewed) */}
+                          {comment.hasAttachment && (
+                            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 space-y-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-[10px]">
+                                    Attached Image
+                                  </Badge>
+                                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                    {comment.attachmentName || 'attachment.png'}
+                                  </span>
+                                  {comment.attachmentOriginalSize && (
+                                    <span className="text-slate-400">
+                                      ({formatByteSize(comment.attachmentOriginalSize)})
+                                    </span>
+                                  )}
+                                </div>
+                                {decryptedCommentImg ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      toggleAttachmentVisibility(
+                                        commentAttachmentKey,
+                                      )
+                                    }
+                                    className="h-7 text-xs"
+                                  >
+                                    {isCommentImgHidden
+                                      ? 'Show Image'
+                                      : 'Hide Image'}
+                                  </Button>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400">
+                                    {isLoadingCommentImg
+                                      ? 'Loading image...'
+                                      : ''}
+                                  </span>
+                                )}
+                              </div>
+
+                              {decryptedCommentImg && !isCommentImgHidden && (
+                                <div className="pt-1">
+                                  <img
+                                    src={decryptedCommentImg.dataUrl}
+                                    alt={decryptedCommentImg.fileName}
+                                    onClick={() =>
+                                      setLightboxImage(decryptedCommentImg)
+                                    }
+                                    title="Click to inspect full-size image"
+                                    className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Post IT Resolution Note Composer (visible once assigned) */}
+              {isTicketAssigned && (
+                <form
+                  onSubmit={(e) => handlePostResolutionNote(ticket.id, e)}
+                  className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5"
+                >
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      placeholder="Add an IT resolution note or update for the customer..."
+                      value={commentDrafts[ticket.id] || ''}
+                      onChange={(e) =>
+                        setCommentDraft(ticket.id, e.target.value)
+                      }
+                      className="text-xs h-9 flex-1"
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={addCommentMutation.isPending}
+                      className="h-9 text-xs shrink-0"
+                    >
+                      {addCommentMutation.isPending ? 'Posting...' : 'Post Note'}
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-slate-400">
+                        Attach image to note (optional):
+                      </span>
+                      <Input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={(e) =>
+                          setCommentAttachments((prev) => ({
+                            ...prev,
+                            [ticket.id]: e.target.files?.[0] || null,
+                          }))
+                        }
+                        className="text-xs h-8 max-w-xs cursor-pointer"
+                      />
+                      {commentAttachments[ticket.id] && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCommentAttachments((prev) => ({
+                              ...prev,
+                              [ticket.id]: null,
+                            }))
+                          }
+                          className="text-[11px] text-red-500 hover:underline"
+                        >
+                          Remove (
+                          {formatByteSize(commentAttachments[ticket.id]!.size)})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      );
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -344,10 +1064,10 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                IT Service Desk Queue
+                IT Service Desk Console
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Triage incoming customer tickets, assign support engineers, request customer follow-ups, and post resolution notes.
+                Monitor live SLA metrics, triage incoming unassigned tickets, and resolve assigned incidents.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -388,736 +1108,444 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* KPI Summary Cards */}
-          {showInitialSkeleton ? (
-            <ContextualLoader context="admin-kpi" />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-medium text-slate-500 uppercase">Total Tickets</p>
-                  <p className="text-2xl font-extrabold mt-1">{kpis.total}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-medium text-amber-500 uppercase">Open Queue</p>
-                  <p className="text-2xl font-extrabold mt-1">{kpis.open}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-medium text-blue-500 uppercase">In Progress</p>
-                  <p className="text-2xl font-extrabold mt-1">{kpis.inProgress}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs font-medium text-red-500 uppercase">Urgent / High</p>
-                  <p className="text-2xl font-extrabold mt-1">{kpis.urgentHigh}</p>
-                </CardContent>
-              </Card>
-              <Card className="col-span-2 sm:col-span-1">
-                <CardContent className="p-4">
-                  <p className="text-xs font-medium text-emerald-500 uppercase">Resolved / Closed</p>
-                  <p className="text-2xl font-extrabold mt-1">{kpis.resolvedClosed}</p>
-                </CardContent>
-              </Card>
+          {/* Primary Navigation Sections (Zustand-backed) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={activeSection === 'DASHBOARD' ? 'default' : 'outline'}
+                onClick={() => setActiveSection('DASHBOARD')}
+                className="text-xs font-semibold"
+              >
+                Dashboard Overview
+                {unassignedTickets.length > 0 && (
+                  <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-500/20 text-amber-400">
+                    {unassignedTickets.length} unassigned
+                  </span>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant={activeSection === 'ALL_TICKETS' ? 'default' : 'outline'}
+                onClick={() => setActiveSection('ALL_TICKETS')}
+                className="text-xs font-semibold"
+              >
+                All Tickets
+                <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-500/20">
+                  {tickets.length}
+                </span>
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant={activeSection === 'ASSIGNED_TICKETS' ? 'default' : 'outline'}
+                onClick={() => setActiveSection('ASSIGNED_TICKETS')}
+                className="text-xs font-semibold"
+              >
+                Assigned Tickets
+                <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-400">
+                  {myAssignedTickets.length} mine / {allAssignedTickets.length} total
+                </span>
+              </Button>
+            </div>
+
+            {displayedTickets.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleAllAccordions}
+                className="h-8 text-xs"
+              >
+                {allExpanded ? 'Collapse All Cards' : 'Expand All Cards'}
+              </Button>
+            )}
+          </div>
+
+          {/* ===================================================================
+              SECTION 1: DASHBOARD OVERVIEW
+             =================================================================== */}
+          {activeSection === 'DASHBOARD' && (
+            <div className="space-y-6">
+              {showInitialSkeleton ? (
+                <ContextualLoader context="admin-kpi" />
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <Card
+                    onClick={() => {
+                      setAssignmentFilter('ALL');
+                      setActiveSection('ALL_TICKETS');
+                    }}
+                    className="cursor-pointer hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
+                  >
+                    <CardContent className="p-4">
+                      <p className="text-xs font-medium text-slate-500 uppercase">
+                        Total Tickets
+                      </p>
+                      <p className="text-2xl font-extrabold mt-1">{kpis.total}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    onClick={() => {
+                      setAssignmentFilter('UNASSIGNED');
+                      setActiveSection('ALL_TICKETS');
+                    }}
+                    className="cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition-colors"
+                  >
+                    <CardContent className="p-4">
+                      <p className="text-xs font-medium text-amber-500 uppercase">
+                        Unassigned Queue
+                      </p>
+                      <p className="text-2xl font-extrabold mt-1">
+                        {unassignedTickets.length}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    onClick={() => {
+                      setAssignedScope('MINE');
+                      setActiveSection('ASSIGNED_TICKETS');
+                    }}
+                    className="cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+                  >
+                    <CardContent className="p-4">
+                      <p className="text-xs font-medium text-blue-500 uppercase">
+                        Assigned to Me
+                      </p>
+                      <p className="text-2xl font-extrabold mt-1">
+                        {myAssignedTickets.length}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs font-medium text-indigo-500 uppercase">
+                        In Progress / Info
+                      </p>
+                      <p className="text-2xl font-extrabold mt-1">
+                        {kpis.inProgress + kpis.needsInfo}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs font-medium text-red-500 uppercase">
+                        Urgent / High
+                      </p>
+                      <p className="text-2xl font-extrabold mt-1">{kpis.urgentHigh}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs font-medium text-emerald-500 uppercase">
+                        Resolved / Closed
+                      </p>
+                      <p className="text-2xl font-extrabold mt-1">
+                        {kpis.resolvedClosed}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Support Team Workload Summary */}
+              {agents.length > 0 && (
+                <Card>
+                  <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                      IT Support Team Workload
+                    </CardTitle>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setAssignedScope('ALL_ASSIGNED');
+                        setActiveSection('ASSIGNED_TICKETS');
+                      }}
+                      className="h-7 text-xs"
+                    >
+                      View All Assigned ({allAssignedTickets.length}) →
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {agents.map((agent) => {
+                      const agentTickets = allAssignedTickets.filter(
+                        (t) => resolveTicketAssigneeId(t) === agent.id,
+                      );
+                      const activeCount = agentTickets.filter(
+                        (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED',
+                      ).length;
+                      const resolvedCount = agentTickets.filter(
+                        (t) => t.status === 'RESOLVED' || t.status === 'CLOSED',
+                      ).length;
+
+                      return (
+                        <div
+                          key={agent.id}
+                          className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 flex items-center justify-between gap-2"
+                        >
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {agent.fullName}
+                              </span>
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                                {agent.role}
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-slate-500">
+                              <strong className="text-blue-500">{activeCount} active</strong> ·{' '}
+                              <span className="text-emerald-500">{resolvedCount} resolved</span>
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setAssignedScope(
+                                user?.id === agent.id ? 'MINE' : agent.id,
+                              );
+                              setActiveSection('ASSIGNED_TICKETS');
+                            }}
+                            className="h-7 text-xs shrink-0"
+                          >
+                            View Queue
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Immediate Triage Queue (Unassigned + Urgent Active Tickets) */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                      Immediate Triage &amp; Unassigned Queue ({displayedTickets.length})
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Unassigned customer tickets waiting to be claimed and high-priority active incidents.
+                    </p>
+                  </div>
+                  <Input
+                    placeholder="Quick search triage queue..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full sm:w-64 text-xs h-8"
+                  />
+                </div>
+
+                {renderAccordionTicketList(
+                  displayedTickets,
+                  'All incoming tickets are currently assigned and triaged! Switch to "Assigned Tickets" or "All Tickets" to view active work.',
+                )}
+              </div>
             </div>
           )}
 
-          {/* Filter & Search Toolbar */}
-          <Card>
-            <CardContent className="p-4 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
-              <div className="flex flex-wrap gap-1.5">
-                {(['ALL', 'OPEN', 'IN_PROGRESS', 'NEEDS_INFO', 'RESOLVED', 'CLOSED'] as const).map((status) => (
-                  <Button
-                    key={status}
-                    type="button"
-                    size="sm"
-                    variant={statusFilter === status ? 'default' : 'outline'}
-                    onClick={() => setStatusFilter(status)}
-                    className="text-xs"
-                  >
-                    {status.replace('_', ' ')}
-                  </Button>
-                ))}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
-                <select
-                  aria-label="Filter by Priority"
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="h-9 rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <option value="ALL">All Priorities</option>
-                  <option value="URGENT">Urgent Only</option>
-                  <option value="HIGH">High Only</option>
-                  <option value="MEDIUM">Medium Only</option>
-                  <option value="LOW">Low Only</option>
-                </select>
-
-                <Input
-                  placeholder="Search by #ID, title, description, or customer..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 text-xs h-9"
-                />
-
-                {filteredTickets.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleToggleAllAccordions}
-                    className="h-9 text-xs shrink-0"
-                  >
-                    {allExpanded ? 'Collapse All' : 'Expand All'}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Accordion Ticket Queue */}
-          <div className="space-y-3">
-            {showInitialSkeleton && <ContextualLoader context="admin-queue" count={3} />}
-
-            {!showInitialSkeleton && filteredTickets.length === 0 && (
+          {/* ===================================================================
+              SECTION 2: ALL TICKETS
+             =================================================================== */}
+          {activeSection === 'ALL_TICKETS' && (
+            <div className="space-y-4">
               <Card>
-                <CardContent className="p-8 text-center text-sm text-slate-500">
-                  No tickets match the current filter criteria.
+                <CardContent className="p-4 flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {(['ALL', 'OPEN', 'IN_PROGRESS', 'NEEDS_INFO', 'RESOLVED', 'CLOSED'] as const).map(
+                        (status) => (
+                          <Button
+                            key={status}
+                            type="button"
+                            size="sm"
+                            variant={statusFilter === status ? 'default' : 'outline'}
+                            onClick={() => setStatusFilter(status)}
+                            className="text-xs"
+                          >
+                            {status.replace('_', ' ')}
+                          </Button>
+                        ),
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {(
+                        [
+                          { id: 'ALL', label: `All (${tickets.length})` },
+                          {
+                            id: 'UNASSIGNED',
+                            label: `Unassigned (${unassignedTickets.length})`,
+                          },
+                          {
+                            id: 'ASSIGNED',
+                            label: `Assigned (${allAssignedTickets.length})`,
+                          },
+                        ] as const
+                      ).map((tab) => (
+                        <Button
+                          key={tab.id}
+                          type="button"
+                          size="sm"
+                          variant={assignmentFilter === tab.id ? 'secondary' : 'ghost'}
+                          onClick={() => setAssignmentFilter(tab.id)}
+                          className="h-8 text-xs"
+                        >
+                          {tab.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <select
+                      aria-label="Filter by Priority"
+                      value={priorityFilter}
+                      onChange={(e) => setPriorityFilter(e.target.value)}
+                      className="h-9 rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    >
+                      <option value="ALL">All Priorities</option>
+                      <option value="URGENT">Urgent Only</option>
+                      <option value="HIGH">High Only</option>
+                      <option value="MEDIUM">Medium Only</option>
+                      <option value="LOW">Low Only</option>
+                    </select>
+
+                    <Input
+                      placeholder="Search all tickets by #ID, title, description, or customer..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full sm:w-80 text-xs h-9"
+                    />
+                  </div>
                 </CardContent>
               </Card>
-            )}
 
-            {!showInitialSkeleton &&
-              filteredTickets.map((ticket) => {
-                const isExpanded = Boolean(expandedTicketIds[ticket.id]);
-                const totalAttachments = countTicketAttachments(ticket);
-                const commentCount = ticket.comments?.length || 0;
-                const sla = computeTicketSlaStatus(ticket);
-                const isTicketAssigned = Boolean(resolveTicketAssigneeId(ticket));
-                const initialAttachmentKey = `ticket:${ticket.id}`;
-                const decryptedTicketImg = decryptedAttachments[initialAttachmentKey];
-                const isLoadingTicketImg = Boolean(
-                  loadingAttachmentKeys[initialAttachmentKey],
-                );
-                const isTicketImgHidden = Boolean(
-                  hiddenAttachmentKeys[initialAttachmentKey],
-                );
-                const isFollowUpOpen = followUpTicketId === ticket.id;
+              <div className="space-y-3">
+                {renderAccordionTicketList(
+                  displayedTickets,
+                  'No tickets match the current filter criteria.',
+                )}
+              </div>
+            </div>
+          )}
 
-                return (
-                  <Card
-                    key={ticket.id}
-                    className={`transition-colors ${
-                      ticket.status === 'NEEDS_INFO'
-                        ? 'border-amber-400/80 dark:border-amber-500/60'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    {/* Accordion Summary Header */}
-                    <CardHeader className="p-0">
-                      <button
+          {/* ===================================================================
+              SECTION 3: ASSIGNED TICKETS
+             =================================================================== */}
+          {activeSection === 'ASSIGNED_TICKETS' && (
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="p-4 flex flex-col gap-3">
+                  {/* Scope Switcher: Assigned to Me vs All Assigned vs Specific Engineer */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
                         type="button"
-                        aria-expanded={isExpanded}
-                        onClick={() => toggleTicketExpanded(ticket.id)}
-                        className="w-full text-left p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded-t-xl"
+                        size="sm"
+                        variant={assignedScope === 'MINE' ? 'default' : 'outline'}
+                        onClick={() => setAssignedScope('MINE')}
+                        className="text-xs"
                       >
-                        <div className="space-y-1.5 min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`inline-flex items-center justify-center w-5 h-5 rounded text-slate-400 transition-transform duration-200 ${
-                                isExpanded ? 'rotate-90 text-slate-700 dark:text-slate-200' : ''
-                              }`}
-                              aria-hidden="true"
-                            >
-                              ▸
-                            </span>
-                            <span className="text-xs font-mono text-slate-400">
-                              {formatShortTicketId(ticket.id)}
-                            </span>
-                            <CardTitle className="text-base sm:text-lg font-bold truncate">
-                              {ticket.title}
-                            </CardTitle>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-7 text-xs text-slate-500 dark:text-slate-400">
-                            <span>
-                              Reported by{' '}
-                              <strong className="font-semibold text-slate-700 dark:text-slate-300">
-                                {ticket.creator?.fullName || 'Anonymous'}
-                              </strong>{' '}
-                              ({ticket.creator?.email || 'no-email'})
-                            </span>
-                            <span>•</span>
-                            <span>{formatTicketDateTime(ticket.createdAt)}</span>
-                            <span>•</span>
-                            <span>
-                              Assignee:{' '}
-                              <strong className="font-medium text-slate-700 dark:text-slate-300">
-                                {ticket.assignee?.fullName || 'Unassigned'}
-                              </strong>
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 pl-7 lg:pl-0 shrink-0">
-                          <span
-                            className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${
-                              sla.isBreached
-                                ? 'bg-red-500/10 text-red-600 dark:text-red-300 border-red-500/30'
-                                : sla.isResolved
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                            }`}
-                          >
-                            {sla.label}
-                          </span>
-                          {commentCount > 0 && (
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                              {commentCount} {commentCount === 1 ? 'message' : 'messages'}
-                            </span>
-                          )}
-                          {totalAttachments > 0 && (
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/20 font-medium">
-                              {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
-                            </span>
-                          )}
-                          <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
-                            {ticket.priority}
-                          </Badge>
-                          <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                            {ticket.status.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                      </button>
-                    </CardHeader>
-
-                    {/* Accordion Body */}
-                    {isExpanded && (
-                      <CardContent className="p-4 sm:p-5 pt-0 space-y-5 border-t border-slate-100 dark:border-slate-800/80">
-                        {/* 1. Admin Triage & Actions Bar */}
-                        <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
-                          <div className="flex flex-wrap items-center gap-3">
-                            {isTicketAssigned && (
-                              <div className="flex items-center gap-1.5">
-                                <label
-                                  htmlFor={`status-${ticket.id}`}
-                                  className="text-xs font-medium text-slate-500"
-                                >
-                                  Status:
-                                </label>
-                                <select
-                                  id={`status-${ticket.id}`}
-                                  value={ticket.status}
-                                  onChange={(e) =>
-                                    updateTicketMutation.mutate({
-                                      id: ticket.id,
-                                      payload: {
-                                        status: e.target.value as Ticket['status'],
-                                      },
-                                    })
-                                  }
-                                  className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
-                                >
-                                  <option value="OPEN">OPEN</option>
-                                  <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                  <option value="NEEDS_INFO">NEEDS_INFO</option>
-                                  <option value="RESOLVED">RESOLVED</option>
-                                  <option value="CLOSED">CLOSED</option>
-                                </select>
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-1.5">
-                              <label
-                                htmlFor={`priority-${ticket.id}`}
-                                className="text-xs font-medium text-slate-500"
-                              >
-                                Priority:
-                              </label>
-                              <select
-                                id={`priority-${ticket.id}`}
-                                value={ticket.priority}
-                                onChange={(e) =>
-                                  updateTicketMutation.mutate({
-                                    id: ticket.id,
-                                    payload: {
-                                      priority: e.target.value as Ticket['priority'],
-                                    },
-                                  })
-                                }
-                                className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
-                              >
-                                <option value="LOW">LOW</option>
-                                <option value="MEDIUM">MEDIUM</option>
-                                <option value="HIGH">HIGH</option>
-                                <option value="URGENT">URGENT</option>
-                              </select>
-                            </div>
-
-                            <div className="flex items-center gap-1.5">
-                              <label
-                                htmlFor={`assignee-${ticket.id}`}
-                                className="text-xs font-medium text-slate-500"
-                              >
-                                Assignee:
-                              </label>
-                              <select
-                                id={`assignee-${ticket.id}`}
-                                value={resolveTicketAssigneeId(ticket)}
-                                onChange={(e) => {
-                                  const nextAssignee = e.target.value || null;
-                                  updateTicketMutation.mutate({
-                                    id: ticket.id,
-                                    payload: {
-                                      assigneeId: nextAssignee,
-                                      ...(nextAssignee && ticket.status === 'OPEN'
-                                        ? { status: 'IN_PROGRESS' as const }
-                                        : {}),
-                                    },
-                                  });
-                                }}
-                                className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
-                              >
-                                <option value="">Unassigned</option>
-                                {agents.map((agent) => (
-                                  <option key={agent.id} value={agent.id}>
-                                    {agent.fullName} ({agent.role})
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2">
-                            {user && ticket.assigneeId !== user.id && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  updateTicketMutation.mutate({
-                                    id: ticket.id,
-                                    payload: {
-                                      assigneeId: user.id,
-                                      status:
-                                        ticket.status === 'OPEN'
-                                          ? 'IN_PROGRESS'
-                                          : ticket.status,
-                                    },
-                                  })
-                                }
-                                className="h-8 text-xs"
-                              >
-                                Assign to Me
-                              </Button>
-                            )}
-
-                            {isTicketAssigned && ticket.status !== 'CLOSED' && (
-                              <Button
-                                type="button"
-                                variant={isFollowUpOpen ? 'default' : 'secondary'}
-                                size="sm"
-                                onClick={() => {
-                                  if (isFollowUpOpen) {
-                                    closeFollowUpComposer();
-                                    setFollowUpAttachment(null);
-                                  } else {
-                                    openFollowUpComposer(ticket.id);
-                                    setFollowUpAttachment(null);
-                                  }
-                                }}
-                                className="h-8 text-xs"
-                              >
-                                {isFollowUpOpen
-                                  ? 'Cancel Follow-Up'
-                                  : 'Request Info / Follow-Up'}
-                              </Button>
-                            )}
-
+                        Assigned to Me ({myAssignedTickets.length})
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={assignedScope === 'ALL_ASSIGNED' ? 'default' : 'outline'}
+                        onClick={() => setAssignedScope('ALL_ASSIGNED')}
+                        className="text-xs"
+                      >
+                        All Assigned Tickets ({allAssignedTickets.length})
+                      </Button>
+                      {agents
+                        .filter((a) => a.id !== user?.id)
+                        .map((agent) => {
+                          const count = allAssignedTickets.filter(
+                            (t) => resolveTicketAssigneeId(t) === agent.id,
+                          ).length;
+                          return (
                             <Button
+                              key={agent.id}
                               type="button"
-                              variant="destructive"
                               size="sm"
-                              onClick={() => deleteTicketMutation.mutate(ticket.id)}
-                              className="h-8 text-xs"
+                              variant={assignedScope === agent.id ? 'default' : 'ghost'}
+                              onClick={() => setAssignedScope(agent.id)}
+                              className="text-xs"
                             >
-                              Delete
+                              {agent.fullName} ({count})
                             </Button>
-                          </div>
-                        </div>
+                          );
+                        })}
+                    </div>
+                  </div>
 
-                        {!isTicketAssigned && (
-                          <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2">
-                            <span>
-                              <strong>Assignment Required:</strong> Assign this ticket to
-                              yourself or an IT agent first before updating status,
-                              requesting follow-ups, or posting resolution notes.
-                            </span>
-                            {user && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  updateTicketMutation.mutate({
-                                    id: ticket.id,
-                                    payload: {
-                                      assigneeId: user.id,
-                                      status:
-                                        ticket.status === 'OPEN'
-                                          ? 'IN_PROGRESS'
-                                          : ticket.status,
-                                    },
-                                  })
-                                }
-                                className="h-7 text-xs shrink-0"
-                              >
-                                Claim &amp; Assign to Me
-                              </Button>
-                            )}
-                          </div>
-                        )}
-
-                        {actionErrors[ticket.id] && (
-                          <div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-300">
-                            {actionErrors[ticket.id]}
-                          </div>
-                        )}
-
-                        {/* Inline Follow-Up Request Composer */}
-                        {isTicketAssigned && isFollowUpOpen && (
-                          <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
-                                Request Customer Follow-Up / Additional Info
-                              </span>
-                              <span className="text-[11px] text-amber-600/80 dark:text-amber-300/80">
-                                Sets ticket status to NEEDS INFO
-                              </span>
-                            </div>
-
-                            <textarea
-                              rows={2}
-                              value={followUpPrompt}
-                              onChange={(e) => setFollowUpPrompt(e.target.value)}
-                              placeholder="Describe what details, steps, or screenshot you need from the customer..."
-                              className="flex w-full rounded-md border border-amber-500/30 bg-white dark:bg-slate-950 px-3 py-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
-                            />
-
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="file"
-                                  accept="image/png,image/jpeg,image/webp,image/gif"
-                                  onChange={(e) =>
-                                    setFollowUpAttachment(e.target.files?.[0] || null)
-                                  }
-                                  className="text-xs h-8 max-w-xs cursor-pointer"
-                                />
-                                {followUpAttachment && (
-                                  <span className="text-[11px] text-slate-500">
-                                    ({formatByteSize(followUpAttachment.size)})
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-2 justify-end">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    closeFollowUpComposer();
-                                    setFollowUpAttachment(null);
-                                  }}
-                                  className="h-8 text-xs"
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  disabled={updateTicketMutation.isPending}
-                                  onClick={() => handleSendFollowUpRequest(ticket)}
-                                  className="h-8 text-xs"
-                                >
-                                  {updateTicketMutation.isPending
-                                    ? 'Sending...'
-                                    : 'Send Follow-Up Request'}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 2. Initial Ticket Report Section */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                            <span>Initial Ticket Report</span>
-                            <span>Opened {formatTicketDateTime(ticket.createdAt)}</span>
-                          </div>
-
-                          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800 space-y-3">
-                            <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                              {ticket.description}
-                            </p>
-
-                            {ticket.hasAttachment && (
-                              <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-2">
-                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-[10px]">
-                                      Initial Attachment
-                                    </Badge>
-                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                      {ticket.attachmentName || 'attachment.png'}
-                                    </span>
-                                    {ticket.attachmentOriginalSize && (
-                                      <span className="text-slate-400">
-                                        ({formatByteSize(ticket.attachmentOriginalSize)})
-                                      </span>
-                                    )}
-                                  </div>
-                                  {decryptedTicketImg ? (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        toggleAttachmentVisibility(initialAttachmentKey)
-                                      }
-                                      className="h-7 text-xs"
-                                    >
-                                      {isTicketImgHidden ? 'Show Image' : 'Hide Image'}
-                                    </Button>
-                                  ) : (
-                                    <span className="text-[11px] text-slate-400">
-                                      {isLoadingTicketImg ? 'Loading image...' : ''}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {decryptedTicketImg && !isTicketImgHidden && (
-                                  <div className="pt-1">
-                                    <img
-                                      src={decryptedTicketImg.dataUrl}
-                                      alt={decryptedTicketImg.fileName}
-                                      onClick={() => setLightboxImage(decryptedTicketImg)}
-                                      title="Click to inspect full-size image"
-                                      className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* 3. Chronological Activity & Follow-Up History Timeline */}
-                        <div className="space-y-2.5">
-                          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                            <span>Activity &amp; Follow-Up History ({commentCount})</span>
-                            <span>Chronological Order</span>
-                          </div>
-
-                          {commentCount === 0 ? (
-                            <p className="text-xs text-slate-500 italic py-1">
-                              No follow-up requests, customer amendments, or resolution notes yet.
-                            </p>
-                          ) : (
-                            <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-800 space-y-3">
-                              {ticket.comments!.map((comment) => {
-                                const parsed = parseTimelineComment(comment.content);
-                                const commentAttachmentKey = `comment:${comment.id}`;
-                                const decryptedCommentImg =
-                                  decryptedAttachments[commentAttachmentKey];
-                                const isLoadingCommentImg = Boolean(
-                                  loadingAttachmentKeys[commentAttachmentKey],
-                                );
-                                const isCommentImgHidden = Boolean(
-                                  hiddenAttachmentKeys[commentAttachmentKey],
-                                );
-                                const isFollowUpReq = parsed.kind === 'FOLLOW_UP';
-                                const isCustomerAmend = parsed.kind === 'AMENDMENT';
-
-                                return (
-                                  <div
-                                    key={comment.id}
-                                    className={`relative p-3 rounded-lg border text-xs space-y-2 ${
-                                      isFollowUpReq
-                                        ? 'bg-amber-500/10 border-amber-500/30'
-                                        : isCustomerAmend
-                                          ? 'bg-blue-500/10 border-blue-500/30'
-                                          : 'bg-slate-100/80 dark:bg-slate-900/90 border-slate-200/70 dark:border-slate-800'
-                                    }`}
-                                  >
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className="font-bold text-slate-900 dark:text-white">
-                                          {comment.author?.fullName || 'Support User'}
-                                        </span>
-                                        {comment.author?.role && (
-                                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                                            {comment.author.role}
-                                          </span>
-                                        )}
-                                        <Badge
-                                          variant={
-                                            isFollowUpReq
-                                              ? 'warning'
-                                              : isCustomerAmend
-                                                ? 'default'
-                                                : 'secondary'
-                                          }
-                                          className="text-[10px] py-0 px-2"
-                                        >
-                                          {parsed.badgeLabel}
-                                        </Badge>
-                                      </div>
-                                      <span className="text-[11px] text-slate-400">
-                                        {formatCommentTime(comment.createdAt)}
-                                      </span>
-                                    </div>
-
-                                    <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                                      {parsed.cleanText}
-                                    </p>
-
-                                    {/* Per-Message Attachment inside the timeline entry (auto-loaded once when viewed) */}
-                                    {comment.hasAttachment && (
-                                      <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 space-y-2">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="text-[10px]">
-                                              Attached Image
-                                            </Badge>
-                                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                              {comment.attachmentName || 'attachment.png'}
-                                            </span>
-                                            {comment.attachmentOriginalSize && (
-                                              <span className="text-slate-400">
-                                                ({formatByteSize(comment.attachmentOriginalSize)})
-                                              </span>
-                                            )}
-                                          </div>
-                                          {decryptedCommentImg ? (
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() =>
-                                                toggleAttachmentVisibility(
-                                                  commentAttachmentKey,
-                                                )
-                                              }
-                                              className="h-7 text-xs"
-                                            >
-                                              {isCommentImgHidden
-                                                ? 'Show Image'
-                                                : 'Hide Image'}
-                                            </Button>
-                                          ) : (
-                                            <span className="text-[11px] text-slate-400">
-                                              {isLoadingCommentImg
-                                                ? 'Loading image...'
-                                                : ''}
-                                            </span>
-                                          )}
-                                        </div>
-
-                                        {decryptedCommentImg && !isCommentImgHidden && (
-                                          <div className="pt-1">
-                                            <img
-                                              src={decryptedCommentImg.dataUrl}
-                                              alt={decryptedCommentImg.fileName}
-                                              onClick={() =>
-                                                setLightboxImage(decryptedCommentImg)
-                                              }
-                                              title="Click to inspect full-size image"
-                                              className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
-                                            />
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* 4. Post IT Resolution Note Composer (visible once assigned) */}
-                        {isTicketAssigned && (
-                          <form
-                            onSubmit={(e) => handlePostResolutionNote(ticket.id, e)}
-                            className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5"
+                  {/* Status + Priority + Search */}
+                  <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+                    <div className="flex flex-wrap gap-1.5">
+                      {(['ALL', 'OPEN', 'IN_PROGRESS', 'NEEDS_INFO', 'RESOLVED', 'CLOSED'] as const).map(
+                        (status) => (
+                          <Button
+                            key={status}
+                            type="button"
+                            size="sm"
+                            variant={statusFilter === status ? 'default' : 'outline'}
+                            onClick={() => setStatusFilter(status)}
+                            className="text-xs"
                           >
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <Input
-                                placeholder="Add an IT resolution note or update for the customer..."
-                                value={commentDrafts[ticket.id] || ''}
-                                onChange={(e) =>
-                                  setCommentDraft(ticket.id, e.target.value)
-                                }
-                                className="text-xs h-9 flex-1"
-                              />
-                              <Button
-                                type="submit"
-                                size="sm"
-                                disabled={addCommentMutation.isPending}
-                                className="h-9 text-xs shrink-0"
-                              >
-                                {addCommentMutation.isPending ? 'Posting...' : 'Post Note'}
-                              </Button>
-                            </div>
+                            {status.replace('_', ' ')}
+                          </Button>
+                        ),
+                      )}
+                    </div>
 
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-slate-400">
-                                  Attach image to note (optional):
-                                </span>
-                                <Input
-                                  type="file"
-                                  accept="image/png,image/jpeg,image/webp,image/gif"
-                                  onChange={(e) =>
-                                    setCommentAttachments((prev) => ({
-                                      ...prev,
-                                      [ticket.id]: e.target.files?.[0] || null,
-                                    }))
-                                  }
-                                  className="text-xs h-8 max-w-xs cursor-pointer"
-                                />
-                                {commentAttachments[ticket.id] && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setCommentAttachments((prev) => ({
-                                        ...prev,
-                                        [ticket.id]: null,
-                                      }))
-                                    }
-                                    className="text-[11px] text-red-500 hover:underline"
-                                  >
-                                    Remove (
-                                    {formatByteSize(commentAttachments[ticket.id]!.size)})
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </form>
-                        )}
-                      </CardContent>
-                    )}
-                  </Card>
-                );
-              })}
-          </div>
+                    <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+                      <select
+                        aria-label="Filter by Priority"
+                        value={priorityFilter}
+                        onChange={(e) => setPriorityFilter(e.target.value)}
+                        className="h-9 rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                      >
+                        <option value="ALL">All Priorities</option>
+                        <option value="URGENT">Urgent Only</option>
+                        <option value="HIGH">High Only</option>
+                        <option value="MEDIUM">Medium Only</option>
+                        <option value="LOW">Low Only</option>
+                      </select>
+
+                      <Input
+                        placeholder="Search assigned tickets by #ID, title, or customer..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full sm:w-64 text-xs h-9"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-3">
+                {renderAccordionTicketList(
+                  displayedTickets,
+                  assignedScope === 'MINE'
+                    ? 'You do not have any tickets assigned to you matching these filters. Claim a ticket from Dashboard Overview or All Tickets!'
+                    : 'No assigned tickets match the current filter criteria.',
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
