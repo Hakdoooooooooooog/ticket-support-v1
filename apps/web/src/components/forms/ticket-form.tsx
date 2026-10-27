@@ -102,8 +102,9 @@ export function TicketForm() {
             <Label htmlFor="priority">Priority Level</Label>
             <select
               id="priority"
+              defaultValue="MEDIUM"
               {...register('priority')}
-              className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 dark:border-slate-800 dark:focus-visible:ring-slate-300"
+              className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 dark:border-slate-800 dark:bg-slate-950 dark:focus-visible:ring-slate-300"
             >
               <option value="LOW">Low - General query or enhancement</option>
               <option value="MEDIUM">Medium - Normal operational issue</option>
