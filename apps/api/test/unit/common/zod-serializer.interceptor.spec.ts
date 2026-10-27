@@ -3,18 +3,20 @@ import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { of, lastValueFrom } from 'rxjs';
 import { z } from 'zod';
-import { ZodSerializerInterceptor } from './zod-serializer.interceptor.js';
+import { ZodSerializerInterceptor } from '../../../src/common/interceptors/zod-serializer.interceptor.js';
 
 describe('ZodSerializerInterceptor', () => {
   let interceptor: ZodSerializerInterceptor;
   let reflector: Reflector;
 
-  const testUserSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    role: z.enum(['ADMIN', 'CUSTOMER']).default('CUSTOMER'),
-    secretToken: z.string().optional(), // not selected, so will be stripped if omitted in schema
-  }).omit({ secretToken: true });
+  const testUserSchema = z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      role: z.enum(['ADMIN', 'CUSTOMER']).default('CUSTOMER'),
+      secretToken: z.string().optional(),
+    })
+    .omit({ secretToken: true });
 
   beforeEach(() => {
     reflector = new Reflector();
@@ -55,8 +57,8 @@ describe('ZodSerializerInterceptor', () => {
 
     expect(result.id).toBe('u1');
     expect(result.name).toBe('John Doe');
-    expect(result.role).toBe('CUSTOMER'); // Default applied
-    expect((result as any).secretToken).toBeUndefined(); // Stripped
+    expect(result.role).toBe('CUSTOMER');
+    expect((result as any).secretToken).toBeUndefined();
   });
 
   it('should parse an array of objects and apply schema to each element', async () => {

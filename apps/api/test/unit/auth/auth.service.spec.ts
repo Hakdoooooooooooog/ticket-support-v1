@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service.js';
-import { PrismaService } from '../database/prisma.service.js';
+import { AuthService } from '../../../src/auth/auth.service.js';
+import { PrismaService } from '../../../src/database/prisma.service.js';
 import bcrypt from 'bcryptjs';
 
 describe('AuthService', () => {
@@ -71,7 +71,6 @@ describe('AuthService', () => {
       expect(result.message).toBe('User registered successfully');
       expect(result.user.id).toBe('user-new');
       expect(result.user.email).toBe('newuser@example.com');
-      // Guarantee passwordHash is NEVER exposed in the returned DTO
       expect((result.user as any).passwordHash).toBeUndefined();
     });
 

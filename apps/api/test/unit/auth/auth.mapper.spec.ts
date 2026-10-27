@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AuthMapper } from './auth.mapper.js';
+import { AuthMapper } from '../../../src/auth/mappers/auth.mapper.js';
 
 describe('AuthMapper', () => {
   it('should normalize email to lowercase in toRegisterInput', () => {
@@ -30,7 +30,6 @@ describe('AuthMapper', () => {
     expect(responseDto.id).toBe('usr_999');
     expect(responseDto.email).toBe('security.check@example.com');
     expect(responseDto.createdAt).toBe('2026-10-27T08:00:00.000Z');
-    // Ensure passwordHash is NOT present in the response
     expect((responseDto as any).passwordHash).toBeUndefined();
   });
 

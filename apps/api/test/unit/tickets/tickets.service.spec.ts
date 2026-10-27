@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { TicketsService } from './tickets.service.js';
-import { PrismaService } from '../database/prisma.service.js';
+import { TicketsService } from '../../../src/tickets/tickets.service.js';
+import { PrismaService } from '../../../src/database/prisma.service.js';
 
 describe('TicketsService', () => {
   let service: TicketsService;

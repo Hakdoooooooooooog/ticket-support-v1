@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TicketMapper } from './ticket.mapper.js';
+import { TicketMapper } from '../../../src/tickets/mappers/ticket.mapper.js';
 
 describe('TicketMapper', () => {
   it('should map incoming valid DTO to Prisma Create input with trimmed fields', () => {

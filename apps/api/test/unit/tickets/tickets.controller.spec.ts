@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TicketsController } from './tickets.controller.js';
-import { TicketsService } from './tickets.service.js';
+import { TicketsController } from '../../../src/tickets/tickets.controller.js';
+import { TicketsService } from '../../../src/tickets/tickets.service.js';
 import { Reflector } from '@nestjs/core';
 
 describe('TicketsController', () => {
