@@ -1,0 +1,23 @@
+{
+  "name": "ticketsupport-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:studio": "npm run db:studio --workspace=api",
+    "db:migrate": "npm run db:migrate --workspace=api",
+    "generate:api": "npm run generate:api --workspace=web"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0"
+  },
+  "packageManager": "npm@10.8.2"
+}
