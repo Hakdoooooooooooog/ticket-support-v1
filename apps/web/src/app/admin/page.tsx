@@ -602,39 +602,35 @@ export default function AdminDashboardPage() {
                         {/* 1. Admin Triage & Actions Bar */}
                         <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
                           <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-1.5">
-                              <label
-                                htmlFor={`status-${ticket.id}`}
-                                className="text-xs font-medium text-slate-500"
-                              >
-                                Status:
-                              </label>
-                              <select
-                                id={`status-${ticket.id}`}
-                                value={ticket.status}
-                                disabled={!isTicketAssigned}
-                                title={
-                                  isTicketAssigned
-                                    ? 'Update ticket status'
-                                    : 'Assign this ticket first before changing status'
-                                }
-                                onChange={(e) =>
-                                  updateTicketMutation.mutate({
-                                    id: ticket.id,
-                                    payload: {
-                                      status: e.target.value as Ticket['status'],
-                                    },
-                                  })
-                                }
-                                className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
-                              >
-                                <option value="OPEN">OPEN</option>
-                                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                <option value="NEEDS_INFO">NEEDS_INFO</option>
-                                <option value="RESOLVED">RESOLVED</option>
-                                <option value="CLOSED">CLOSED</option>
-                              </select>
-                            </div>
+                            {isTicketAssigned && (
+                              <div className="flex items-center gap-1.5">
+                                <label
+                                  htmlFor={`status-${ticket.id}`}
+                                  className="text-xs font-medium text-slate-500"
+                                >
+                                  Status:
+                                </label>
+                                <select
+                                  id={`status-${ticket.id}`}
+                                  value={ticket.status}
+                                  onChange={(e) =>
+                                    updateTicketMutation.mutate({
+                                      id: ticket.id,
+                                      payload: {
+                                        status: e.target.value as Ticket['status'],
+                                      },
+                                    })
+                                  }
+                                  className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                                >
+                                  <option value="OPEN">OPEN</option>
+                                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                                  <option value="NEEDS_INFO">NEEDS_INFO</option>
+                                  <option value="RESOLVED">RESOLVED</option>
+                                  <option value="CLOSED">CLOSED</option>
+                                </select>
+                              </div>
+                            )}
 
                             <div className="flex items-center gap-1.5">
                               <label
@@ -721,17 +717,11 @@ export default function AdminDashboardPage() {
                               </Button>
                             )}
 
-                            {ticket.status !== 'CLOSED' && (
+                            {isTicketAssigned && ticket.status !== 'CLOSED' && (
                               <Button
                                 type="button"
                                 variant={isFollowUpOpen ? 'default' : 'secondary'}
                                 size="sm"
-                                disabled={!isTicketAssigned}
-                                title={
-                                  isTicketAssigned
-                                    ? 'Request follow-up details from customer'
-                                    : 'Assign this ticket first before requesting a follow-up'
-                                }
                                 onClick={() => {
                                   if (isFollowUpOpen) {
                                     closeFollowUpComposer();
@@ -800,7 +790,7 @@ export default function AdminDashboardPage() {
                         )}
 
                         {/* Inline Follow-Up Request Composer */}
-                        {isFollowUpOpen && (
+                        {isTicketAssigned && isFollowUpOpen && (
                           <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-3">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
@@ -1062,69 +1052,66 @@ export default function AdminDashboardPage() {
                           )}
                         </div>
 
-                        {/* 4. Post IT Resolution Note Composer */}
-                        <form
-                          onSubmit={(e) => handlePostResolutionNote(ticket.id, e)}
-                          className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5"
-                        >
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <Input
-                              placeholder={
-                                isTicketAssigned
-                                  ? 'Add an IT resolution note or update for the customer...'
-                                  : 'Assign this ticket first to post a resolution note...'
-                              }
-                              value={commentDrafts[ticket.id] || ''}
-                              disabled={!isTicketAssigned}
-                              onChange={(e) =>
-                                setCommentDraft(ticket.id, e.target.value)
-                              }
-                              className="text-xs h-9 flex-1"
-                            />
-                            <Button
-                              type="submit"
-                              size="sm"
-                              disabled={!isTicketAssigned || addCommentMutation.isPending}
-                              className="h-9 text-xs shrink-0"
-                            >
-                              {addCommentMutation.isPending ? 'Posting...' : 'Post Note'}
-                            </Button>
-                          </div>
-
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] text-slate-400">
-                                Attach image to note (optional):
-                              </span>
+                        {/* 4. Post IT Resolution Note Composer (visible once assigned) */}
+                        {isTicketAssigned && (
+                          <form
+                            onSubmit={(e) => handlePostResolutionNote(ticket.id, e)}
+                            className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5"
+                          >
+                            <div className="flex flex-col sm:flex-row gap-2">
                               <Input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp,image/gif"
-                                disabled={!isTicketAssigned}
+                                placeholder="Add an IT resolution note or update for the customer..."
+                                value={commentDrafts[ticket.id] || ''}
                                 onChange={(e) =>
-                                  setCommentAttachments((prev) => ({
-                                    ...prev,
-                                    [ticket.id]: e.target.files?.[0] || null,
-                                  }))
+                                  setCommentDraft(ticket.id, e.target.value)
                                 }
-                                className="text-xs h-8 max-w-xs cursor-pointer"
+                                className="text-xs h-9 flex-1"
                               />
-                              {commentAttachments[ticket.id] && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
+                              <Button
+                                type="submit"
+                                size="sm"
+                                disabled={addCommentMutation.isPending}
+                                className="h-9 text-xs shrink-0"
+                              >
+                                {addCommentMutation.isPending ? 'Posting...' : 'Post Note'}
+                              </Button>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] text-slate-400">
+                                  Attach image to note (optional):
+                                </span>
+                                <Input
+                                  type="file"
+                                  accept="image/png,image/jpeg,image/webp,image/gif"
+                                  onChange={(e) =>
                                     setCommentAttachments((prev) => ({
                                       ...prev,
-                                      [ticket.id]: null,
+                                      [ticket.id]: e.target.files?.[0] || null,
                                     }))
                                   }
-                                  className="text-[11px] text-red-500 hover:underline"
-                                >
-                                  Remove ({formatByteSize(commentAttachments[ticket.id]!.size)})
-                                </button>
-                              )}
+                                  className="text-xs h-8 max-w-xs cursor-pointer"
+                                />
+                                {commentAttachments[ticket.id] && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setCommentAttachments((prev) => ({
+                                        ...prev,
+                                        [ticket.id]: null,
+                                      }))
+                                    }
+                                    className="text-[11px] text-red-500 hover:underline"
+                                  >
+                                    Remove (
+                                    {formatByteSize(commentAttachments[ticket.id]!.size)})
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </form>
+                          </form>
+                        )}
                       </CardContent>
                     )}
                   </Card>
