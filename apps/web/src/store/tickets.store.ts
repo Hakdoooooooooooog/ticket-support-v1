@@ -23,6 +23,7 @@ export interface TicketsState {
   decryptedAttachments: Record<string, DecryptedAttachmentResult>;
   loadingAttachmentKeys: Record<string, boolean>;
   hiddenAttachmentKeys: Record<string, boolean>;
+  lightboxImage: DecryptedAttachmentResult | null;
 
   setTickets: (tickets: Ticket[]) => void;
   upsertTicket: (ticket: Ticket) => void;
@@ -39,6 +40,7 @@ export interface TicketsState {
   loadCommentAttachment: (ticketId: string, commentId: string) => Promise<void>;
   ensureTicketAttachmentsLoaded: (ticket: Ticket) => Promise<void>;
   toggleAttachmentVisibility: (key: string) => void;
+  setLightboxImage: (image: DecryptedAttachmentResult | null) => void;
 }
 
 export const useTicketsStore = create<TicketsState>()(
@@ -55,6 +57,7 @@ export const useTicketsStore = create<TicketsState>()(
       decryptedAttachments: {},
       loadingAttachmentKeys: {},
       hiddenAttachmentKeys: {},
+      lightboxImage: null,
 
       setTickets: (tickets: Ticket[]) => {
         set({
@@ -242,6 +245,10 @@ export const useTicketsStore = create<TicketsState>()(
             [key]: !current[key],
           },
         });
+      },
+
+      setLightboxImage: (lightboxImage: DecryptedAttachmentResult | null) => {
+        set({ lightboxImage });
       },
     }),
     {

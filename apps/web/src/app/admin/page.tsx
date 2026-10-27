@@ -25,6 +25,7 @@ import {
   formatByteSize,
   parseTimelineComment,
   countTicketAttachments,
+  computeTicketSlaStatus,
   sanitizeText,
   AuthUser,
   EncryptedAttachmentPayload,
@@ -52,6 +53,7 @@ export default function AdminDashboardPage() {
     decryptedAttachments,
     loadingAttachmentKeys,
     hiddenAttachmentKeys,
+    lightboxImage,
     setTickets,
     upsertTicket,
     removeTicket,
@@ -61,6 +63,7 @@ export default function AdminDashboardPage() {
     setAllTicketsExpanded,
     ensureTicketAttachmentsLoaded,
     toggleAttachmentVisibility,
+    setLightboxImage,
   } = useTicketsStore();
   const {
     agents: storedAgents,
@@ -494,6 +497,7 @@ export default function AdminDashboardPage() {
                 const isExpanded = Boolean(expandedTicketIds[ticket.id]);
                 const totalAttachments = countTicketAttachments(ticket);
                 const commentCount = ticket.comments?.length || 0;
+                const sla = computeTicketSlaStatus(ticket);
                 const initialAttachmentKey = `ticket:${ticket.id}`;
                 const decryptedTicketImg = decryptedAttachments[initialAttachmentKey];
                 const isLoadingTicketImg = Boolean(
@@ -560,6 +564,17 @@ export default function AdminDashboardPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 pl-7 lg:pl-0 shrink-0">
+                          <span
+                            className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${
+                              sla.isBreached
+                                ? 'bg-red-500/10 text-red-600 dark:text-red-300 border-red-500/30'
+                                : sla.isResolved
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            {sla.label}
+                          </span>
                           {commentCount > 0 && (
                             <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
                               {commentCount} {commentCount === 1 ? 'message' : 'messages'}
@@ -853,7 +868,9 @@ export default function AdminDashboardPage() {
                                     <img
                                       src={decryptedTicketImg.dataUrl}
                                       alt={decryptedTicketImg.fileName}
-                                      className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20"
+                                      onClick={() => setLightboxImage(decryptedTicketImg)}
+                                      title="Click to inspect full-size image"
+                                      className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
                                     />
                                   </div>
                                 )}
@@ -979,7 +996,11 @@ export default function AdminDashboardPage() {
                                             <img
                                               src={decryptedCommentImg.dataUrl}
                                               alt={decryptedCommentImg.fileName}
-                                              className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20"
+                                              onClick={() =>
+                                                setLightboxImage(decryptedCommentImg)
+                                              }
+                                              title="Click to inspect full-size image"
+                                              className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
                                             />
                                           </div>
                                         )}
@@ -1057,6 +1078,46 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Full-Screen Image Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-5xl w-full bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-3 text-xs text-slate-200">
+              <div className="flex items-center gap-2 truncate">
+                <span className="font-semibold truncate">{lightboxImage.fileName}</span>
+                <span className="text-slate-400">
+                  ({formatByteSize(lightboxImage.originalSize)})
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLightboxImage(null)}
+                className="h-7 text-xs"
+              >
+                Close Preview
+              </Button>
+            </div>
+            <div className="flex items-center justify-center max-h-[80vh] overflow-auto bg-slate-950 rounded-lg p-2">
+              <img
+                src={lightboxImage.dataUrl}
+                alt={lightboxImage.fileName}
+                className="max-h-[76vh] w-auto object-contain rounded"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,6 +15,18 @@ import {
   OnDemandAttachmentResponse,
 } from './attachment-crypto.util.js';
 
+export interface TicketActorContext {
+  id: string;
+  email?: string;
+  role: 'ADMIN' | 'AGENT' | 'CUSTOMER';
+}
+
+export interface TicketQueryFilters {
+  priority?: string;
+  search?: string;
+  actor?: TicketActorContext;
+}
+
 @Injectable()
 export class TicketsService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
@@ -95,9 +107,54 @@ export class TicketsService implements OnModuleInit {
     return fn(this.prisma);
   }
 
-  async findAll(status?: string): Promise<TicketResponseDto[]> {
+  protected assertCustomerOwnership(
+    ticket: { creatorId?: string | null },
+    actor?: TicketActorContext,
+    actionLabel = 'access this ticket',
+  ): void {
+    if (
+      actor?.role === 'CUSTOMER' &&
+      ticket.creatorId &&
+      ticket.creatorId !== actor.id
+    ) {
+      throw new ForbiddenException(`You do not have permission to ${actionLabel}`);
+    }
+  }
+
+  async findAll(
+    status?: string,
+    filters?: TicketQueryFilters,
+  ): Promise<TicketResponseDto[]> {
+    const where: Record<string, unknown> = {};
+
+    if (status && status !== 'ALL') {
+      where.status = status;
+    }
+
+    if (filters?.priority && filters.priority !== 'ALL') {
+      where.priority = filters.priority;
+    }
+
+    if (filters?.actor?.role === 'CUSTOMER') {
+      where.creatorId = filters.actor.id;
+    }
+
+    const trimmedSearch = filters?.search?.trim();
+    if (trimmedSearch) {
+      const idQuery = trimmedSearch.replace(/^#/, '');
+      where.OR = [
+        ...(idQuery ? [{ id: { contains: idQuery, mode: 'insensitive' } }] : []),
+        { title: { contains: trimmedSearch, mode: 'insensitive' } },
+        { description: { contains: trimmedSearch, mode: 'insensitive' } },
+        { creator: { fullName: { contains: trimmedSearch, mode: 'insensitive' } } },
+        { creator: { email: { contains: trimmedSearch, mode: 'insensitive' } } },
+      ];
+    }
+
+    const hasWhereConditions = Object.keys(where).length > 0;
+
     const records = await this.prisma.ticket.findMany({
-      where: status ? { status: status as any } : undefined,
+      where: hasWhereConditions ? (where as any) : undefined,
       include: this.standardTicketInclude,
       orderBy: { createdAt: 'desc' },
     });
@@ -105,7 +162,7 @@ export class TicketsService implements OnModuleInit {
     return TicketMapper.toResponseDtoList(records);
   }
 
-  async findOne(id: string): Promise<TicketResponseDto> {
+  async findOne(id: string, actor?: TicketActorContext): Promise<TicketResponseDto> {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
       include: this.standardTicketInclude,
@@ -115,12 +172,19 @@ export class TicketsService implements OnModuleInit {
       throw new NotFoundException(`Ticket with ID "${id}" not found`);
     }
 
+    this.assertCustomerOwnership(ticket as { creatorId?: string }, actor, 'view this ticket');
+
     return TicketMapper.toResponseDto(ticket);
   }
 
-  async create(dto: CreateTicketDto, creatorId?: string): Promise<TicketResponseDto> {
+  async create(
+    dto: CreateTicketDto,
+    creatorId?: string,
+    actor?: TicketActorContext,
+  ): Promise<TicketResponseDto> {
     return this.runTransaction(async (tx) => {
-      const user = await this.resolveCreatorUser(creatorId || dto.creatorId, tx);
+      const effectiveCreatorId = actor?.id || creatorId || dto.creatorId;
+      const user = await this.resolveCreatorUser(effectiveCreatorId, tx);
       const createData = TicketMapper.toCreateInput(dto, user.id);
 
       if (typeof tx.ticket.findFirst === 'function') {
@@ -154,6 +218,7 @@ export class TicketsService implements OnModuleInit {
     content: string,
     authorId?: string,
     encryptedAttachment?: EncryptedAttachmentInput,
+    actor?: TicketActorContext,
   ): Promise<TicketResponseDto> {
     const trimmedContent = content.trim();
     const commentAttachment = encryptedAttachment
@@ -170,7 +235,13 @@ export class TicketsService implements OnModuleInit {
         throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
       }
 
-      const author = await this.resolveCreatorUser(authorId, tx);
+      this.assertCustomerOwnership(
+        existingTicket as { creatorId?: string },
+        actor,
+        'comment on this ticket',
+      );
+
+      const author = await this.resolveCreatorUser(actor?.id || authorId, tx);
 
       if (!encryptedAttachment && typeof tx.comment?.findFirst === 'function') {
         const duplicateComment = await tx.comment.findFirst({
@@ -205,7 +276,11 @@ export class TicketsService implements OnModuleInit {
     });
   }
 
-  async update(id: string, dto: UpdateTicketDto): Promise<TicketResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateTicketDto,
+    actor?: TicketActorContext,
+  ): Promise<TicketResponseDto> {
     return this.runTransaction(async (tx) => {
       const existingTicket = await tx.ticket.findUnique({
         where: { id },
@@ -214,6 +289,28 @@ export class TicketsService implements OnModuleInit {
 
       if (!existingTicket) {
         throw new NotFoundException(`Ticket with ID "${id}" not found`);
+      }
+
+      this.assertCustomerOwnership(
+        existingTicket as { creatorId?: string },
+        actor,
+        'modify this ticket',
+      );
+
+      if (actor?.role === 'CUSTOMER') {
+        if (dto.assigneeId !== undefined) {
+          throw new ForbiddenException('Customers are not permitted to assign tickets');
+        }
+        if (
+          dto.status !== undefined &&
+          dto.status !== 'CLOSED' &&
+          dto.status !== 'OPEN' &&
+          dto.status !== 'IN_PROGRESS'
+        ) {
+          throw new ForbiddenException(
+            'Customers can only confirm resolution or reopen their own tickets',
+          );
+        }
       }
 
       if (dto.assigneeId !== undefined && dto.assigneeId !== null) {
@@ -238,7 +335,7 @@ export class TicketsService implements OnModuleInit {
         ? TicketMapper.toCommentAttachmentInput(dto.encryptedAttachment)
         : {};
 
-      // If a customer amends a ticket that was waiting on NEEDS_INFO, automatically reopen it
+      // If a customer amends a ticket that was waiting on NEEDS_INFO or RESOLVED, automatically reopen it
       const isCustomerAmendment =
         !dto.status &&
         (dto.title !== undefined ||
@@ -246,9 +343,10 @@ export class TicketsService implements OnModuleInit {
           dto.encryptedAttachment !== undefined ||
           dto.amendmentNote !== undefined);
 
+      const currentStatus = (existingTicket as { status?: string }).status;
       if (
         isCustomerAmendment &&
-        (existingTicket as { status?: string }).status === 'NEEDS_INFO'
+        (currentStatus === 'NEEDS_INFO' || currentStatus === 'RESOLVED')
       ) {
         updateData.status = (existingTicket as { assigneeId?: string | null }).assigneeId
           ? 'IN_PROGRESS'
@@ -257,8 +355,8 @@ export class TicketsService implements OnModuleInit {
 
       const hasCommentPayload = Boolean(dto.amendmentNote || dto.encryptedAttachment);
       if (hasCommentPayload && typeof tx.comment?.create === 'function') {
-        const actor = await this.resolveCreatorUser(
-          dto.actorId || (existingTicket as { creatorId?: string }).creatorId,
+        const commentActor = await this.resolveCreatorUser(
+          actor?.id || dto.actorId || (existingTicket as { creatorId?: string }).creatorId,
           tx,
         );
 
@@ -288,7 +386,7 @@ export class TicketsService implements OnModuleInit {
           data: {
             ticketId: id,
             content: noteContent,
-            authorId: actor.id,
+            authorId: commentActor.id,
             ...commentAttachment,
           },
         });
@@ -304,11 +402,15 @@ export class TicketsService implements OnModuleInit {
     });
   }
 
-  async getAttachment(id: string): Promise<OnDemandAttachmentResponse> {
+  async getAttachment(
+    id: string,
+    actor?: TicketActorContext,
+  ): Promise<OnDemandAttachmentResponse> {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
       select: {
         id: true,
+        creatorId: true,
         attachmentName: true,
         attachmentMimeType: true,
         attachmentCompressed: true,
@@ -331,6 +433,8 @@ export class TicketsService implements OnModuleInit {
     if (!ticket) {
       throw new NotFoundException(`Ticket with ID "${id}" not found`);
     }
+
+    this.assertCustomerOwnership(ticket, actor, 'access this attachment');
 
     const source = ticket.attachmentCompressed
       ? ticket
@@ -359,7 +463,19 @@ export class TicketsService implements OnModuleInit {
   async getCommentAttachment(
     ticketId: string,
     commentId: string,
+    actor?: TicketActorContext,
   ): Promise<OnDemandAttachmentResponse> {
+    if (actor?.role === 'CUSTOMER') {
+      const parentTicket = await this.prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { id: true, creatorId: true },
+      });
+      if (!parentTicket) {
+        throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
+      }
+      this.assertCustomerOwnership(parentTicket, actor, 'access this attachment');
+    }
+
     const comment = await this.prisma.comment.findFirst({
       where: { id: commentId, ticketId },
       select: {
@@ -392,7 +508,11 @@ export class TicketsService implements OnModuleInit {
     };
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor?: TicketActorContext): Promise<void> {
+    if (actor?.role === 'CUSTOMER') {
+      throw new ForbiddenException('Customers are not permitted to delete tickets');
+    }
+
     await this.runTransaction(async (tx) => {
       const existingTicket = await tx.ticket.findUnique({
         where: { id },

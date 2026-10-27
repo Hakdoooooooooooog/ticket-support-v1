@@ -84,6 +84,7 @@ export function TicketList() {
     decryptedAttachments,
     loadingAttachmentKeys,
     hiddenAttachmentKeys,
+    lightboxImage,
     setTickets,
     upsertTicket,
     setPortalSearchQuery,
@@ -93,6 +94,7 @@ export function TicketList() {
     setAllTicketsExpanded,
     ensureTicketAttachmentsLoaded,
     toggleAttachmentVisibility,
+    setLightboxImage,
   } = useTicketsStore();
 
   const [amendingTicketId, setAmendingTicketId] = React.useState<string | null>(null);
@@ -390,6 +392,48 @@ export function TicketList() {
                     </div>
                   )}
 
+                  {/* Customer Resolution Confirmation / Re-Open Callout */}
+                  {ticket.status === 'RESOLVED' && (
+                    <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 flex flex-wrap items-center justify-between gap-2">
+                      <span>
+                        <strong>Marked Resolved:</strong> Please confirm if your issue is
+                        fixed or re-open the ticket if you still need assistance.
+                      </span>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={amendTicketMutation.isPending}
+                          onClick={() =>
+                            amendTicketMutation.mutate({
+                              id: ticket.id,
+                              payload: {
+                                status: 'CLOSED',
+                                amendmentNote:
+                                  '[CUSTOMER AMENDMENT] Confirmed issue is resolved and closed the ticket.',
+                                actorId: user?.id,
+                              },
+                            })
+                          }
+                          className="h-7 text-xs"
+                        >
+                          Confirm Resolved &amp; Close
+                        </Button>
+                        {!isAmending && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openAmendPanel(ticket, false)}
+                            className="h-7 text-xs"
+                          >
+                            Still Having Issues (Re-Open)
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* 1. Original Ticket Report */}
                   <div className="p-3 rounded-lg bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
@@ -443,7 +487,9 @@ export function TicketList() {
                             <img
                               src={decryptedTicketImg.dataUrl}
                               alt={decryptedTicketImg.fileName}
-                              className="max-h-64 rounded-md border border-slate-200 dark:border-slate-700 object-contain"
+                              onClick={() => setLightboxImage(decryptedTicketImg)}
+                              title="Click to inspect full-size image"
+                              className="max-h-64 rounded-md border border-slate-200 dark:border-slate-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
                             />
                           </div>
                         )}
@@ -583,7 +629,11 @@ export function TicketList() {
                                       <img
                                         src={decryptedCommentImg.dataUrl}
                                         alt={decryptedCommentImg.fileName}
-                                        className="max-h-64 rounded-md border border-slate-200 dark:border-slate-700 object-contain"
+                                        onClick={() =>
+                                          setLightboxImage(decryptedCommentImg)
+                                        }
+                                        title="Click to inspect full-size image"
+                                        className="max-h-64 rounded-md border border-slate-200 dark:border-slate-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
                                       />
                                     </div>
                                   )}
@@ -773,6 +823,46 @@ export function TicketList() {
             </Card>
           );
         })}
+
+      {/* Full-Screen Image Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-5xl w-full bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-3 text-xs text-slate-200">
+              <div className="flex items-center gap-2 truncate">
+                <span className="font-semibold truncate">{lightboxImage.fileName}</span>
+                <span className="text-slate-400">
+                  ({formatByteSize(lightboxImage.originalSize)})
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLightboxImage(null)}
+                className="h-7 text-xs"
+              >
+                Close Preview
+              </Button>
+            </div>
+            <div className="flex items-center justify-center max-h-[80vh] overflow-auto bg-slate-950 rounded-lg p-2">
+              <img
+                src={lightboxImage.dataUrl}
+                alt={lightboxImage.fileName}
+                className="max-h-[76vh] w-auto object-contain rounded"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

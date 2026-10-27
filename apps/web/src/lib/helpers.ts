@@ -356,6 +356,58 @@ export function countTicketAttachments(ticket: Ticket): number {
   return total;
 }
 
+export interface TicketSlaStatus {
+  label: string;
+  isBreached: boolean;
+  isResolved: boolean;
+}
+
+export function computeTicketSlaStatus(ticket: Ticket): TicketSlaStatus {
+  const slaHoursByPriority: Record<Ticket['priority'], number> = {
+    URGENT: 2,
+    HIGH: 8,
+    MEDIUM: 24,
+    LOW: 72,
+  };
+  const targetHours = slaHoursByPriority[ticket.priority] ?? 24;
+
+  if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+    return {
+      label: `SLA Met (${targetHours}h target)`,
+      isBreached: false,
+      isResolved: true,
+    };
+  }
+
+  const createdMs = new Date(ticket.createdAt).getTime();
+  if (Number.isNaN(createdMs)) {
+    return {
+      label: `${targetHours}h SLA`,
+      isBreached: false,
+      isResolved: false,
+    };
+  }
+
+  const deadlineMs = createdMs + targetHours * 60 * 60 * 1000;
+  const remainingMs = deadlineMs - Date.now();
+
+  if (remainingMs <= 0) {
+    const overdueHours = Math.max(1, Math.round(Math.abs(remainingMs) / (60 * 60 * 1000)));
+    return {
+      label: `SLA Breached (${overdueHours}h overdue)`,
+      isBreached: true,
+      isResolved: false,
+    };
+  }
+
+  const remainingHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+  return {
+    label: `SLA: ${remainingHours}h left`,
+    isBreached: false,
+    isResolved: false,
+  };
+}
+
 // ============================================================================
 // 6. Image Attachment Compression, In-Transit AES-256-GCM Encryption & On-Demand Decryption
 // ============================================================================

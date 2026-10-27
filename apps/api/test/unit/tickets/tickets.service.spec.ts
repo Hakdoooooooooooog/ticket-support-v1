@@ -275,5 +275,42 @@ describe('TicketsService', () => {
 
       await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
     });
+
+    it('should throw ForbiddenException if a CUSTOMER attempts to delete a ticket', async () => {
+      await expect(
+        service.remove('ticket-1', { id: 'user-1', role: 'CUSTOMER' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.ticket.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('role-scoped visibility & ownership guards', () => {
+    it('should scope findAll to creatorId when actor is a CUSTOMER', async () => {
+      prisma.ticket.findMany.mockResolvedValue([mockDbTicket]);
+
+      await service.findAll('ALL', {
+        priority: 'HIGH',
+        search: '#ticket-1',
+        actor: { id: 'user-1', role: 'CUSTOMER' },
+      });
+
+      expect(prisma.ticket.findMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          priority: 'HIGH',
+          creatorId: 'user-1',
+          OR: expect.any(Array),
+        }),
+        include: expect.any(Object),
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+
+    it('should throw ForbiddenException when a CUSTOMER accesses another customer ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue(mockDbTicket);
+
+      await expect(
+        service.findOne('ticket-1', { id: 'other-customer', role: 'CUSTOMER' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 });
