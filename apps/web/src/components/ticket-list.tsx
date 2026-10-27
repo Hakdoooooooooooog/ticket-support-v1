@@ -356,6 +356,12 @@ export function TicketList() {
                             {attachmentCount === 1 ? 'attachment' : 'attachments'}
                           </span>
                         )}
+                        {typeof ticket.csatRating === 'number' && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 font-semibold flex items-center gap-1">
+                            <span>★</span>
+                            <span>{ticket.csatRating}/5 Feedback</span>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -463,6 +469,10 @@ export function TicketList() {
                   {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
                     <CsatRatingWidget
                       ticketId={ticket.id}
+                      creatorId={ticket.creatorId}
+                      creatorName={ticket.creator?.fullName}
+                      currentUserId={user?.id}
+                      currentUserRole={user?.role}
                       initialRating={ticket.csatRating}
                       initialComment={ticket.csatComment}
                       ratedAt={ticket.csatRatedAt}

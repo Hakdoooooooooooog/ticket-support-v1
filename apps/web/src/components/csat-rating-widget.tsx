@@ -8,6 +8,10 @@ import { extractApiErrorMessage } from '@lib/helpers';
 
 interface CsatRatingWidgetProps {
   ticketId: string;
+  creatorId?: string | null;
+  creatorName?: string | null;
+  currentUserId?: string;
+  currentUserRole?: string;
   initialRating?: number | null;
   initialComment?: string | null;
   ratedAt?: string | null;
@@ -24,6 +28,10 @@ const RATING_DESCRIPTIONS: Record<number, string> = {
 
 export function CsatRatingWidget({
   ticketId,
+  creatorId,
+  creatorName,
+  currentUserId,
+  currentUserRole,
   initialRating,
   initialComment,
   ratedAt,
@@ -35,6 +43,15 @@ export function CsatRatingWidget({
   const [comment, setComment] = React.useState<string>(initialComment || '');
   const [isEditing, setIsEditing] = React.useState<boolean>(!initialRating);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  // Security & Authorization Guard:
+  // Only the original customer who reported the ticket may submit or modify CSAT ratings.
+  // Support engineers and administrators must never be able to rate tickets they worked on.
+  const isTicketReporter =
+    currentUserRole === 'CUSTOMER' &&
+    Boolean(currentUserId) &&
+    Boolean(creatorId) &&
+    currentUserId === creatorId;
 
   const csatMutation = useMutation({
     mutationFn: async (payload: { rating: number; comment?: string }) => {
@@ -58,6 +75,10 @@ export function CsatRatingWidget({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isTicketReporter) {
+      setErrorMessage('Only the customer who reported this ticket can submit satisfaction feedback.');
+      return;
+    }
     if (rating < 1 || rating > 5) {
       setErrorMessage('Please select a rating between 1 and 5 stars');
       return;
@@ -71,6 +92,31 @@ export function CsatRatingWidget({
 
   const activeStar = hoverRating || rating;
 
+  // Case 1: Non-reporter viewing a ticket that has not been rated yet
+  if (!isTicketReporter && !initialRating) {
+    return (
+      <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-xs flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
+          <span className="text-amber-500">⭐</span>
+          <div>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
+              Customer Satisfaction Feedback:
+            </span>{' '}
+            <span>
+              {currentUserRole === 'AGENT' || currentUserRole === 'ADMIN'
+                ? 'Awaiting customer rating. Support engineers cannot rate tickets.'
+                : `Awaiting feedback from ${creatorName || 'the reporting customer'}.`}
+            </span>
+          </div>
+        </div>
+        <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+          Customer Only
+        </span>
+      </div>
+    );
+  }
+
+  // Case 2: Ticket already has customer feedback (read-only for non-reporters, editable for reporter)
   if (!isEditing && initialRating) {
     return (
       <div className="p-3.5 rounded-lg border border-amber-500/20 bg-amber-500/5 space-y-2">
@@ -91,15 +137,17 @@ export function CsatRatingWidget({
             </span>
           </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-            className="h-7 text-xs text-slate-400 hover:text-white"
-          >
-            Edit Feedback
-          </Button>
+          {isTicketReporter && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+              className="h-7 text-xs text-slate-400 hover:text-white"
+            >
+              Edit Feedback
+            </Button>
+          )}
         </div>
 
         {initialComment && (

@@ -603,11 +603,26 @@ export class TicketsService implements OnModuleInit {
         throw new NotFoundException(`Ticket with ID "${id}" not found`);
       }
 
-      this.assertCustomerOwnership(
-        existingTicket as { creatorId?: string },
-        actor,
-        'rate this ticket',
-      );
+      // Enforce strict separation: Support staff can NEVER submit CSAT feedback
+      if (actor && actor.role !== 'CUSTOMER') {
+        throw new ForbiddenException(
+          'Support engineers and administrators are not permitted to submit satisfaction ratings. CSAT feedback is strictly reserved for the customer.',
+        );
+      }
+
+      // If the ticket was submitted by a registered customer, only that customer can rate it
+      const ticketCreatorId = (existingTicket as { creatorId?: string | null }).creatorId;
+      if (ticketCreatorId) {
+        if (!actor || actor.role !== 'CUSTOMER' || actor.id !== ticketCreatorId) {
+          throw new ForbiddenException(
+            'Only the customer who reported this ticket can submit satisfaction feedback.',
+          );
+        }
+      } else if (actor && actor.role !== 'CUSTOMER') {
+        throw new ForbiddenException(
+          'Only customer accounts can submit satisfaction ratings.',
+        );
+      }
 
       const status = (existingTicket as { status?: string }).status;
       if (status !== 'RESOLVED' && status !== 'CLOSED') {

@@ -12,6 +12,7 @@ describe('TicketSupport API (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
   let createdTicketId: string;
+  let customerToken: string;
   const testEmail = `e2e.user.${Date.now()}@example.com`;
 
   beforeAll(async () => {
@@ -92,6 +93,7 @@ describe('TicketSupport API (e2e)', () => {
         .expect(200);
 
       expect(res.body.accessToken).toBeDefined();
+      customerToken = res.body.accessToken;
       expect(res.body.user.email).toBe(testEmail);
       expect(res.body.user.passwordHash).toBeUndefined();
 
@@ -137,6 +139,7 @@ describe('TicketSupport API (e2e)', () => {
     it('POST /tickets -> should create a ticket with trimmed fields and default MEDIUM priority', async () => {
       const res = await request(app.getHttpServer())
         .post('/tickets')
+        .set('Authorization', `Bearer ${customerToken}`)
         .send({
           title: '  E2E Automated Verification Ticket  ',
           description: '  Verifying end-to-end ticket creation through NestJS, Zod, and Prisma 7.  ',
@@ -300,9 +303,34 @@ describe('TicketSupport API (e2e)', () => {
         .send({ status: 'RESOLVED' })
         .expect(200);
 
-      // 2. Submit valid CSAT
+      // 2. Reject support agent attempting to submit CSAT (anti-self-rating guard)
+      const agentLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'agent@ticketsupport.local',
+          password: 'LocalDevAgentPassword123!',
+        });
+
+      if (agentLogin.status === 200) {
+        const staffRes = await request(app.getHttpServer())
+          .post(`/tickets/${createdTicketId}/csat`)
+          .set('Authorization', `Bearer ${agentLogin.body.accessToken}`)
+          .send({ rating: 5, comment: 'Illegal agent self-rating' })
+          .expect(403);
+
+        expect(staffRes.body.message).toContain('Support engineers and administrators are not permitted');
+      }
+
+      // 3. Reject unauthenticated request when ticket has a registered creator
+      await request(app.getHttpServer())
+        .post(`/tickets/${createdTicketId}/csat`)
+        .send({ rating: 5, comment: 'Anonymous attempt' })
+        .expect(403);
+
+      // 4. Submit valid CSAT as reporting customer
       const csatRes = await request(app.getHttpServer())
         .post(`/tickets/${createdTicketId}/csat`)
+        .set('Authorization', `Bearer ${customerToken}`)
         .send({
           rating: 5,
           comment: 'Outstanding support experience! Fixed in 10 minutes.',
@@ -315,9 +343,10 @@ describe('TicketSupport API (e2e)', () => {
       );
       expect(csatRes.body.csatRatedAt).toBeDefined();
 
-      // 3. Reject invalid rating (> 5)
+      // 5. Reject invalid rating (> 5)
       await request(app.getHttpServer())
         .post(`/tickets/${createdTicketId}/csat`)
+        .set('Authorization', `Bearer ${customerToken}`)
         .send({ rating: 6 })
         .expect(400);
     });

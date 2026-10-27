@@ -642,12 +642,17 @@ export default function AdminDashboardPage() {
                     {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
                   </span>
                 )}
-                {typeof ticket.csatRating === 'number' && (
+                {typeof ticket.csatRating === 'number' ? (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 font-semibold flex items-center gap-1">
                     <span>★</span>
                     <span>{ticket.csatRating}/5 CSAT</span>
                   </span>
-                )}
+                ) : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-400 border border-slate-700/60 font-medium flex items-center gap-1">
+                    <span>☆</span>
+                    <span>CSAT Pending</span>
+                  </span>
+                ) : null}
                 <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
                   {ticket.priority}
                 </Badge>
@@ -1085,42 +1090,57 @@ export default function AdminDashboardPage() {
                 </div>
               )}
 
-              {/* Customer Satisfaction Feedback Card (if rated by customer) */}
-              {typeof ticket.csatRating === 'number' && (
-                <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-amber-500 uppercase tracking-wider text-[11px]">
-                        Customer Satisfaction Feedback
-                      </span>
-                      <div className="flex items-center text-amber-400">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <span
-                            key={star}
-                            className={
-                              star <= ticket.csatRating! ? 'opacity-100' : 'opacity-25'
-                            }
-                          >
-                            ★
-                          </span>
-                        ))}
+              {/* Customer Satisfaction Feedback Section */}
+              {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
+                typeof ticket.csatRating === 'number' ? (
+                  <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-amber-500 uppercase tracking-wider text-[11px]">
+                          Customer Satisfaction Feedback
+                        </span>
+                        <div className="flex items-center text-amber-400">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span
+                              key={star}
+                              className={
+                                star <= ticket.csatRating! ? 'opacity-100' : 'opacity-25'
+                              }
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          ({ticket.csatRating} / 5 Stars)
+                        </span>
                       </div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">
-                        ({ticket.csatRating} / 5 Stars)
-                      </span>
+                      {ticket.csatRatedAt && (
+                        <span className="text-[10px] text-slate-500">
+                          Rated on {formatTicketDateTime(ticket.csatRatedAt)}
+                        </span>
+                      )}
                     </div>
-                    {ticket.csatRatedAt && (
-                      <span className="text-[10px] text-slate-500">
-                        Rated on {formatTicketDateTime(ticket.csatRatedAt)}
-                      </span>
+                    {ticket.csatComment && (
+                      <p className="text-slate-700 dark:text-slate-300 italic bg-white/60 dark:bg-slate-900/60 p-2.5 rounded border border-amber-500/10">
+                        &ldquo;{ticket.csatComment}&rdquo;
+                      </p>
                     )}
                   </div>
-                  {ticket.csatComment && (
-                    <p className="text-slate-700 dark:text-slate-300 italic bg-white/60 dark:bg-slate-900/60 p-2.5 rounded border border-amber-500/10">
-                      &ldquo;{ticket.csatComment}&rdquo;
-                    </p>
-                  )}
-                </div>
+                ) : (
+                  <div className="p-3 rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 text-xs flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <span className="text-amber-400/80">⭐</span>
+                      <span className="font-medium text-slate-300">Customer Satisfaction:</span>
+                      <span className="italic text-slate-400">
+                        Awaiting feedback from customer ({ticket.creator?.fullName || 'Customer'})
+                      </span>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                      Pending Rating
+                    </span>
+                  </div>
+                )
               )}
 
               {/* 2. Initial Ticket Report Section */}
