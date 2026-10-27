@@ -1380,6 +1380,8 @@ export default function AdminDashboardPage() {
 
                     <CannedResponsesMenu
                       buttonLabel="⚡ Canned Responses"
+                      direction="up"
+                      align="right"
                       onSelect={(snippet) =>
                         setCommentDraft(
                           ticket.id,
