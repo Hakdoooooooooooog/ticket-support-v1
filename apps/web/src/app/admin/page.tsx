@@ -498,6 +498,7 @@ export default function AdminDashboardPage() {
                 const totalAttachments = countTicketAttachments(ticket);
                 const commentCount = ticket.comments?.length || 0;
                 const sla = computeTicketSlaStatus(ticket);
+                const isTicketAssigned = Boolean(resolveTicketAssigneeId(ticket));
                 const initialAttachmentKey = `ticket:${ticket.id}`;
                 const decryptedTicketImg = decryptedAttachments[initialAttachmentKey];
                 const isLoadingTicketImg = Boolean(
@@ -611,6 +612,12 @@ export default function AdminDashboardPage() {
                               <select
                                 id={`status-${ticket.id}`}
                                 value={ticket.status}
+                                disabled={!isTicketAssigned}
+                                title={
+                                  isTicketAssigned
+                                    ? 'Update ticket status'
+                                    : 'Assign this ticket first before changing status'
+                                }
                                 onChange={(e) =>
                                   updateTicketMutation.mutate({
                                     id: ticket.id,
@@ -619,7 +626,7 @@ export default function AdminDashboardPage() {
                                     },
                                   })
                                 }
-                                className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                                className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
                               >
                                 <option value="OPEN">OPEN</option>
                                 <option value="IN_PROGRESS">IN_PROGRESS</option>
@@ -666,14 +673,18 @@ export default function AdminDashboardPage() {
                               <select
                                 id={`assignee-${ticket.id}`}
                                 value={resolveTicketAssigneeId(ticket)}
-                                onChange={(e) =>
+                                onChange={(e) => {
+                                  const nextAssignee = e.target.value || null;
                                   updateTicketMutation.mutate({
                                     id: ticket.id,
                                     payload: {
-                                      assigneeId: e.target.value || null,
+                                      assigneeId: nextAssignee,
+                                      ...(nextAssignee && ticket.status === 'OPEN'
+                                        ? { status: 'IN_PROGRESS' as const }
+                                        : {}),
                                     },
-                                  })
-                                }
+                                  });
+                                }}
                                 className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
                               >
                                 <option value="">Unassigned</option>
@@ -715,6 +726,12 @@ export default function AdminDashboardPage() {
                                 type="button"
                                 variant={isFollowUpOpen ? 'default' : 'secondary'}
                                 size="sm"
+                                disabled={!isTicketAssigned}
+                                title={
+                                  isTicketAssigned
+                                    ? 'Request follow-up details from customer'
+                                    : 'Assign this ticket first before requesting a follow-up'
+                                }
                                 onClick={() => {
                                   if (isFollowUpOpen) {
                                     closeFollowUpComposer();
@@ -743,6 +760,38 @@ export default function AdminDashboardPage() {
                             </Button>
                           </div>
                         </div>
+
+                        {!isTicketAssigned && (
+                          <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2">
+                            <span>
+                              <strong>Assignment Required:</strong> Assign this ticket to
+                              yourself or an IT agent first before updating status,
+                              requesting follow-ups, or posting resolution notes.
+                            </span>
+                            {user && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  updateTicketMutation.mutate({
+                                    id: ticket.id,
+                                    payload: {
+                                      assigneeId: user.id,
+                                      status:
+                                        ticket.status === 'OPEN'
+                                          ? 'IN_PROGRESS'
+                                          : ticket.status,
+                                    },
+                                  })
+                                }
+                                className="h-7 text-xs shrink-0"
+                              >
+                                Claim &amp; Assign to Me
+                              </Button>
+                            )}
+                          </div>
+                        )}
 
                         {actionErrors[ticket.id] && (
                           <div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-300">
@@ -1020,8 +1069,13 @@ export default function AdminDashboardPage() {
                         >
                           <div className="flex flex-col sm:flex-row gap-2">
                             <Input
-                              placeholder="Add an IT resolution note or update for the customer..."
+                              placeholder={
+                                isTicketAssigned
+                                  ? 'Add an IT resolution note or update for the customer...'
+                                  : 'Assign this ticket first to post a resolution note...'
+                              }
                               value={commentDrafts[ticket.id] || ''}
+                              disabled={!isTicketAssigned}
                               onChange={(e) =>
                                 setCommentDraft(ticket.id, e.target.value)
                               }
@@ -1030,7 +1084,7 @@ export default function AdminDashboardPage() {
                             <Button
                               type="submit"
                               size="sm"
-                              disabled={addCommentMutation.isPending}
+                              disabled={!isTicketAssigned || addCommentMutation.isPending}
                               className="h-9 text-xs shrink-0"
                             >
                               {addCommentMutation.isPending ? 'Posting...' : 'Post Note'}
@@ -1045,6 +1099,7 @@ export default function AdminDashboardPage() {
                               <Input
                                 type="file"
                                 accept="image/png,image/jpeg,image/webp,image/gif"
+                                disabled={!isTicketAssigned}
                                 onChange={(e) =>
                                   setCommentAttachments((prev) => ({
                                     ...prev,

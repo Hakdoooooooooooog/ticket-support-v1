@@ -188,10 +188,14 @@ describe('TicketsService', () => {
   });
 
   describe('update', () => {
-    it('should update ticket and return mapped response', async () => {
-      prisma.ticket.findUnique.mockResolvedValue(mockDbTicket);
+    it('should update ticket and return mapped response when assigned', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        assigneeId: 'agent-1',
+      });
       prisma.ticket.update.mockResolvedValue({
         ...mockDbTicket,
+        assigneeId: 'agent-1',
         status: 'RESOLVED',
       });
 
@@ -203,6 +207,23 @@ describe('TicketsService', () => {
         include: expect.any(Object),
       });
       expect(result.status).toBe('RESOLVED');
+    });
+
+    it('should throw BadRequestException if updating status on an unassigned ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue(mockDbTicket);
+
+      await expect(
+        service.update('ticket-1', { status: 'IN_PROGRESS' } as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.ticket.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if posting a resolution note on an unassigned ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue(mockDbTicket);
+
+      await expect(
+        service.addComment('ticket-1', 'Attempting note without assignment'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if updating non-existent ticket', async () => {

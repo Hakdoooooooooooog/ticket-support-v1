@@ -241,6 +241,14 @@ export class TicketsService implements OnModuleInit {
         'comment on this ticket',
       );
 
+      const currentAssigneeId = (existingTicket as { assigneeId?: string | null })
+        .assigneeId;
+      if (!currentAssigneeId) {
+        throw new BadRequestException(
+          'Ticket must be assigned to an IT agent or administrator before posting resolution notes',
+        );
+      }
+
       const author = await this.resolveCreatorUser(actor?.id || authorId, tx);
 
       if (!encryptedAttachment && typeof tx.comment?.findFirst === 'function') {
@@ -335,6 +343,36 @@ export class TicketsService implements OnModuleInit {
         ? TicketMapper.toCommentAttachmentInput(dto.encryptedAttachment)
         : {};
 
+      const existingAssigneeId = (existingTicket as { assigneeId?: string | null })
+        .assigneeId;
+      const effectiveAssigneeId =
+        dto.assigneeId !== undefined ? dto.assigneeId : existingAssigneeId;
+
+      const isCustomerAction =
+        actor?.role === 'CUSTOMER' ||
+        Boolean(dto.amendmentNote?.trim().startsWith('[CUSTOMER AMENDMENT]'));
+
+      if (
+        !isCustomerAction &&
+        !effectiveAssigneeId &&
+        ((dto.status && dto.status !== 'OPEN') ||
+          Boolean(dto.amendmentNote?.trim().startsWith('[FOLLOW-UP')))
+      ) {
+        throw new BadRequestException(
+          'Ticket must be assigned to an IT agent or administrator before updating status or requesting a follow-up',
+        );
+      }
+
+      // If an agent or admin unassigns an active ticket without specifying status, reset status to OPEN
+      const currentStatus = (existingTicket as { status?: string }).status;
+      if (
+        dto.assigneeId === null &&
+        dto.status === undefined &&
+        (currentStatus === 'IN_PROGRESS' || currentStatus === 'NEEDS_INFO')
+      ) {
+        updateData.status = 'OPEN';
+      }
+
       // If a customer amends a ticket that was waiting on NEEDS_INFO or RESOLVED, automatically reopen it
       const isCustomerAmendment =
         !dto.status &&
@@ -343,14 +381,11 @@ export class TicketsService implements OnModuleInit {
           dto.encryptedAttachment !== undefined ||
           dto.amendmentNote !== undefined);
 
-      const currentStatus = (existingTicket as { status?: string }).status;
       if (
         isCustomerAmendment &&
         (currentStatus === 'NEEDS_INFO' || currentStatus === 'RESOLVED')
       ) {
-        updateData.status = (existingTicket as { assigneeId?: string | null }).assigneeId
-          ? 'IN_PROGRESS'
-          : 'OPEN';
+        updateData.status = existingAssigneeId ? 'IN_PROGRESS' : 'OPEN';
       }
 
       const hasCommentPayload = Boolean(dto.amendmentNote || dto.encryptedAttachment);

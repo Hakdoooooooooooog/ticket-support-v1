@@ -174,10 +174,35 @@ describe('TicketSupport API (e2e)', () => {
         .expect(404);
     });
 
-    it('PATCH /tickets/:id -> should update ticket status and priority', async () => {
+    it('PATCH /tickets/:id -> should require assignment before changing status or commenting, then update status and priority once assigned', async () => {
+      // 1. Unassigned status change or comment is rejected with 400 Bad Request
+      await request(app.getHttpServer())
+        .patch(`/tickets/${createdTicketId}`)
+        .send({ status: 'IN_PROGRESS' })
+        .expect(400);
+
+      await request(app.getHttpServer())
+        .post(`/tickets/${createdTicketId}/comments`)
+        .send({ content: 'Cannot comment while unassigned' })
+        .expect(400);
+
+      // 2. Ensure an IT Agent exists to claim the ticket
+      const agent = await prisma.user.upsert({
+        where: { email: 'e2e.agent@ticketsupport.local' },
+        update: { role: 'AGENT' },
+        create: {
+          email: 'e2e.agent@ticketsupport.local',
+          fullName: 'E2E Support Agent',
+          passwordHash: 'agenthash',
+          role: 'AGENT',
+        },
+      });
+
+      // 3. Assign the ticket and move to IN_PROGRESS
       const res = await request(app.getHttpServer())
         .patch(`/tickets/${createdTicketId}`)
         .send({
+          assigneeId: agent.id,
           status: 'IN_PROGRESS',
           priority: 'HIGH',
         })
@@ -185,6 +210,7 @@ describe('TicketSupport API (e2e)', () => {
 
       expect(res.body.status).toBe('IN_PROGRESS');
       expect(res.body.priority).toBe('HIGH');
+      expect(res.body.assigneeId).toBe(agent.id);
     });
 
     it('POST /tickets/:id/comments -> should add an IT resolution note to the ticket', async () => {
@@ -249,7 +275,7 @@ describe('TicketSupport API (e2e)', () => {
         })
         .expect(200);
 
-      expect(amendRes.body.status).toBe('OPEN');
+      expect(amendRes.body.status).toBe('IN_PROGRESS');
       const latestComment =
         amendRes.body.comments[amendRes.body.comments.length - 1];
       expect(latestComment).toBeDefined();
