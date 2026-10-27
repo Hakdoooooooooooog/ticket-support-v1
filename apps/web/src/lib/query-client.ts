@@ -4,8 +4,9 @@ export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
+        staleTime: 10 * 1000,
+        refetchOnWindowFocus: 'always',
+        refetchInterval: 15 * 1000,
       },
     },
   });

@@ -24,3 +24,67 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse-bar {
+  0%, 100% {
+    transform: scaleY(0.35);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes orbit-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(148, 163, 184, 0.18) 50%,
+    transparent 100%
+  );
+  animation: shimmer-slide 1.6s infinite ease-in-out;
+}
+
+.animate-orbit {
+  animation: orbit-spin 2.4s linear infinite;
+}
+
+.animate-bar-1 {
+  animation: pulse-bar 1s ease-in-out infinite;
+}
+.animate-bar-2 {
+  animation: pulse-bar 1s ease-in-out 0.15s infinite;
+}
+.animate-bar-3 {
+  animation: pulse-bar 1s ease-in-out 0.3s infinite;
+}
+.animate-bar-4 {
+  animation: pulse-bar 1s ease-in-out 0.45s infinite;
+}

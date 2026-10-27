@@ -23,6 +23,7 @@
       "@ui/*": ["./src/components/ui/*"],
       "@lib/*": ["./src/lib/*"],
       "@hooks/*": ["./src/hooks/*"],
+      "@store/*": ["./src/store/*"],
       "@api/*": ["./src/api/*"],
       "@app/*": ["./src/app/*"],
       "@/*": ["./src/*"]

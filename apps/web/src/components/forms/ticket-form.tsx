@@ -5,13 +5,24 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { Button } from '@ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@ui/card';
 import { Input } from '@ui/input';
 import { Textarea } from '@ui/textarea';
 import { Label } from '@ui/label';
-import { API_BASE_URL } from '@lib/constants';
+import { Badge } from '@ui/badge';
+import { ContextualLoader } from '@ui/contextual-loader';
+import { apiClient } from '@lib/api-client';
+import {
+  getStoredSession,
+  formatShortTicketId,
+  extractApiErrorMessage,
+  compressAndEncryptImageFile,
+  formatByteSize,
+  EncryptedAttachmentPayload,
+} from '@lib/helpers';
+import { useAuthStore } from '@store/auth.store';
+import { useTicketsStore } from '@store/tickets.store';
 
 const ticketSchema = z.object({
   title: z
@@ -26,9 +37,17 @@ const ticketSchema = z.object({
 
 type TicketFormValues = z.infer<typeof ticketSchema>;
 
-export function TicketForm() {
+export function TicketForm({ creatorId }: { creatorId?: string }) {
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+  const [encryptedAttachment, setEncryptedAttachment] =
+    React.useState<EncryptedAttachmentPayload | null>(null);
+  const [isEncryptingImage, setIsEncryptingImage] = React.useState(false);
+  const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const { upsertTicket } = useTicketsStore();
 
   const {
     register,
@@ -44,19 +63,57 @@ export function TicketForm() {
     },
   });
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setAttachmentError(null);
+    if (!file) {
+      setEncryptedAttachment(null);
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setAttachmentError('Please select a valid image file (PNG, JPG, WebP, GIF).');
+      return;
+    }
+
+    setIsEncryptingImage(true);
+    try {
+      const payload = await compressAndEncryptImageFile(file);
+      setEncryptedAttachment(payload);
+    } catch {
+      setAttachmentError('Could not attach the selected image.');
+      setEncryptedAttachment(null);
+    } finally {
+      setIsEncryptingImage(false);
+    }
+  };
+
+  const clearAttachment = () => {
+    setEncryptedAttachment(null);
+    setAttachmentError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const createTicketMutation = useMutation({
     mutationFn: async (values: TicketFormValues) => {
-      const response = await axios.post(`${API_BASE_URL}/tickets`, values);
+      const session = getStoredSession();
+      const activeCreatorId = creatorId || user?.id || session?.user?.id;
+      const response = await apiClient.post('/tickets', {
+        ...values,
+        ...(activeCreatorId ? { creatorId: activeCreatorId } : {}),
+        ...(encryptedAttachment ? { encryptedAttachment } : {}),
+      });
       return response.data;
     },
     onSuccess: (data) => {
-      setSuccessMessage(`Ticket #${data.id?.slice(0, 8) || 'new'} created successfully!`);
+      upsertTicket(data);
+      setSuccessMessage(`Ticket ${formatShortTicketId(data.id)} created successfully!`);
       reset();
+      clearAttachment();
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
       setTimeout(() => setSuccessMessage(null), 5000);
-    },
-    onError: (err: any) => {
-      console.error('Error creating ticket:', err);
     },
   });
 
@@ -65,7 +122,7 @@ export function TicketForm() {
   };
 
   return (
-    <Card className="w-full max-w-xl mx-auto shadow-md">
+    <Card className="w-full shadow-md">
       <CardHeader>
         <CardTitle>Submit Support Ticket</CardTitle>
         <CardDescription>
@@ -74,6 +131,10 @@ export function TicketForm() {
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
+          {createTicketMutation.isPending && (
+            <ContextualLoader context="ticket-submission" />
+          )}
+
           {successMessage && (
             <div className="p-3 text-sm rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800">
               {successMessage}
@@ -82,7 +143,10 @@ export function TicketForm() {
 
           {createTicketMutation.isError && (
             <div className="p-3 text-sm rounded-md bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800">
-              Failed to submit ticket. Ensure the backend API is running on port 3001.
+              {extractApiErrorMessage(
+                createTicketMutation.error,
+                'Unable to submit your ticket right now. Please try again shortly.',
+              )}
             </div>
           )}
 
@@ -128,17 +192,65 @@ export function TicketForm() {
               <p className="text-xs text-red-500 font-medium">{errors.description.message}</p>
             )}
           </div>
+
+          {/* Optional Image Attachment (Encrypted In-Transit + Brotli Compressed at Rest) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="attachment">Screenshot / Image Attachment (Optional)</Label>
+            </div>
+            <Input
+              ref={fileInputRef}
+              id="attachment"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="cursor-pointer text-xs file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2.5 file:py-1 file:text-xs file:font-semibold dark:file:bg-slate-800 dark:file:text-slate-200"
+            />
+            {isEncryptingImage && (
+              <p className="text-xs text-blue-500 animate-pulse">
+                Preparing attachment...
+              </p>
+            )}
+            {attachmentError && (
+              <p className="text-xs text-red-500 font-medium">{attachmentError}</p>
+            )}
+            {encryptedAttachment && !isEncryptingImage && (
+              <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+                <div className="flex items-center gap-2 truncate">
+                  <span className="font-medium truncate">
+                    {encryptedAttachment.fileName}
+                  </span>
+                  <span className="text-slate-400 shrink-0">
+                    ({formatByteSize(encryptedAttachment.originalSize)})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearAttachment}
+                  className="text-red-500 hover:underline shrink-0 text-[11px]"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
         </CardContent>
         <CardFooter className="flex justify-between items-center">
           <Button
             type="button"
             variant="ghost"
-            onClick={() => reset()}
-            disabled={createTicketMutation.isPending}
+            onClick={() => {
+              reset();
+              clearAttachment();
+            }}
+            disabled={createTicketMutation.isPending || isEncryptingImage}
           >
             Clear
           </Button>
-          <Button type="submit" disabled={createTicketMutation.isPending}>
+          <Button
+            type="submit"
+            disabled={createTicketMutation.isPending || isEncryptingImage}
+          >
             {createTicketMutation.isPending ? 'Submitting...' : 'Submit Ticket'}
           </Button>
         </CardFooter>

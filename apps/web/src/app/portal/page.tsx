@@ -1,0 +1,109 @@
+'use client';
+
+import * as React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { TicketForm } from '@components/forms/ticket-form';
+import { TicketList } from '@components/ticket-list';
+import { Button } from '@ui/button';
+import { Badge } from '@ui/badge';
+import { ContextualLoader } from '@ui/contextual-loader';
+import { getStoredSession } from '@lib/helpers';
+import { useAuthStore } from '@store/auth.store';
+import { useTicketsStore } from '@store/tickets.store';
+
+export default function CustomerPortalPage() {
+  const router = useRouter();
+  const {
+    user,
+    isSessionVerified,
+    isVerifyingSession,
+    ensureSessionVerified,
+    clearSession,
+  } = useAuthStore();
+  const { clearTickets } = useTicketsStore();
+
+  React.useEffect(() => {
+    if (isSessionVerified && user) {
+      return;
+    }
+
+    const stored = getStoredSession();
+    if (!stored?.accessToken && !user) {
+      router.replace('/');
+      return;
+    }
+
+    ensureSessionVerified().then((verified) => {
+      if (!verified) {
+        router.replace('/');
+      }
+    });
+  }, [isSessionVerified, user, ensureSessionVerified, router]);
+
+  const handleSignOut = () => {
+    clearSession();
+    clearTickets();
+    router.replace('/');
+  };
+
+  if (!user && isVerifyingSession) {
+    return <ContextualLoader context="portal-auth" />;
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
+              TicketSupport
+            </span>
+            <Badge variant="secondary">End-User Portal</Badge>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {(user?.role === 'ADMIN' || user?.role === 'AGENT') && (
+              <Link href="/admin">
+                <Button variant="outline" size="sm">
+                  Switch to IT Admin Console
+                </Button>
+              </Link>
+            )}
+            {user && (
+              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                <span className="font-medium">{user.fullName}</span>
+                <Badge variant="outline">{user.role}</Badge>
+              </div>
+            )}
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Customer Support Portal
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Submit new helpdesk requests and track real-time status updates from our IT engineering team.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-5">
+              <TicketForm creatorId={user?.id} />
+            </div>
+            <div className="lg:col-span-7">
+              <TicketList />
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

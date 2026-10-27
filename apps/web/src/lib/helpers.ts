@@ -1,0 +1,491 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { apiClient } from './api-client';
+import type { Ticket } from '@components/ticket-list';
+
+// ============================================================================
+// 1. UI Class Name Helper
+// ============================================================================
+
+/**
+ * Merges conditional Tailwind CSS classes cleanly without style conflicts.
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+const RAW_OPAQUE_FIELDS = new Set([
+  'password',
+  'passwordHash',
+  'ciphertext',
+  'iv',
+  'accessToken',
+  'attachmentCompressed',
+]);
+
+/**
+ * Sanitizes a user or API string by stripping control characters, <script>/<style> blocks,
+ * HTML tags, dangerous URI schemes, and inline DOM event handlers.
+ */
+export function sanitizeText(value: string, fieldKey?: string): string {
+  if (fieldKey && RAW_OPAQUE_FIELDS.has(fieldKey)) {
+    return value;
+  }
+
+  return value
+    .normalize('NFC')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\b(javascript|vbscript|data\s*:\s*text\/html)\s*:/gi, '')
+    .replace(/\bon[a-z]+\s*=/gi, '')
+    .trim();
+}
+
+/**
+ * Recursively sanitizes all string fields in an outbound request payload or inbound API response.
+ */
+export function sanitizePayload<T>(payload: T, fieldKey?: string): T {
+  if (payload === null || payload === undefined) {
+    return payload;
+  }
+
+  if (typeof payload === 'string') {
+    return sanitizeText(payload, fieldKey) as unknown as T;
+  }
+
+  if (payload instanceof Date) {
+    return payload;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload.map((item) => sanitizePayload(item, fieldKey)) as unknown as T;
+  }
+
+  if (typeof payload === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(payload as Record<string, unknown>)) {
+      out[k] = sanitizePayload(v, k);
+    }
+    return out as T;
+  }
+
+  return payload;
+}
+
+// ============================================================================
+// 2. Authentication, Session Storage & API Error Helpers
+// ============================================================================
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'ADMIN' | 'AGENT' | 'CUSTOMER';
+  createdAt?: string;
+}
+
+export interface AuthSession {
+  accessToken: string;
+  user: AuthUser;
+}
+
+const AUTH_STORAGE_KEY = 'ts_auth_s';
+
+export function getStoredSession(): AuthSession | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as AuthSession;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredSession(session: AuthSession): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+}
+
+export function clearStoredSession(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+export async function verifyPassportSession(
+  accessToken: string,
+): Promise<AuthUser | null> {
+  try {
+    const res = await apiClient.get<AuthUser>('/auth/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
+export function getWorkspacePathForRole(
+  role?: AuthUser['role'],
+): '/admin' | '/portal' {
+  return role === 'ADMIN' || role === 'AGENT' ? '/admin' : '/portal';
+}
+
+export function extractApiErrorMessage(
+  err: unknown,
+  fallbackMessage: string,
+): string {
+  const apiErr = (
+    err as {
+      response?: {
+        data?: { message?: string; errors?: Array<{ message: string }> };
+      };
+    }
+  )?.response?.data;
+  if (apiErr?.errors && Array.isArray(apiErr.errors)) {
+    return apiErr.errors.map((e) => e.message).join('. ');
+  }
+  return apiErr?.message || fallbackMessage;
+}
+
+// ============================================================================
+// 3. Badge Variant Mapping Helpers
+// ============================================================================
+
+export type PriorityBadgeVariant =
+  | 'destructive'
+  | 'warning'
+  | 'secondary'
+  | 'outline';
+
+export type StatusBadgeVariant = 'success' | 'warning' | 'default' | 'destructive';
+
+export function getPriorityBadgeVariant(priority: string): PriorityBadgeVariant {
+  switch (priority) {
+    case 'URGENT':
+      return 'destructive';
+    case 'HIGH':
+      return 'warning';
+    case 'MEDIUM':
+      return 'secondary';
+    default:
+      return 'outline';
+  }
+}
+
+export function getStatusBadgeVariant(status: string): StatusBadgeVariant {
+  switch (status) {
+    case 'RESOLVED':
+    case 'CLOSED':
+      return 'success';
+    case 'IN_PROGRESS':
+      return 'warning';
+    case 'NEEDS_INFO':
+      return 'destructive';
+    default:
+      return 'default';
+  }
+}
+
+// ============================================================================
+// 4. Date, Timestamp & Byte Formatting Helpers
+// ============================================================================
+
+export function formatLastUpdatedTimestamp(
+  dataUpdatedAt?: number,
+  lastUpdatedAt?: string | null,
+): string | null {
+  const rawTimestamp =
+    dataUpdatedAt && dataUpdatedAt > 0
+      ? new Date(dataUpdatedAt)
+      : lastUpdatedAt
+        ? new Date(lastUpdatedAt)
+        : null;
+
+  if (!rawTimestamp || Number.isNaN(rawTimestamp.getTime())) {
+    return null;
+  }
+
+  return rawTimestamp.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+export function formatTicketDateTime(isoString: string): string {
+  return new Date(isoString).toLocaleString();
+}
+
+export function formatTicketDate(isoString: string): string {
+  return new Date(isoString).toLocaleDateString();
+}
+
+export function formatCommentTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function formatByteSize(bytes?: number | null): string {
+  if (!bytes || bytes <= 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(2)} MB`;
+}
+
+// ============================================================================
+// 5. Ticket Filtering (Including ID Search), KPI Calculation & Display Helpers
+// ============================================================================
+
+export interface TicketKpiSummary {
+  total: number;
+  open: number;
+  inProgress: number;
+  needsInfo: number;
+  urgentHigh: number;
+  resolvedClosed: number;
+}
+
+/**
+ * Filters tickets by status, priority, and free-text query matching
+ * Ticket ID (with or without leading `#`), title, description, or creator name/email.
+ */
+export function filterTickets(
+  tickets: Ticket[],
+  statusFilter: string,
+  priorityFilter: string,
+  searchQuery: string,
+): Ticket[] {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const idQuery = normalizedQuery.replace(/^#/, '');
+
+  return tickets.filter((ticket) => {
+    if (statusFilter !== 'ALL' && ticket.status !== statusFilter) return false;
+    if (priorityFilter !== 'ALL' && ticket.priority !== priorityFilter) return false;
+    if (normalizedQuery) {
+      const matchId =
+        idQuery.length > 0 && ticket.id.toLowerCase().includes(idQuery);
+      const matchTitle = ticket.title.toLowerCase().includes(normalizedQuery);
+      const matchDesc = ticket.description.toLowerCase().includes(normalizedQuery);
+      const matchAuthor = ticket.creator?.fullName
+        ?.toLowerCase()
+        .includes(normalizedQuery);
+      const matchEmail = ticket.creator?.email
+        ?.toLowerCase()
+        .includes(normalizedQuery);
+      if (!matchId && !matchTitle && !matchDesc && !matchAuthor && !matchEmail) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+export function computeTicketKpis(tickets: Ticket[]): TicketKpiSummary {
+  return {
+    total: tickets.length,
+    open: tickets.filter((t) => t.status === 'OPEN').length,
+    inProgress: tickets.filter((t) => t.status === 'IN_PROGRESS').length,
+    needsInfo: tickets.filter((t) => t.status === 'NEEDS_INFO').length,
+    urgentHigh: tickets.filter(
+      (t) => t.priority === 'URGENT' || t.priority === 'HIGH',
+    ).length,
+    resolvedClosed: tickets.filter(
+      (t) => t.status === 'RESOLVED' || t.status === 'CLOSED',
+    ).length,
+  };
+}
+
+export function formatShortTicketId(id?: string): string {
+  return `#${id?.slice(0, 8) || 'new'}`;
+}
+
+export function resolveTicketAssigneeId(ticket: Ticket): string {
+  return ticket.assigneeId || ticket.assignee?.id || '';
+}
+
+// ============================================================================
+// 6. Image Attachment Compression, In-Transit AES-256-GCM Encryption & On-Demand Decryption
+// ============================================================================
+
+export interface EncryptedAttachmentPayload {
+  ciphertext: string;
+  iv: string;
+  fileName: string;
+  mimeType: string;
+  originalSize: number;
+}
+
+export interface DecryptedAttachmentResult {
+  ticketId: string;
+  fileName: string;
+  mimeType: string;
+  originalSize: number;
+  dataUrl: string;
+}
+
+const ATTACHMENT_TRANSPORT_SECRET = process.env.NEXT_PUBLIC_ATTACHMENT_KEY;
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return window.btoa(binary);
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function deriveBrowserAesKey(): Promise<CryptoKey> {
+  if (!ATTACHMENT_TRANSPORT_SECRET || !ATTACHMENT_TRANSPORT_SECRET.trim()) {
+    throw new Error(
+      'NEXT_PUBLIC_ATTACHMENT_KEY environment variable is required and not configured',
+    );
+  }
+  const encoder = new TextEncoder();
+  const keyMaterial = await window.crypto.subtle.digest(
+    'SHA-256',
+    encoder.encode(ATTACHMENT_TRANSPORT_SECRET.trim()),
+  );
+  return window.crypto.subtle.importKey(
+    'raw',
+    keyMaterial,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/**
+ * Downscales and compresses an image file on an offscreen HTML5 canvas (WebP/JPEG)
+ * before encrypting it in-transit with AES-256-GCM via the Web Crypto API.
+ */
+async function compressImageToDataUrl(
+  file: File,
+): Promise<{ dataUrl: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Invalid image file'));
+      img.onload = () => {
+        const maxDim = 1280;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve({
+            dataUrl: String(reader.result),
+            mimeType: file.type || 'image/png',
+          });
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const targetMime = 'image/webp';
+        const compressedDataUrl = canvas.toDataURL(targetMime, 0.8);
+        resolve({
+          dataUrl: compressedDataUrl,
+          mimeType: compressedDataUrl.startsWith('data:image/webp')
+            ? 'image/webp'
+            : file.type || 'image/jpeg',
+        });
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Compresses a user-selected image on the client and encrypts the resulting payload
+ * using AES-256-GCM so the image is encrypted in-transit before reaching the API.
+ */
+export async function compressAndEncryptImageFile(
+  file: File,
+): Promise<EncryptedAttachmentPayload> {
+  const { dataUrl, mimeType } = await compressImageToDataUrl(file);
+  const key = await deriveBrowserAesKey();
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const plainBytes = new TextEncoder().encode(dataUrl);
+
+  const encryptedBuffer = await window.crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    plainBytes,
+  );
+
+  return {
+    ciphertext: bytesToBase64(new Uint8Array(encryptedBuffer)),
+    iv: bytesToBase64(iv),
+    fileName: file.name,
+    mimeType,
+    originalSize: file.size,
+  };
+}
+
+/**
+ * Requests on-demand Brotli decompression from `GET /tickets/:id/attachment`
+ * and decrypts the AES-256-GCM transit payload in the browser.
+ */
+export async function fetchAndDecryptTicketAttachment(
+  ticketId: string,
+): Promise<DecryptedAttachmentResult> {
+  const res = await apiClient.get<{
+    ticketId: string;
+    fileName: string;
+    mimeType: string;
+    originalSize: number;
+    encrypted: { ciphertext: string; iv: string };
+  }>(`/tickets/${ticketId}/attachment`);
+
+  const { encrypted, fileName, mimeType, originalSize } = res.data;
+  const key = await deriveBrowserAesKey();
+  const iv = base64ToBytes(encrypted.iv);
+  const cipherBytes = base64ToBytes(encrypted.ciphertext);
+
+  const decryptedBuffer = await window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv as BufferSource },
+    key,
+    cipherBytes as BufferSource,
+  );
+
+  const dataUrl = new TextDecoder().decode(decryptedBuffer);
+
+  return {
+    ticketId,
+    fileName,
+    mimeType,
+    originalSize,
+    dataUrl,
+  };
+}
