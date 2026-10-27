@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Card, CardHeader, CardTitle, CardContent } from '@ui/card';
 import { Badge } from '@ui/badge';
+import { API_BASE_URL } from '@lib/constants';
+import { getPriorityBadgeVariant, getStatusBadgeVariant } from '@lib/badge-utils';
 
 interface Ticket {
   id: string;
@@ -24,40 +26,13 @@ export function TicketList() {
     queryKey: ['tickets'],
     queryFn: async () => {
       try {
-        const res = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/tickets`
-        );
+        const res = await axios.get(`${API_BASE_URL}/tickets`);
         return res.data;
       } catch {
         return [];
       }
     },
   });
-
-  const getPriorityBadgeVariant = (priority: string) => {
-    switch (priority) {
-      case 'URGENT':
-        return 'destructive';
-      case 'HIGH':
-        return 'warning';
-      case 'MEDIUM':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'RESOLVED':
-      case 'CLOSED':
-        return 'success';
-      case 'IN_PROGRESS':
-        return 'warning';
-      default:
-        return 'default';
-    }
-  };
 
   return (
     <div className="w-full max-w-xl mx-auto space-y-4">

@@ -12,21 +12,7 @@ export class TicketsService {
   async findAll(status?: string): Promise<TicketResponseDto[]> {
     const records = await this.prisma.ticket.findMany({
       where: status ? { status: status as any } : undefined,
-      include: {
-        creator: {
-          select: { id: true, email: true, fullName: true, role: true },
-        },
-        assignee: {
-          select: { id: true, email: true, fullName: true, role: true },
-        },
-        comments: {
-          take: 5,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            author: { select: { id: true, fullName: true, email: true } },
-          },
-        },
-      },
+      include: this.standardTicketInclude,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -36,20 +22,7 @@ export class TicketsService {
   async findOne(id: string): Promise<TicketResponseDto> {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
-      include: {
-        creator: {
-          select: { id: true, email: true, fullName: true, role: true },
-        },
-        assignee: {
-          select: { id: true, email: true, fullName: true, role: true },
-        },
-        comments: {
-          include: {
-            author: { select: { id: true, fullName: true, email: true } },
-          },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
+      include: this.standardTicketInclude,
     });
 
     if (!ticket) {
@@ -60,33 +33,13 @@ export class TicketsService {
   }
 
   async create(dto: CreateTicketDto, creatorId?: string): Promise<TicketResponseDto> {
-    let user = creatorId ? await this.prisma.user.findUnique({ where: { id: creatorId } }) : null;
-    if (!user) {
-      user = await this.prisma.user.upsert({
-        where: { email: 'demo@ticketsupport.com' },
-        update: {},
-        create: {
-          email: 'demo@ticketsupport.com',
-          fullName: 'Demo Customer',
-          passwordHash: 'demohash',
-          role: 'CUSTOMER',
-        },
-      });
-    }
+    const user = await this.resolveCreatorUser(creatorId);
 
     const createData = TicketMapper.toCreateInput(dto, user.id);
 
     const record = await this.prisma.ticket.create({
       data: createData,
-      include: {
-        creator: {
-          select: { id: true, email: true, fullName: true, role: true },
-        },
-        assignee: {
-          select: { id: true, email: true, fullName: true, role: true },
-        },
-        comments: true,
-      },
+      include: this.standardTicketInclude,
     });
 
     return TicketMapper.toResponseDto(record);
@@ -100,11 +53,7 @@ export class TicketsService {
     const updated = await this.prisma.ticket.update({
       where: { id },
       data: updateData as any,
-      include: {
-        creator: { select: { id: true, email: true, fullName: true, role: true } },
-        assignee: { select: { id: true, email: true, fullName: true, role: true } },
-        comments: true,
-      },
+      include: this.standardTicketInclude,
     });
 
     return TicketMapper.toResponseDto(updated);
@@ -115,5 +64,48 @@ export class TicketsService {
     await this.prisma.ticket.delete({
       where: { id },
     });
+  }
+
+  /**
+   * Resolves the author/creator User model. If not found or omitted,
+   * creates or retrieves a safe fallback demo customer.
+   */
+  protected async resolveCreatorUser(creatorId?: string) {
+    if (creatorId) {
+      const user = await this.prisma.user.findUnique({ where: { id: creatorId } });
+      if (user) return user;
+    }
+
+    return this.prisma.user.upsert({
+      where: { email: 'demo@ticketsupport.com' },
+      update: {},
+      create: {
+        email: 'demo@ticketsupport.com',
+        fullName: 'Demo Customer',
+        passwordHash: 'demohash',
+        role: 'CUSTOMER',
+      },
+    });
+  }
+
+  /**
+   * Reusable Prisma relations include clause for consistent serialization.
+   */
+  protected get standardTicketInclude() {
+    return {
+      creator: {
+        select: { id: true, email: true, fullName: true, role: true },
+      },
+      assignee: {
+        select: { id: true, email: true, fullName: true, role: true },
+      },
+      comments: {
+        take: 5,
+        orderBy: { createdAt: 'desc' as const },
+        include: {
+          author: { select: { id: true, fullName: true, email: true } },
+        },
+      },
+    };
   }
 }

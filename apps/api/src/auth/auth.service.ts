@@ -21,8 +21,7 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(validatedInput.password, salt);
+    const passwordHash = await this.hashPassword(validatedInput.password);
 
     const user = await this.prisma.user.create({
       data: {
@@ -50,15 +49,39 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const isMatch = await bcrypt.compare(validatedInput.password, user.passwordHash);
+    const isMatch = await this.verifyPassword(validatedInput.password, user.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    const accessToken = this.generateAuthToken(user.id);
+
     return AuthMapper.toAuthResponseDto({
-      accessToken: `mock-jwt-token-for-${user.id}`,
+      accessToken,
       user: AuthMapper.toUserResponseDto(user),
       message: 'Authenticated successfully',
     });
+  }
+
+  /**
+   * Generates a secure salt and computes the bcrypt password hash.
+   */
+  protected async hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
+  }
+
+  /**
+   * Compares plain-text candidate password with the stored bcrypt hash.
+   */
+  protected async verifyPassword(plain: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(plain, hash);
+  }
+
+  /**
+   * Generates access authentication token.
+   */
+  protected generateAuthToken(userId: string): string {
+    return `mock-jwt-token-for-${userId}`;
   }
 }

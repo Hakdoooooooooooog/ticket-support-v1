@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dateToIsoString } from '../../common/schemas/common.schema.js';
 
 export const ticketPriorityEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']);
 export const ticketStatusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']);
@@ -36,17 +37,6 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 // ==============================================================================
 // Output / Response Schemas (Raw Prisma Database Entity -> Sanitized Response DTO)
 // ==============================================================================
-
-const dateToIsoString = z
-  .union([z.instanceof(Date), z.string()])
-  .transform((val) => {
-    if (val instanceof Date) return val.toISOString();
-    if (typeof val === 'string' && val.length > 0) {
-      const parsed = new Date(val);
-      return isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-    }
-    return new Date().toISOString();
-  });
 
 export const userSummarySchema = z.object({
   id: z.string().default('unknown-user'),

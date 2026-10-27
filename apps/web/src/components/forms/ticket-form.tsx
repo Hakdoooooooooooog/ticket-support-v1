@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from '@ui/input';
 import { Textarea } from '@ui/textarea';
 import { Label } from '@ui/label';
+import { API_BASE_URL } from '@lib/constants';
 
 const ticketSchema = z.object({
   title: z
@@ -45,10 +46,7 @@ export function TicketForm() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (values: TicketFormValues) => {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/tickets`,
-        values
-      );
+      const response = await axios.post(`${API_BASE_URL}/tickets`, values);
       return response.data;
     },
     onSuccess: (data) => {
