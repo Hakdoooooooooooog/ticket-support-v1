@@ -16,6 +16,10 @@ export const commentResponseSchema = z.object({
   content: z.string().default(''),
   createdAt: dateToIsoString.default(() => new Date().toISOString()),
   author: userSummarySchema.nullable().default(null),
+  hasAttachment: z.boolean().default(false),
+  attachmentName: z.string().nullable().optional().default(null),
+  attachmentMimeType: z.string().nullable().optional().default(null),
+  attachmentOriginalSize: z.number().nullable().optional().default(null),
 });
 
 export const ticketResponseSchema = z.object({

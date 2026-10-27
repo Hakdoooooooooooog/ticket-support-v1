@@ -313,6 +313,49 @@ export function resolveTicketAssigneeId(ticket: Ticket): string {
   return ticket.assigneeId || ticket.assignee?.id || '';
 }
 
+export interface ParsedTimelineComment {
+  kind: 'FOLLOW_UP' | 'AMENDMENT' | 'NOTE';
+  badgeLabel: string;
+  cleanText: string;
+}
+
+export function parseTimelineComment(content: string): ParsedTimelineComment {
+  const trimmed = (content || '').trim();
+  if (trimmed.startsWith('[FOLLOW-UP REQUESTED]')) {
+    return {
+      kind: 'FOLLOW_UP',
+      badgeLabel: 'Follow-Up Requested',
+      cleanText:
+        trimmed.replace(/^\[FOLLOW-UP REQUESTED\]\s*/i, '').trim() ||
+        'Additional details or screenshot requested.',
+    };
+  }
+  if (trimmed.startsWith('[CUSTOMER AMENDMENT]')) {
+    return {
+      kind: 'AMENDMENT',
+      badgeLabel: 'Customer Follow-Up / Amendment',
+      cleanText:
+        trimmed.replace(/^\[CUSTOMER AMENDMENT\]\s*/i, '').trim() ||
+        'Submitted updated details.',
+    };
+  }
+  return {
+    kind: 'NOTE',
+    badgeLabel: 'Support Note',
+    cleanText: trimmed,
+  };
+}
+
+export function countTicketAttachments(ticket: Ticket): number {
+  let total = ticket.hasAttachment ? 1 : 0;
+  if (Array.isArray(ticket.comments)) {
+    for (const c of ticket.comments) {
+      if (c.hasAttachment) total += 1;
+    }
+  }
+  return total;
+}
+
 // ============================================================================
 // 6. Image Attachment Compression, In-Transit AES-256-GCM Encryption & On-Demand Decryption
 // ============================================================================
@@ -467,6 +510,40 @@ export async function fetchAndDecryptTicketAttachment(
     originalSize: number;
     encrypted: { ciphertext: string; iv: string };
   }>(`/tickets/${ticketId}/attachment`);
+
+  const { encrypted, fileName, mimeType, originalSize } = res.data;
+  const key = await deriveBrowserAesKey();
+  const iv = base64ToBytes(encrypted.iv);
+  const cipherBytes = base64ToBytes(encrypted.ciphertext);
+
+  const decryptedBuffer = await window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv as BufferSource },
+    key,
+    cipherBytes as BufferSource,
+  );
+
+  const dataUrl = new TextDecoder().decode(decryptedBuffer);
+
+  return {
+    ticketId,
+    fileName,
+    mimeType,
+    originalSize,
+    dataUrl,
+  };
+}
+
+export async function fetchAndDecryptCommentAttachment(
+  ticketId: string,
+  commentId: string,
+): Promise<DecryptedAttachmentResult> {
+  const res = await apiClient.get<{
+    ticketId: string;
+    fileName: string;
+    mimeType: string;
+    originalSize: number;
+    encrypted: { ciphertext: string; iv: string };
+  }>(`/tickets/${ticketId}/comments/${commentId}/attachment`);
 
   const { encrypted, fileName, mimeType, originalSize } = res.data;
   const key = await deriveBrowserAesKey();

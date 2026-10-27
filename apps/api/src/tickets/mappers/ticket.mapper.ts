@@ -28,16 +28,15 @@ export class TicketMapper {
 
   /**
    * Maps incoming partial DTO payload to validated Prisma Update input.
+   * Note: When an encryptedAttachment is supplied on an amendment or follow-up,
+   * it is attached to the corresponding activity Comment entry in TicketsService
+   * so the message history preserves each attachment in context.
    */
   static toUpdateInput(dto: unknown) {
     const validated = updateTicketSchema.parse(dto);
     let attachmentPatch: Record<string, unknown> = {};
 
-    if (validated.encryptedAttachment) {
-      attachmentPatch = {
-        ...decryptAndCompressAttachment(validated.encryptedAttachment),
-      };
-    } else if (validated.encryptedAttachment === null) {
+    if (validated.encryptedAttachment === null) {
       attachmentPatch = {
         attachmentName: null,
         attachmentMimeType: null,
@@ -58,6 +57,18 @@ export class TicketMapper {
   }
 
   /**
+   * Decrypts and compresses an optional attachment for a comment/amendment message.
+   */
+  static toCommentAttachmentInput(dtoAttachment: unknown) {
+    if (!dtoAttachment || typeof dtoAttachment !== 'object') {
+      return {};
+    }
+    return {
+      ...decryptAndCompressAttachment(dtoAttachment as any),
+    };
+  }
+
+  /**
    * Maps raw Prisma database record to client Response DTO.
    * Runs ticketResponseSchema.parse() which transforms Dates to ISO strings,
    * strips unwanted fields, and populates missing fields with safe defaults.
@@ -67,12 +78,32 @@ export class TicketMapper {
       string,
       unknown
     >;
-    const hasAttachment = Boolean(
+
+    const rawComments = Array.isArray(record.comments) ? record.comments : [];
+    const mappedComments = rawComments.map((c: unknown) => {
+      const commentObj = (c && typeof c === 'object' ? c : {}) as Record<
+        string,
+        unknown
+      >;
+      const commentHasAttachment = Boolean(
+        commentObj.hasAttachment ||
+          commentObj.attachmentName ||
+          commentObj.attachmentCompressed,
+      );
+      return {
+        ...commentObj,
+        hasAttachment: commentHasAttachment,
+      };
+    });
+
+    const hasTicketAttachment = Boolean(
       record.hasAttachment || record.attachmentName || record.attachmentCompressed,
     );
+
     return ticketResponseSchema.parse({
       ...record,
-      hasAttachment,
+      hasAttachment: hasTicketAttachment,
+      comments: mappedComments,
     });
   }
 

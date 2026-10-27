@@ -77,6 +77,9 @@ export const createCommentSchema = z.object({
     .string()
     .optional()
     .describe('Optional author User ID'),
+  encryptedAttachment: encryptedAttachmentSchema
+    .optional()
+    .describe('Optional image attachment for this comment'),
 });
 
 export class CreateCommentDto extends createZodDto(createCommentSchema) {}

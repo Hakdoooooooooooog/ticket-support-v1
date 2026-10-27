@@ -78,6 +78,12 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  attachmentName           String?
+  attachmentMimeType       String?
+  attachmentCompressed     String?
+  attachmentOriginalSize   Int?
+  attachmentCompressedSize Int?
+
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 

@@ -250,12 +250,15 @@ describe('TicketSupport API (e2e)', () => {
         .expect(200);
 
       expect(amendRes.body.status).toBe('OPEN');
-      expect(amendRes.body.hasAttachment).toBe(true);
-      expect(amendRes.body.attachmentName).toBe('error-screenshot.webp');
+      const latestComment =
+        amendRes.body.comments[amendRes.body.comments.length - 1];
+      expect(latestComment).toBeDefined();
+      expect(latestComment.hasAttachment).toBe(true);
+      expect(latestComment.attachmentName).toBe('error-screenshot.webp');
 
-      // 3. Decompress attachment on-demand
+      // 3. Retrieve comment attachment on-demand
       const attachRes = await request(app.getHttpServer())
-        .get(`/tickets/${createdTicketId}/attachment`)
+        .get(`/tickets/${createdTicketId}/comments/${latestComment.id}/attachment`)
         .expect(200);
 
       expect(attachRes.body.ticketId).toBe(createdTicketId);

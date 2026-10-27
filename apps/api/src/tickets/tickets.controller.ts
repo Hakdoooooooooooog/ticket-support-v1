@@ -61,6 +61,19 @@ export class TicketsController {
     return this.ticketsService.getAttachment(id);
   }
 
+  @Get(':id/comments/:commentId/attachment')
+  @ApiOperation({
+    summary: 'Retrieve comment or follow-up message image attachment',
+  })
+  @ApiResponse({ status: 200, description: 'Comment attachment retrieved' })
+  @ApiResponse({ status: 404, description: 'Comment or attachment not found' })
+  getCommentAttachment(
+    @Param('id') id: string,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.ticketsService.getCommentAttachment(id, commentId);
+  }
+
   @Post()
   @Serialize(ticketResponseSchema)
   @UsePipes(new ZodValidationPipe(createTicketSchema))
@@ -87,7 +100,12 @@ export class TicketsController {
   @ApiResponse({ status: 201, description: 'Comment added successfully' })
   @ApiResponse({ status: 404, description: 'Ticket not found' })
   addComment(@Param('id') id: string, @Body() dto: CreateCommentDto) {
-    return this.ticketsService.addComment(id, dto.content, dto.authorId);
+    return this.ticketsService.addComment(
+      id,
+      dto.content,
+      dto.authorId,
+      dto.encryptedAttachment,
+    );
   }
 
   @Delete(':id')

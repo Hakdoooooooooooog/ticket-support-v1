@@ -4,18 +4,83 @@ import {
   ConflictException,
   BadRequestException,
   ForbiddenException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { CreateTicketDto, UpdateTicketDto, TicketResponseDto } from './dto/index.js';
 import { TicketMapper } from './mappers/ticket.mapper.js';
 import {
   decompressAndEncryptAttachment,
+  EncryptedAttachmentInput,
   OnDemandAttachmentResponse,
 } from './attachment-crypto.util.js';
 
 @Injectable()
-export class TicketsService {
+export class TicketsService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Migrates any legacy ticket-level attachment that was uploaded during a
+   * [CUSTOMER AMENDMENT] or [FOLLOW-UP REQUESTED] event onto that specific Comment
+   * record so existing tickets display the image inside the message that sent it.
+   */
+  async onModuleInit() {
+    if (
+      typeof this.prisma?.ticket?.findMany !== 'function' ||
+      typeof this.prisma?.comment?.update !== 'function'
+    ) {
+      return;
+    }
+
+    try {
+      const ticketsWithAttachments = await this.prisma.ticket.findMany({
+        where: {
+          attachmentCompressed: { not: null },
+        },
+        include: {
+          comments: {
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
+      for (const t of ticketsWithAttachments) {
+        const targetComment = t.comments.find(
+          (c) =>
+            !c.attachmentCompressed &&
+            (c.content.startsWith('[CUSTOMER AMENDMENT]') ||
+              c.content.startsWith('[FOLLOW-UP')),
+        );
+
+        if (targetComment) {
+          await this.runTransaction(async (tx) => {
+            await tx.comment.update({
+              where: { id: targetComment.id },
+              data: {
+                attachmentName: t.attachmentName,
+                attachmentMimeType: t.attachmentMimeType,
+                attachmentCompressed: t.attachmentCompressed,
+                attachmentOriginalSize: t.attachmentOriginalSize,
+                attachmentCompressedSize: t.attachmentCompressedSize,
+              },
+            });
+            await tx.ticket.update({
+              where: { id: t.id },
+              data: {
+                attachmentName: null,
+                attachmentMimeType: null,
+                attachmentCompressed: null,
+                attachmentOriginalSize: null,
+                attachmentCompressedSize: null,
+              },
+            });
+          });
+        }
+      }
+    } catch {
+      // Ignore if schema migration is not yet pushed in unit test environment
+    }
+  }
 
   /**
    * Executes a database unit of work inside an interactive Prisma transaction
@@ -88,8 +153,12 @@ export class TicketsService {
     ticketId: string,
     content: string,
     authorId?: string,
+    encryptedAttachment?: EncryptedAttachmentInput,
   ): Promise<TicketResponseDto> {
     const trimmedContent = content.trim();
+    const commentAttachment = encryptedAttachment
+      ? TicketMapper.toCommentAttachmentInput(encryptedAttachment)
+      : {};
 
     return this.runTransaction(async (tx) => {
       const existingTicket = await tx.ticket.findUnique({
@@ -103,7 +172,7 @@ export class TicketsService {
 
       const author = await this.resolveCreatorUser(authorId, tx);
 
-      if (typeof tx.comment?.findFirst === 'function') {
+      if (!encryptedAttachment && typeof tx.comment?.findFirst === 'function') {
         const duplicateComment = await tx.comment.findFirst({
           where: {
             ticketId,
@@ -123,6 +192,7 @@ export class TicketsService {
           ticketId,
           content: trimmedContent,
           authorId: author.id,
+          ...commentAttachment,
         },
       });
 
@@ -164,6 +234,9 @@ export class TicketsService {
       }
 
       const updateData = TicketMapper.toUpdateInput(dto) as Record<string, unknown>;
+      const commentAttachment = dto.encryptedAttachment
+        ? TicketMapper.toCommentAttachmentInput(dto.encryptedAttachment)
+        : {};
 
       // If a customer amends a ticket that was waiting on NEEDS_INFO, automatically reopen it
       const isCustomerAmendment =
@@ -182,16 +255,41 @@ export class TicketsService {
           : 'OPEN';
       }
 
-      if (dto.amendmentNote && typeof tx.comment?.create === 'function') {
+      const hasCommentPayload = Boolean(dto.amendmentNote || dto.encryptedAttachment);
+      if (hasCommentPayload && typeof tx.comment?.create === 'function') {
         const actor = await this.resolveCreatorUser(
           dto.actorId || (existingTicket as { creatorId?: string }).creatorId,
           tx,
         );
+
+        const fieldChanges: string[] = [];
+        const prevTitle = (existingTicket as { title?: string }).title;
+        const prevPriority = (existingTicket as { priority?: string }).priority;
+        const prevDesc = (existingTicket as { description?: string }).description;
+
+        if (dto.title && prevTitle && dto.title.trim() !== prevTitle.trim()) {
+          fieldChanges.push(`Title changed from "${prevTitle}" to "${dto.title.trim()}"`);
+        }
+        if (dto.priority && prevPriority && dto.priority !== prevPriority) {
+          fieldChanges.push(`Priority changed from ${prevPriority} to ${dto.priority}`);
+        }
+        if (dto.description && prevDesc && dto.description.trim() !== prevDesc.trim()) {
+          fieldChanges.push(`Description updated`);
+        }
+
+        let noteContent =
+          dto.amendmentNote?.trim() ||
+          '[CUSTOMER AMENDMENT] Attached screenshot update.';
+        if (fieldChanges.length > 0) {
+          noteContent = `${noteContent} (${fieldChanges.join(' · ')})`;
+        }
+
         await tx.comment.create({
           data: {
             ticketId: id,
-            content: dto.amendmentNote.trim(),
+            content: noteContent,
             authorId: actor.id,
+            ...commentAttachment,
           },
         });
       }
@@ -215,6 +313,18 @@ export class TicketsService {
         attachmentMimeType: true,
         attachmentCompressed: true,
         attachmentOriginalSize: true,
+        comments: {
+          where: { attachmentCompressed: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            attachmentName: true,
+            attachmentMimeType: true,
+            attachmentCompressed: true,
+            attachmentOriginalSize: true,
+          },
+        },
       },
     });
 
@@ -222,19 +332,59 @@ export class TicketsService {
       throw new NotFoundException(`Ticket with ID "${id}" not found`);
     }
 
-    if (!ticket.attachmentCompressed) {
+    const source = ticket.attachmentCompressed
+      ? ticket
+      : ticket.comments?.[0];
+
+    if (!source?.attachmentCompressed) {
       throw new NotFoundException(`Ticket "${id}" does not have an image attachment`);
     }
 
     const { ciphertext, iv, decompressedSize } = decompressAndEncryptAttachment(
-      ticket.attachmentCompressed,
+      source.attachmentCompressed,
     );
 
     return {
       ticketId: ticket.id,
-      fileName: ticket.attachmentName || 'attachment.webp',
-      mimeType: ticket.attachmentMimeType || 'image/webp',
-      originalSize: ticket.attachmentOriginalSize || decompressedSize,
+      fileName: source.attachmentName || 'attachment.webp',
+      mimeType: source.attachmentMimeType || 'image/webp',
+      originalSize: source.attachmentOriginalSize || decompressedSize,
+      encrypted: {
+        ciphertext,
+        iv,
+      },
+    };
+  }
+
+  async getCommentAttachment(
+    ticketId: string,
+    commentId: string,
+  ): Promise<OnDemandAttachmentResponse> {
+    const comment = await this.prisma.comment.findFirst({
+      where: { id: commentId, ticketId },
+      select: {
+        id: true,
+        ticketId: true,
+        attachmentName: true,
+        attachmentMimeType: true,
+        attachmentCompressed: true,
+        attachmentOriginalSize: true,
+      },
+    });
+
+    if (!comment || !comment.attachmentCompressed) {
+      throw new NotFoundException(`Comment attachment not found`);
+    }
+
+    const { ciphertext, iv, decompressedSize } = decompressAndEncryptAttachment(
+      comment.attachmentCompressed,
+    );
+
+    return {
+      ticketId: comment.ticketId,
+      fileName: comment.attachmentName || 'attachment.webp',
+      mimeType: comment.attachmentMimeType || 'image/webp',
+      originalSize: comment.attachmentOriginalSize || decompressedSize,
       encrypted: {
         ciphertext,
         iv,
@@ -296,10 +446,9 @@ export class TicketsService {
         select: { id: true, email: true, fullName: true, role: true },
       },
       comments: {
-        take: 5,
-        orderBy: { createdAt: 'desc' as const },
+        orderBy: { createdAt: 'asc' as const },
         include: {
-          author: { select: { id: true, fullName: true, email: true } },
+          author: { select: { id: true, fullName: true, email: true, role: true } },
         },
       },
     };
