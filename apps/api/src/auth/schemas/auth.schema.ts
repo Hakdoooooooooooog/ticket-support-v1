@@ -9,18 +9,21 @@ export const registerSchema = z.object({
   fullName: z
     .string()
     .trim()
-    .min(2, { message: 'Full name must be at least 2 characters' }),
-  email: emailSchema,
+    .min(2, { message: 'Full name must be at least 2 characters' })
+    .describe('User full name (minimum 2 characters)'),
+  email: emailSchema.describe('User email address'),
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters' }),
+    .min(6, { message: 'Password must be at least 6 characters' })
+    .describe('User password (minimum 6 characters)'),
 });
 
 export const loginSchema = z.object({
-  email: emailSchema,
+  email: emailSchema.describe('User email address'),
   password: z
     .string()
-    .min(1, { message: 'Password is required' }),
+    .min(1, { message: 'Password is required' })
+    .describe('User password'),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

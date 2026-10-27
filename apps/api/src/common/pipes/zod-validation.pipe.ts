@@ -7,12 +7,32 @@ import {
 import type { ZodType } from 'zod';
 import { ZodError } from 'zod';
 
+export function isZodDto(metatype: unknown): metatype is { isZodDto: true; schema: ZodType } {
+  return Boolean(
+    metatype &&
+      (typeof metatype === 'object' || typeof metatype === 'function') &&
+      'isZodDto' in metatype &&
+      (metatype as { isZodDto?: boolean }).isZodDto === true &&
+      'schema' in metatype,
+  );
+}
+
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private readonly schema: ZodType) {}
+  constructor(private readonly schema?: ZodType) {}
 
-  transform(value: unknown, _metadata: ArgumentMetadata) {
-    const result = this.schema.safeParse(value);
+  transform(value: unknown, metadata?: ArgumentMetadata) {
+    const targetSchema: ZodType | undefined =
+      this.schema ??
+      (metadata?.metatype && isZodDto(metadata.metatype)
+        ? metadata.metatype.schema
+        : undefined);
+
+    if (!targetSchema) {
+      return value;
+    }
+
+    const result = targetSchema.safeParse(value);
 
     if (!result.success) {
       const formattedErrors = (result.error as ZodError).issues.map((issue) => ({
@@ -31,3 +51,5 @@ export class ZodValidationPipe implements PipeTransform {
     return result.data;
   }
 }
+
+

@@ -16,19 +16,38 @@ export const createTicketSchema = z.object({
     .string()
     .trim()
     .min(5, { message: 'Title must be at least 5 characters long' })
-    .max(100, { message: 'Title cannot exceed 100 characters' }),
+    .max(100, { message: 'Title cannot exceed 100 characters' })
+    .describe('Title of the ticket (5-100 characters)'),
   description: z
     .string()
     .trim()
-    .min(10, { message: 'Description must be at least 10 characters long' }),
-  priority: ticketPriorityEnum.default('MEDIUM'),
+    .min(10, { message: 'Description must be at least 10 characters long' })
+    .describe('Detailed description of the issue (min 10 characters)'),
+  priority: ticketPriorityEnum
+    .default('MEDIUM')
+    .describe('Priority level: LOW, MEDIUM, HIGH, URGENT'),
 });
 
 export const updateTicketSchema = z.object({
-  title: z.string().trim().min(5).max(100).optional(),
-  description: z.string().trim().min(10).optional(),
-  priority: ticketPriorityEnum.optional(),
-  status: ticketStatusEnum.optional(),
+  title: z
+    .string()
+    .trim()
+    .min(5)
+    .max(100)
+    .optional()
+    .describe('Updated title of the ticket (5-100 characters)'),
+  description: z
+    .string()
+    .trim()
+    .min(10)
+    .optional()
+    .describe('Updated detailed description of the issue'),
+  priority: ticketPriorityEnum
+    .optional()
+    .describe('Updated priority level: LOW, MEDIUM, HIGH, URGENT'),
+  status: ticketStatusEnum
+    .optional()
+    .describe('Updated ticket status: OPEN, IN_PROGRESS, RESOLVED, CLOSED'),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;

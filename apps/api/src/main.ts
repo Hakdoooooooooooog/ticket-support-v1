@@ -1,19 +1,14 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { AppModule } from './app.module.js';
+import { ZodValidationPipe } from './common/pipes/zod-validation.pipe.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
+  // Global validation pipe with Zod DTO schema support
+  app.useGlobalPipes(new ZodValidationPipe());
 
   // Enable CORS for Next.js frontend
   app.enableCors({
@@ -30,6 +25,8 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+  cleanupOpenApiDoc(document);
+
   SwaggerModule.setup('api/docs', app, document, {
     jsonDocumentUrl: 'api-json',
   });

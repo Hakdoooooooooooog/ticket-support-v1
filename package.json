@@ -19,5 +19,12 @@
   "devDependencies": {
     "turbo": "^2.4.0"
   },
+  "overrides": {
+    "multer": "2.5.0",
+    "nestjs-zod": {
+      "@nestjs/common": "$@nestjs/common",
+      "@nestjs/swagger": "$@nestjs/swagger"
+    }
+  },
   "packageManager": "npm@10.8.2"
 }
