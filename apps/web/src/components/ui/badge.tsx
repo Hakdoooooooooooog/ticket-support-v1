@@ -3,21 +3,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@lib/helpers";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-slate-900 text-slate-50 shadow hover:bg-slate-900/80 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/80",
+          "border-transparent bg-slate-900 text-slate-50 shadow dark:bg-slate-100 dark:text-slate-900",
         secondary:
-          "border-transparent bg-slate-100 text-slate-900 hover:bg-slate-100/80 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-800/80",
+          "border-transparent bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200",
         destructive:
-          "border-transparent bg-red-500 text-slate-50 shadow hover:bg-red-500/80 dark:bg-red-900 dark:text-slate-50 dark:hover:bg-red-900/80",
-        outline: "text-slate-950 dark:text-slate-50",
+          "border-rose-500/40 bg-rose-500/15 text-rose-300 shadow-sm font-bold uppercase tracking-wider text-[11px]",
+        outline: "border-slate-700 text-slate-300",
         success:
-          "border-transparent bg-emerald-500 text-white shadow hover:bg-emerald-600",
+          "border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-semibold shadow-sm",
         warning:
-          "border-transparent bg-amber-500 text-white shadow hover:bg-amber-600",
+          "border-amber-500/40 bg-amber-500/15 text-amber-300 font-semibold shadow-sm",
       },
     },
     defaultVariants: {

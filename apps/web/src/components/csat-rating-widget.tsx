@@ -19,11 +19,19 @@ interface CsatRatingWidgetProps {
 }
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
-  1: 'Very Dissatisfied (1/5)',
-  2: 'Dissatisfied (2/5)',
-  3: 'Neutral (3/5)',
-  4: 'Satisfied (4/5)',
-  5: 'Exceptional (5/5)',
+  1: '1/5 · Very Dissatisfied',
+  2: '2/5 · Dissatisfied',
+  3: '3/5 · Neutral',
+  4: '4/5 · Satisfied',
+  5: '5/5 · Exceptional Resolution',
+};
+
+const RATING_COLORS: Record<number, string> = {
+  1: 'bg-rose-600 text-white border-rose-500 shadow-rose-900/40',
+  2: 'bg-orange-600 text-white border-orange-500 shadow-orange-900/40',
+  3: 'bg-amber-500 text-slate-950 border-amber-400 shadow-amber-900/40 font-bold',
+  4: 'bg-sky-600 text-white border-sky-500 shadow-sky-900/40 font-bold',
+  5: 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/40 font-bold',
 };
 
 export function CsatRatingWidget({
@@ -80,7 +88,7 @@ export function CsatRatingWidget({
       return;
     }
     if (rating < 1 || rating > 5) {
-      setErrorMessage('Please select a rating between 1 and 5 stars');
+      setErrorMessage('Please select a rating between 1 and 5');
       return;
     }
     setErrorMessage(null);
@@ -95,21 +103,18 @@ export function CsatRatingWidget({
   // Case 1: Non-reporter viewing a ticket that has not been rated yet
   if (!isTicketReporter && !initialRating) {
     return (
-      <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-xs flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
-          <span className="text-amber-500">⭐</span>
-          <div>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              Customer Satisfaction Feedback:
-            </span>{' '}
-            <span>
-              {currentUserRole === 'AGENT' || currentUserRole === 'ADMIN'
-                ? 'Awaiting customer rating. Support engineers cannot rate tickets.'
-                : `Awaiting feedback from ${creatorName || 'the reporting customer'}.`}
-            </span>
-          </div>
+      <div className="p-3.5 rounded-lg border border-slate-700/60 bg-slate-900/50 text-xs flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            CSAT PENDING
+          </span>
+          <span className="text-slate-400 text-xs">
+            {currentUserRole === 'AGENT' || currentUserRole === 'ADMIN'
+              ? 'Awaiting customer rating. Support engineers cannot rate tickets.'
+              : `Awaiting feedback from ${creatorName || 'the reporting customer'}.`}
+          </span>
         </div>
-        <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+        <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 whitespace-nowrap">
           Customer Only
         </span>
       </div>
@@ -122,18 +127,11 @@ export function CsatRatingWidget({
       <div className="p-3.5 rounded-lg border border-amber-500/20 bg-amber-500/5 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-amber-500">
-              Customer Satisfaction Feedback
+            <span className="text-[11px] font-bold tracking-wider uppercase text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+              CSAT SCORE {initialRating}.0 / 5.0
             </span>
-            <div className="flex items-center text-amber-400 text-sm">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span key={star} className={star <= initialRating ? 'opacity-100' : 'opacity-25'}>
-                  ★
-                </span>
-              ))}
-            </div>
-            <span className="text-xs font-semibold text-slate-300">
-              ({initialRating}/5)
+            <span className="text-xs font-semibold text-slate-200">
+              {RATING_DESCRIPTIONS[initialRating] || `${initialRating}/5`}
             </span>
           </div>
 
@@ -169,11 +167,14 @@ export function CsatRatingWidget({
     <div className="p-4 rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-950/20 via-slate-900/60 to-slate-900/90 space-y-3.5">
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-            <span>⭐ How satisfied are you with this resolution?</span>
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">
+            Customer Satisfaction Rating
+          </div>
+          <h4 className="text-sm font-bold text-white">
+            How satisfied are you with this resolution?
           </h4>
           <p className="text-xs text-slate-400">
-            Your feedback directly helps our support team improve response quality.
+            Your feedback directly impacts support response benchmarks and quality SLA.
           </p>
         </div>
         {initialRating && (
@@ -188,36 +189,32 @@ export function CsatRatingWidget({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Star Selection Row */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1" onMouseLeave={() => setHoverRating(0)}>
-            {[1, 2, 3, 4, 5].map((star) => {
-              const isFilled = star <= activeStar;
+        {/* Numbered Score Selection Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5" onMouseLeave={() => setHoverRating(0)}>
+            {[1, 2, 3, 4, 5].map((num) => {
+              const isSelectedOrHovered = num === activeStar || (!hoverRating && num === rating);
               return (
                 <button
-                  key={star}
+                  key={num}
                   type="button"
-                  aria-label={`${star} Star`}
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoverRating(star)}
-                  className="p-1 focus:outline-none text-2xl transition-transform hover:scale-125 duration-100"
+                  aria-label={`Score ${num}`}
+                  onClick={() => setRating(num)}
+                  onMouseEnter={() => setHoverRating(num)}
+                  className={`h-9 w-9 rounded-lg border text-sm font-extrabold transition-all duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    isSelectedOrHovered
+                      ? `${RATING_COLORS[num]} scale-105 shadow-md`
+                      : 'border-slate-700 bg-slate-900/80 text-slate-400 hover:border-slate-500 hover:text-white'
+                  }`}
                 >
-                  <span
-                    className={
-                      isFilled
-                        ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-                        : 'text-slate-600 hover:text-slate-400'
-                    }
-                  >
-                    ★
-                  </span>
+                  {num}
                 </button>
               );
             })}
           </div>
 
-          <span className="text-xs font-semibold text-slate-300 ml-2">
-            {activeStar > 0 ? RATING_DESCRIPTIONS[activeStar] : 'Select rating'}
+          <span className="text-xs font-semibold text-slate-300">
+            {activeStar > 0 ? RATING_DESCRIPTIONS[activeStar] : 'Select rating (1 to 5)'}
           </span>
         </div>
 

@@ -643,14 +643,12 @@ export default function AdminDashboardPage() {
                   </span>
                 )}
                 {typeof ticket.csatRating === 'number' ? (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 font-semibold flex items-center gap-1">
-                    <span>★</span>
-                    <span>{ticket.csatRating}/5 CSAT</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    CSAT {ticket.csatRating}.0 / 5.0
                   </span>
                 ) : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') ? (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-400 border border-slate-700/60 font-medium flex items-center gap-1">
-                    <span>☆</span>
-                    <span>CSAT Pending</span>
+                  <span className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700/60">
+                    CSAT Pending
                   </span>
                 ) : null}
                 <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
@@ -1023,7 +1021,7 @@ export default function AdminDashboardPage() {
                     </span>
                     <div className="flex items-center gap-2">
                       <CannedResponsesMenu
-                        buttonLabel="⚡ Quick Templates"
+                        buttonLabel="Quick Templates"
                         onSelect={(snippet) =>
                           setFollowUpPrompt(
                             followUpPrompt ? `${followUpPrompt} ${snippet}` : snippet,
@@ -1096,23 +1094,17 @@ export default function AdminDashboardPage() {
                   <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-amber-500 uppercase tracking-wider text-[11px]">
-                          Customer Satisfaction Feedback
+                        <span className="font-bold text-amber-400 uppercase tracking-wider text-[11px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                          CSAT Score {ticket.csatRating}.0 / 5.0
                         </span>
-                        <div className="flex items-center text-amber-400">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <span
-                              key={star}
-                              className={
-                                star <= ticket.csatRating! ? 'opacity-100' : 'opacity-25'
-                              }
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </div>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
-                          ({ticket.csatRating} / 5 Stars)
+                        <span className="font-semibold text-slate-200">
+                          {ticket.csatRating === 5
+                            ? 'Exceptional Resolution'
+                            : ticket.csatRating === 4
+                              ? 'Satisfied'
+                              : ticket.csatRating === 3
+                                ? 'Neutral'
+                                : 'Dissatisfied'}
                         </span>
                       </div>
                       {ticket.csatRatedAt && (
@@ -1130,9 +1122,10 @@ export default function AdminDashboardPage() {
                 ) : (
                   <div className="p-3 rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 text-xs flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-slate-400">
-                      <span className="text-amber-400/80">⭐</span>
-                      <span className="font-medium text-slate-300">Customer Satisfaction:</span>
-                      <span className="italic text-slate-400">
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        CSAT Pending
+                      </span>
+                      <span className="text-slate-400">
                         Awaiting feedback from customer ({ticket.creator?.fullName || 'Customer'})
                       </span>
                     </div>
@@ -1399,7 +1392,7 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <CannedResponsesMenu
-                      buttonLabel="⚡ Canned Responses"
+                      buttonLabel="Canned Responses"
                       direction="up"
                       align="right"
                       onSelect={(snippet) =>
@@ -1488,10 +1481,7 @@ export default function AdminDashboardPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
             }`}
           >
-            <span className="flex items-center gap-2.5">
-              <span>📊</span>
-              <span>Dashboard Overview</span>
-            </span>
+            <span>Dashboard Overview</span>
             {unassignedTickets.length > 0 && (
               <span
                 className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
@@ -1514,10 +1504,7 @@ export default function AdminDashboardPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
             }`}
           >
-            <span className="flex items-center gap-2.5">
-              <span>📋</span>
-              <span>All Tickets</span>
-            </span>
+            <span>All Tickets</span>
             <span
               className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
                 activeSection === 'ALL_TICKETS'
@@ -1538,10 +1525,7 @@ export default function AdminDashboardPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
             }`}
           >
-            <span className="flex items-center gap-2.5">
-              <span>👤</span>
-              <span>Assigned Tickets</span>
-            </span>
+            <span>Assigned Tickets</span>
             <span
               className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
                 activeSection === 'ASSIGNED_TICKETS'
@@ -1564,10 +1548,7 @@ export default function AdminDashboardPage() {
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
-              <span className="flex items-center gap-2.5">
-                <span>👥</span>
-                <span>Team &amp; Invites</span>
-              </span>
+              <span>Team &amp; Invites</span>
               <span
                 className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wider ${
                   activeSection === 'TEAM_MANAGEMENT'
@@ -1585,11 +1566,10 @@ export default function AdminDashboardPage() {
               href="/portal"
               className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900 transition-colors"
             >
-              <span className="flex items-center gap-2.5">
-                <span>🌐</span>
-                <span>Customer Portal</span>
+              <span>Customer Portal</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Portal
               </span>
-              <span className="text-[10px] text-slate-400">↗</span>
             </Link>
           </div>
         </nav>
@@ -1646,9 +1626,9 @@ export default function AdminDashboardPage() {
             type="button"
             aria-label="Toggle navigation menu"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-1.5 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+            className="px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900 border border-slate-700/60"
           >
-            <span className="text-xl">☰</span>
+            Menu
           </button>
           <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-sm shrink-0">
             TS
@@ -1697,9 +1677,9 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-1 rounded text-slate-400 hover:text-slate-600"
+                  className="px-2 py-0.5 text-xs font-semibold rounded text-slate-400 hover:text-slate-200"
                 >
-                  ✕
+                  Close
                 </button>
               </div>
 
@@ -1724,9 +1704,9 @@ export default function AdminDashboardPage() {
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
                   }`}
                 >
-                  <span>📊 Dashboard Overview</span>
+                  <span>Dashboard Overview</span>
                   {unassignedTickets.length > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-400">
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-400 font-bold">
                       {unassignedTickets.length}
                     </span>
                   )}
@@ -1744,8 +1724,8 @@ export default function AdminDashboardPage() {
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
                   }`}
                 >
-                  <span>📋 All Tickets</span>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800">
+                  <span>All Tickets</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 font-bold">
                     {tickets.length}
                   </span>
                 </button>
@@ -1762,8 +1742,8 @@ export default function AdminDashboardPage() {
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
                   }`}
                 >
-                  <span>👤 Assigned Tickets</span>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-400">
+                  <span>Assigned Tickets</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-400 font-bold">
                     {myAssignedTickets.length}
                   </span>
                 </button>
@@ -1781,8 +1761,8 @@ export default function AdminDashboardPage() {
                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
                     }`}
                   >
-                    <span>👥 Team &amp; Invites</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 uppercase">
+                    <span>Team &amp; Invites</span>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 uppercase font-bold">
                       Admin
                     </span>
                   </button>
@@ -1794,8 +1774,10 @@ export default function AdminDashboardPage() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
                   >
-                    <span>🌐 Customer Portal</span>
-                    <span>↗</span>
+                    <span>Customer Portal</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Portal
+                    </span>
                   </Link>
                 </div>
               </nav>
@@ -1905,101 +1887,173 @@ export default function AdminDashboardPage() {
                 <ContextualLoader context="admin-kpi" />
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+                  {/* 1. Critical & Urgent Incidents (Highest Priority) */}
                   <Card
                     onClick={() => {
-                      setAssignmentFilter('ALL');
+                      setPriorityFilter('URGENT');
                       setActiveSection('ALL_TICKETS');
                     }}
-                    className="cursor-pointer hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
+                    className={`cursor-pointer transition-all duration-150 ${
+                      kpis.urgentHigh > 0
+                        ? 'border-rose-500/50 bg-rose-500/10 shadow-md shadow-rose-950/20 hover:border-rose-400'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                    }`}
                   >
-                    <CardContent className="p-4">
-                      <p className="text-xs font-medium text-slate-500 uppercase">
-                        Total Tickets
+                    <CardContent className="p-3.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className={`text-[10px] font-extrabold uppercase tracking-widest ${
+                          kpis.urgentHigh > 0 ? 'text-rose-400' : 'text-slate-400'
+                        }`}>
+                          Urgent / High
+                        </p>
+                        {kpis.urgentHigh > 0 && (
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            Critical
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-3xl font-black tracking-tight ${
+                        kpis.urgentHigh > 0 ? 'text-rose-400' : 'text-slate-200'
+                      }`}>
+                        {kpis.urgentHigh}
                       </p>
-                      <p className="text-2xl font-extrabold mt-1">{kpis.total}</p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {kpis.urgentHigh > 0 ? 'Production blockers active' : 'No critical incidents'}
+                      </p>
                     </CardContent>
                   </Card>
 
+                  {/* 2. Unassigned Queue (High Priority Triage) */}
                   <Card
                     onClick={() => {
                       setAssignmentFilter('UNASSIGNED');
                       setActiveSection('ALL_TICKETS');
                     }}
-                    className="cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition-colors"
+                    className={`cursor-pointer transition-all duration-150 ${
+                      unassignedTickets.length > 0
+                        ? 'border-amber-500/50 bg-amber-500/10 shadow-md shadow-amber-950/20 hover:border-amber-400'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                    }`}
                   >
-                    <CardContent className="p-4">
-                      <p className="text-xs font-medium text-amber-500 uppercase">
-                        Unassigned Queue
-                      </p>
-                      <p className="text-2xl font-extrabold mt-1">
+                    <CardContent className="p-3.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className={`text-[10px] font-extrabold uppercase tracking-widest ${
+                          unassignedTickets.length > 0 ? 'text-amber-400' : 'text-slate-400'
+                        }`}>
+                          Unassigned Queue
+                        </p>
+                        {unassignedTickets.length > 0 && (
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Triage
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-3xl font-black tracking-tight ${
+                        unassignedTickets.length > 0 ? 'text-amber-300' : 'text-slate-200'
+                      }`}>
                         {unassignedTickets.length}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {unassignedTickets.length > 0 ? 'Awaiting engineer claim' : 'Queue fully triaged'}
                       </p>
                     </CardContent>
                   </Card>
 
+                  {/* 3. Assigned to Me (Personal Focus) */}
                   <Card
                     onClick={() => {
                       setAssignedScope('MINE');
                       setActiveSection('ASSIGNED_TICKETS');
                     }}
-                    className="cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+                    className="cursor-pointer border-blue-500/40 bg-blue-500/10 hover:border-blue-400 transition-colors"
                   >
-                    <CardContent className="p-4">
-                      <p className="text-xs font-medium text-blue-500 uppercase">
-                        Assigned to Me
-                      </p>
-                      <p className="text-2xl font-extrabold mt-1">
+                    <CardContent className="p-3.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">
+                          Assigned to Me
+                        </p>
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                          Active
+                        </span>
+                      </div>
+                      <p className="text-3xl font-black tracking-tight text-blue-400">
                         {myAssignedTickets.length}
                       </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-xs font-medium text-indigo-500 uppercase">
-                        In Progress / Info
-                      </p>
-                      <p className="text-2xl font-extrabold mt-1">
-                        {kpis.inProgress + kpis.needsInfo}
+                      <p className="text-[10px] text-slate-500 truncate">
+                        My personal incidents
                       </p>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-xs font-medium text-red-500 uppercase">
-                        Urgent / High
-                      </p>
-                      <p className="text-2xl font-extrabold mt-1">{kpis.urgentHigh}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-xs font-medium text-emerald-500 uppercase">
-                        Resolved / Closed
-                      </p>
-                      <p className="text-2xl font-extrabold mt-1">
-                        {kpis.resolvedClosed}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="hover:border-amber-400 dark:hover:border-amber-500 transition-colors">
-                    <CardContent className="p-4">
+                  {/* 4. Customer Satisfaction Score (Quality KPI) */}
+                  <Card className="border-amber-500/30 bg-amber-500/5 hover:border-amber-400 transition-colors">
+                    <CardContent className="p-3.5 space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium text-amber-500 uppercase">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">
                           CSAT Score
                         </p>
-                        <span className="text-xs">⭐</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          KPI
+                        </span>
                       </div>
-                      <p className="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">
-                        {kpis.csatAverage ? `${kpis.csatAverage} / 5` : 'N/A'}
+                      <p className="text-3xl font-black tracking-tight text-amber-300">
+                        {kpis.csatAverage ? `${kpis.csatAverage} / 5.0` : 'N/A'}
                       </p>
-                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">
+                      <p className="text-[10px] text-slate-500 truncate">
                         {kpis.csatCount > 0
-                          ? `${kpis.csatCount} ${kpis.csatCount === 1 ? 'review' : 'reviews'}`
-                          : 'No reviews yet'}
+                          ? `${kpis.csatCount} ${kpis.csatCount === 1 ? 'review recorded' : 'reviews recorded'}`
+                          : 'Awaiting reviews'}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* 5. In Progress / Needs Info (Operational Workflow) */}
+                  <Card className="border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-400 transition-colors">
+                    <CardContent className="p-3.5 space-y-1">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">
+                        In Progress / Info
+                      </p>
+                      <p className="text-2xl font-black tracking-tight text-indigo-300">
+                        {kpis.inProgress + kpis.needsInfo}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        Active investigations
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* 6. Resolved / Closed (Completed Work) */}
+                  <Card className="border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400 transition-colors">
+                    <CardContent className="p-3.5 space-y-1">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">
+                        Resolved / Closed
+                      </p>
+                      <p className="text-2xl font-black tracking-tight text-emerald-300">
+                        {kpis.resolvedClosed}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        Closed incidents
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* 7. Total Queue Baseline */}
+                  <Card
+                    onClick={() => {
+                      setAssignmentFilter('ALL');
+                      setActiveSection('ALL_TICKETS');
+                    }}
+                    className="cursor-pointer border-slate-800 bg-slate-900/60 hover:border-slate-700 transition-colors"
+                  >
+                    <CardContent className="p-3.5 space-y-1">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                        Total Tickets
+                      </p>
+                      <p className="text-2xl font-extrabold tracking-tight text-slate-200">
+                        {kpis.total}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        All incidents in desk
                       </p>
                     </CardContent>
                   </Card>

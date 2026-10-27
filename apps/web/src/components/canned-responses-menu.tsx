@@ -14,7 +14,7 @@ interface CannedResponsesMenuProps {
 export function CannedResponsesMenu({
   onSelect,
   className = '',
-  buttonLabel = '⚡ Canned Responses',
+  buttonLabel = 'Canned Responses',
   align = 'right',
   direction = 'auto',
 }: CannedResponsesMenuProps) {

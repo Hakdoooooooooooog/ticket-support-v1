@@ -27,42 +27,36 @@ function formatNotificationTime(isoString: string): string {
   }
 }
 
-function getNotificationIcon(type: AppNotification['type']): {
-  icon: string;
-  bg: string;
-  text: string;
+function getNotificationBadge(type: AppNotification['type']): {
+  label: string;
+  badgeClass: string;
 } {
   switch (type) {
     case 'TICKET_FOLLOW_UP_REQUESTED':
       return {
-        icon: '⚠️',
-        bg: 'bg-amber-500/10 border-amber-500/20',
-        text: 'text-amber-500',
+        label: 'NEEDS INFO',
+        badgeClass: 'border-amber-500/40 bg-amber-500/15 text-amber-300 font-bold',
       };
     case 'TICKET_CUSTOMER_AMENDED':
       return {
-        icon: '💬',
-        bg: 'bg-blue-500/10 border-blue-500/20',
-        text: 'text-blue-500',
+        label: 'CUSTOMER',
+        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
       };
     case 'TICKET_NOTE_POSTED':
       return {
-        icon: '📝',
-        bg: 'bg-purple-500/10 border-purple-500/20',
-        text: 'text-purple-500',
+        label: 'NOTE',
+        badgeClass: 'border-purple-500/40 bg-purple-500/15 text-purple-300 font-bold',
       };
     case 'TICKET_ASSIGNED':
       return {
-        icon: '👤',
-        bg: 'bg-emerald-500/10 border-emerald-500/20',
-        text: 'text-emerald-500',
+        label: 'ASSIGNED',
+        badgeClass: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-bold',
       };
     case 'TICKET_STATUS_CHANGED':
     default:
       return {
-        icon: '🔄',
-        bg: 'bg-cyan-500/10 border-cyan-500/20',
-        text: 'text-cyan-500',
+        label: 'STATUS',
+        badgeClass: 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300 font-bold',
       };
   }
 }
@@ -189,16 +183,17 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
 
           <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-800/60">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 space-y-2">
-                <div className="text-3xl">🎉</div>
-                <div className="text-xs font-medium text-slate-300">All caught up!</div>
-                <div className="text-[11px] text-slate-500">
-                  No notifications to display right now.
+              <div className="p-8 text-center space-y-1.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                  All Caught Up
+                </div>
+                <div className="text-xs text-slate-400">
+                  No pending notifications in your feed.
                 </div>
               </div>
             ) : (
               notifications.map((notif) => {
-                const iconMeta = getNotificationIcon(notif.type);
+                const badgeMeta = getNotificationBadge(notif.type);
                 return (
                   <button
                     key={notif.id}
@@ -209,9 +204,9 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
                     }`}
                   >
                     <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm ${iconMeta.bg} ${iconMeta.text}`}
+                      className={`flex h-6 px-2 shrink-0 items-center justify-center rounded border text-[9px] uppercase tracking-wider font-extrabold ${badgeMeta.badgeClass}`}
                     >
-                      {iconMeta.icon}
+                      {badgeMeta.label}
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-1">
