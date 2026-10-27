@@ -245,15 +245,17 @@ function CustomerTicketsLoader({
 
 /**
  * 3. ADMIN KPI TELEMETRY EQUALIZER LOADER
- * Renders 5 metric cards with animated equalizer bars while SLA metrics compute.
+ * Renders 7 metric cards matching the exact layout and height of the IT Service Desk KPI grid.
  */
 function AdminKpiTelemetryLoader() {
   const kpiMeta = [
-    { label: 'Total Tickets', color: 'bg-slate-400' },
-    { label: 'Open Queue', color: 'bg-amber-500' },
-    { label: 'In Progress', color: 'bg-blue-500' },
-    { label: 'Urgent / High', color: 'bg-red-500' },
-    { label: 'Resolved / Closed', color: 'bg-emerald-500' },
+    { label: 'Urgent / High', subtitle: 'Critical SLA Queue', badge: 'Critical' },
+    { label: 'Unassigned Queue', subtitle: 'Awaiting triage', badge: 'Triage' },
+    { label: 'Assigned to Me', subtitle: 'My active tickets', badge: 'Active' },
+    { label: 'CSAT Score', subtitle: 'Customer sentiment', badge: 'KPI' },
+    { label: 'In Progress / Info', subtitle: 'Under investigation' },
+    { label: 'Resolved / Closed', subtitle: 'All completed' },
+    { label: 'Total Tickets', subtitle: 'Full workspace', isSpanned: true },
   ];
 
   return (
@@ -261,27 +263,28 @@ function AdminKpiTelemetryLoader() {
       role="status"
       aria-label="Loading SLA KPI metrics"
       data-testid="loader-admin-kpi"
-      className="grid grid-cols-2 sm:grid-cols-5 gap-4"
+      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-3"
     >
-      {kpiMeta.map((item, idx) => (
+      {kpiMeta.map((item) => (
         <Card
           key={item.label}
-          className={`animate-shimmer ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}
+          className={`border-slate-800 bg-slate-900/60 animate-shimmer ${
+            item.isSpanned ? 'col-span-2 sm:col-span-3 lg:col-span-2 2xl:col-span-1' : ''
+          }`}
         >
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-slate-500 uppercase">
+          <CardContent className="p-3.5 space-y-1">
+            <div className="flex items-center justify-between gap-1.5 min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">
                 {item.label}
               </p>
-              <div className="h-7 w-12 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+              {item.badge && (
+                <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                  {item.badge}
+                </span>
+              )}
             </div>
-            {/* Equalizer Telemetry Bars */}
-            <div className="flex items-end gap-1 h-7">
-              <span className={`w-1 h-5 rounded-full ${item.color} animate-bar-1`} />
-              <span className={`w-1 h-7 rounded-full ${item.color} animate-bar-2`} />
-              <span className={`w-1 h-4 rounded-full ${item.color} animate-bar-3`} />
-              <span className={`w-1 h-6 rounded-full ${item.color} animate-bar-4`} />
-            </div>
+            <div className="h-8 w-14 rounded bg-slate-800 animate-pulse my-1" />
+            <p className="text-[10px] text-slate-500 truncate">{item.subtitle}</p>
           </CardContent>
         </Card>
       ))}
@@ -291,12 +294,10 @@ function AdminKpiTelemetryLoader() {
 
 /**
  * 4. ADMIN TRIAGE QUEUE & SLA MATRIX LOADER
- * Renders a command-center queue skeleton with triage dropdown controls
- * (Status, Priority, Assignee), incident description, and resolution note composer.
+ * Renders ticket row skeletons matching the exact height and structure of the triage queue cards.
  */
 function AdminQueueTriageLoader({
   count = 3,
-  label,
 }: {
   count?: number;
   label?: string;
@@ -306,60 +307,30 @@ function AdminQueueTriageLoader({
       role="status"
       aria-live="polite"
       data-testid="loader-admin-queue"
-      className="space-y-4"
+      className="space-y-3"
     >
-      {/* Telemetry Command Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 rounded-lg border border-indigo-200/80 dark:border-indigo-900/60 bg-indigo-50/60 dark:bg-indigo-950/30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-end gap-0.5 h-4">
-            <span className="w-1 h-3 bg-indigo-500 rounded-full animate-bar-1" />
-            <span className="w-1 h-4 bg-indigo-500 rounded-full animate-bar-2" />
-            <span className="w-1 h-2.5 bg-indigo-500 rounded-full animate-bar-3" />
-          </div>
-          <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
-            {label || 'Loading service desk queue and team assignments...'}
-          </span>
-        </div>
-      </div>
-
-      {/* Command-Center Triage Row Skeletons */}
       {Array.from({ length: count }).map((_, idx) => (
         <Card
           key={idx}
-          className="animate-shimmer border-slate-200 dark:border-slate-800 shadow-sm"
+          className="animate-shimmer border-slate-800 bg-slate-900/60 shadow-sm"
         >
-          <CardHeader className="p-5 pb-3">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-16 rounded font-mono bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                  <div className="h-5 w-64 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                  <div className="h-5 w-16 rounded-full bg-red-500/20 animate-pulse" />
-                  <div className="h-5 w-20 rounded-full bg-amber-500/20 animate-pulse" />
-                </div>
-                <div className="h-3 w-72 rounded bg-slate-100 dark:bg-slate-800/80 animate-pulse" />
-              </div>
-
-              {/* Simulated Status / Priority / Assignee Select Controls */}
+          <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-2 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="h-8 w-28 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900 animate-pulse" />
-                <div className="h-8 w-28 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900 animate-pulse" />
-                <div className="h-8 w-40 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900 animate-pulse" />
-                <div className="h-8 w-16 rounded-md bg-red-500/15 animate-pulse" />
+                <div className="h-4 w-20 rounded font-mono bg-slate-800 animate-pulse" />
+                <div className="h-5 w-48 sm:w-64 rounded bg-slate-800 animate-pulse" />
+                <div className="h-5 w-16 rounded-full bg-slate-800 animate-pulse" />
+                <div className="h-5 w-20 rounded-full bg-slate-800 animate-pulse" />
               </div>
+              <div className="h-3 w-60 sm:w-80 rounded bg-slate-800/80 animate-pulse" />
             </div>
-          </CardHeader>
 
-          <CardContent className="p-5 pt-2 space-y-4">
-            <div className="p-3 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 space-y-2">
-              <div className="h-3 w-full rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
-              <div className="h-3 w-2/3 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="h-8 w-24 sm:w-28 rounded-md bg-slate-800 animate-pulse" />
+              <div className="h-8 w-24 sm:w-28 rounded-md bg-slate-800 animate-pulse" />
+              <div className="h-8 w-32 sm:w-36 rounded-md bg-slate-800 animate-pulse" />
             </div>
-            <div className="flex gap-2">
-              <div className="h-8 flex-1 rounded-md bg-slate-100 dark:bg-slate-900 animate-pulse" />
-              <div className="h-8 w-24 rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
-            </div>
-          </CardContent>
+          </div>
         </Card>
       ))}
     </div>

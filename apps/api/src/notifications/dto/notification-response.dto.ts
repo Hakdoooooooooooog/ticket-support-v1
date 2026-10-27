@@ -3,6 +3,7 @@ import { createZodDto } from 'nestjs-zod';
 import { dateToIsoString } from '../../common/schemas/common.schema.js';
 
 export const notificationTypeEnum = z.enum([
+  'TICKET_CREATED',
   'TICKET_FOLLOW_UP_REQUESTED',
   'TICKET_CUSTOMER_AMENDED',
   'TICKET_NOTE_POSTED',

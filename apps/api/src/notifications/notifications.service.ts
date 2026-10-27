@@ -11,6 +11,7 @@ export interface CreateNotificationParams {
   userId: string;
   ticketId: string;
   type:
+    | 'TICKET_CREATED'
     | 'TICKET_FOLLOW_UP_REQUESTED'
     | 'TICKET_CUSTOMER_AMENDED'
     | 'TICKET_NOTE_POSTED'
@@ -25,14 +26,28 @@ export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getForUser(userId: string, limit = 50): Promise<NotificationListResponseDto> {
+    const user =
+      typeof this.prisma?.user?.findUnique === 'function'
+        ? await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true },
+          })
+        : null;
+
+    // Administrators strictly receive TICKET_CREATED notifications. All other operational noise is omitted.
+    const whereClause: any = { userId };
+    if (user?.role === 'ADMIN') {
+      whereClause.type = 'TICKET_CREATED';
+    }
+
     const [notifications, unreadCount] = await Promise.all([
       this.prisma.notification.findMany({
-        where: { userId },
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         take: limit,
       }),
       this.prisma.notification.count({
-        where: { userId, read: false },
+        where: { ...whereClause, read: false },
       }),
     ]);
 
@@ -86,8 +101,53 @@ export class NotificationsService {
     return { success: true, count: res.count };
   }
 
+  async notifyAdmins(params: {
+    ticketId: string;
+    title: string;
+    message: string;
+  }): Promise<void> {
+    try {
+      const admins = await this.prisma.user.findMany({
+        where: { role: 'ADMIN' },
+        select: { id: true },
+      });
+
+      await Promise.all(
+        admins.map((admin) =>
+          this.prisma.notification.create({
+            data: {
+              userId: admin.id,
+              ticketId: params.ticketId,
+              type: 'TICKET_CREATED',
+              title: params.title,
+              message: params.message,
+            },
+          }),
+        ),
+      );
+    } catch (err) {
+      console.error('Failed to notify administrators of new ticket:', err);
+    }
+  }
+
   async createNotification(params: CreateNotificationParams): Promise<NotificationResponseDto | null> {
     try {
+      // If the notification is NOT a new ticket creation, verify that the recipient is not an administrator.
+      // Administrators should strictly receive new ticket notifications, not agent-level operational noise.
+      if (params.type !== 'TICKET_CREATED') {
+        const recipient =
+          typeof this.prisma?.user?.findUnique === 'function'
+            ? await this.prisma.user.findUnique({
+                where: { id: params.userId },
+                select: { role: true },
+              })
+            : null;
+
+        if (recipient?.role === 'ADMIN') {
+          return null; // Suppress agent-level notifications for IT Administrators
+        }
+      }
+
       const created = await this.prisma.notification.create({
         data: {
           userId: params.userId,

@@ -32,6 +32,11 @@ function getNotificationBadge(type: AppNotification['type']): {
   badgeClass: string;
 } {
   switch (type) {
+    case 'TICKET_CREATED':
+      return {
+        label: 'NEW TICKET',
+        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
+      };
     case 'TICKET_FOLLOW_UP_REQUESTED':
       return {
         label: 'NEEDS INFO',

@@ -8,6 +8,10 @@ describe('NotificationsService', () => {
 
   beforeEach(() => {
     mockPrisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({ role: 'AGENT' }),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
       notification: {
         findMany: vi.fn(),
         count: vi.fn(),
@@ -106,5 +110,54 @@ describe('NotificationsService', () => {
 
     expect(result?.id).toBe('notif-new');
     expect(result?.type).toBe('TICKET_ASSIGNED');
+  });
+
+  it('filters out operational notifications for administrators in getForUser', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ role: 'ADMIN' });
+    mockPrisma.notification.findMany.mockResolvedValue([]);
+    mockPrisma.notification.count.mockResolvedValue(0);
+
+    await service.getForUser('admin-1');
+
+    expect(mockPrisma.notification.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'admin-1', type: 'TICKET_CREATED' },
+      }),
+    );
+  });
+
+  it('suppresses agent-level operational notifications when recipient is an ADMIN', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ role: 'ADMIN' });
+
+    const result = await service.createNotification({
+      userId: 'admin-1',
+      ticketId: 'ticket-1',
+      type: 'TICKET_STATUS_CHANGED',
+      title: 'Customer Rated Ticket (5/5)',
+      message: 'Great service',
+    });
+
+    expect(result).toBeNull();
+    expect(mockPrisma.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('notifies all administrators when a new ticket is submitted via notifyAdmins', async () => {
+    mockPrisma.user.findMany.mockResolvedValue([
+      { id: 'admin-1' },
+      { id: 'admin-2' },
+    ]);
+    mockPrisma.notification.create.mockResolvedValue({ id: 'notif-1' });
+
+    await service.notifyAdmins({
+      ticketId: 'ticket-123',
+      title: 'New Ticket: Server Outage',
+      message: 'A new ticket #123 was submitted',
+    });
+
+    expect(mockPrisma.user.findMany).toHaveBeenCalledWith({
+      where: { role: 'ADMIN' },
+      select: { id: true },
+    });
+    expect(mockPrisma.notification.create).toHaveBeenCalledTimes(2);
   });
 });

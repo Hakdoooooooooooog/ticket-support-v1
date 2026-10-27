@@ -351,13 +351,37 @@ describe('TicketSupport API (e2e)', () => {
         .expect(400);
     });
 
-    it('GET /notifications -> should return notification feed structure', async () => {
+    it('GET /notifications -> should return notification feed structure and strictly filter for admins', async () => {
+      // 1. Check notifications feed with customer token
       const notifRes = await request(app.getHttpServer())
         .get('/notifications')
+        .set('Authorization', `Bearer ${customerToken}`)
         .expect(200);
 
       expect(Array.isArray(notifRes.body.notifications)).toBe(true);
       expect(typeof notifRes.body.unreadCount).toBe('number');
+
+      // 2. Log in as admin and verify admin feed only receives TICKET_CREATED
+      const adminLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'admin@ticketsupport.local',
+          password: 'AdminPassword123!',
+        });
+
+      if (adminLogin.status === 200) {
+        const adminFeed = await request(app.getHttpServer())
+          .get('/notifications')
+          .set('Authorization', `Bearer ${adminLogin.body.accessToken}`)
+          .expect(200);
+
+        expect(Array.isArray(adminFeed.body.notifications)).toBe(true);
+        // Verify every notification for admin is strictly TICKET_CREATED
+        const nonAdminNotifications = adminFeed.body.notifications.filter(
+          (n: { type: string }) => n.type !== 'TICKET_CREATED',
+        );
+        expect(nonAdminNotifications).toHaveLength(0);
+      }
     });
 
     it('DELETE /tickets/:id -> should delete the ticket and return 204', async () => {

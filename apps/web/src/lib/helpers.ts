@@ -639,6 +639,7 @@ export interface AppNotification {
   userId: string;
   ticketId: string;
   type:
+    | 'TICKET_CREATED'
     | 'TICKET_FOLLOW_UP_REQUESTED'
     | 'TICKET_CUSTOMER_AMENDED'
     | 'TICKET_NOTE_POSTED'

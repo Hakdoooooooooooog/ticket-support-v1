@@ -1590,7 +1590,7 @@ export default function AdminDashboardPage() {
                   }`}
                 />
               </span>
-              <span className="text-[11px] font-medium">
+              <span className="text-[11px] font-medium w-24 truncate">
                 {isFetching ? 'Syncing...' : 'Live Connected'}
               </span>
             </div>
@@ -1599,7 +1599,7 @@ export default function AdminDashboardPage() {
               variant="outline"
               size="sm"
               onClick={() => refetch()}
-              className="h-7 px-2 text-[11px]"
+              className="h-7 w-16 text-center px-1 text-[11px] shrink-0"
             >
               Refresh
             </Button>
@@ -1824,11 +1824,11 @@ export default function AdminDashboardPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0 flex-nowrap overflow-x-auto">
               {formattedLastUpdated && (
                 <div
                   data-testid="dashboard-last-updated"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300 tabular-nums shrink-0 whitespace-nowrap"
                 >
                   <span className="relative flex h-2 w-2">
                     <span
@@ -1847,18 +1847,32 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
               )}
-              {updateTicketMutation.isPending && (
-                <ContextualLoader context="triage-update" />
-              )}
-              {addCommentMutation.isPending && (
-                <ContextualLoader context="comment-post" />
-              )}
-              {deleteTicketMutation.isPending && (
-                <ContextualLoader context="ticket-delete" />
-              )}
+              <div className="flex items-center shrink-0">
+                {updateTicketMutation.isPending && (
+                  <ContextualLoader context="triage-update" />
+                )}
+                {addCommentMutation.isPending && (
+                  <ContextualLoader context="comment-post" />
+                )}
+                {deleteTicketMutation.isPending && (
+                  <ContextualLoader context="ticket-delete" />
+                )}
+              </div>
               <NotificationCenter onSelectTicket={handleSelectTicket} />
-              <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs h-8">
-                {isFetching && hasLoadedTickets ? 'Syncing...' : 'Refresh Queue'}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                className="w-32 shrink-0 text-xs h-8 justify-center text-center font-medium"
+              >
+                {isFetching && hasLoadedTickets ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    Syncing...
+                  </span>
+                ) : (
+                  'Refresh Queue'
+                )}
               </Button>
             </div>
           </div>
@@ -1886,7 +1900,7 @@ export default function AdminDashboardPage() {
               {showInitialSkeleton ? (
                 <ContextualLoader context="admin-kpi" />
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-3">
                   {/* 1. Critical & Urgent Incidents (Highest Priority) */}
                   <Card
                     onClick={() => {
@@ -1900,14 +1914,14 @@ export default function AdminDashboardPage() {
                     }`}
                   >
                     <CardContent className="p-3.5 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className={`text-[10px] font-extrabold uppercase tracking-widest ${
+                      <div className="flex items-center justify-between gap-1.5 min-w-0">
+                        <p className={`text-[10px] font-extrabold uppercase tracking-wider truncate ${
                           kpis.urgentHigh > 0 ? 'text-rose-400' : 'text-slate-400'
                         }`}>
                           Urgent / High
                         </p>
                         {kpis.urgentHigh > 0 && (
-                          <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
                             Critical
                           </span>
                         )}
@@ -1936,14 +1950,14 @@ export default function AdminDashboardPage() {
                     }`}
                   >
                     <CardContent className="p-3.5 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className={`text-[10px] font-extrabold uppercase tracking-widest ${
+                      <div className="flex items-center justify-between gap-1.5 min-w-0">
+                        <p className={`text-[10px] font-extrabold uppercase tracking-wider truncate ${
                           unassignedTickets.length > 0 ? 'text-amber-400' : 'text-slate-400'
                         }`}>
                           Unassigned Queue
                         </p>
                         {unassignedTickets.length > 0 && (
-                          <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                             Triage
                           </span>
                         )}
@@ -1968,11 +1982,11 @@ export default function AdminDashboardPage() {
                     className="cursor-pointer border-blue-500/40 bg-blue-500/10 hover:border-blue-400 transition-colors"
                   >
                     <CardContent className="p-3.5 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">
+                      <div className="flex items-center justify-between gap-1.5 min-w-0">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-blue-400">
                           Assigned to Me
                         </p>
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
                           Active
                         </span>
                       </div>
@@ -1988,15 +2002,15 @@ export default function AdminDashboardPage() {
                   {/* 4. Customer Satisfaction Score (Quality KPI) */}
                   <Card className="border-amber-500/30 bg-amber-500/5 hover:border-amber-400 transition-colors">
                     <CardContent className="p-3.5 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">
+                      <div className="flex items-center justify-between gap-1.5 min-w-0">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-amber-400">
                           CSAT Score
                         </p>
-                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                           KPI
                         </span>
                       </div>
-                      <p className="text-3xl font-black tracking-tight text-amber-300">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-amber-300">
                         {kpis.csatAverage ? `${kpis.csatAverage} / 5.0` : 'N/A'}
                       </p>
                       <p className="text-[10px] text-slate-500 truncate">
@@ -2010,10 +2024,10 @@ export default function AdminDashboardPage() {
                   {/* 5. In Progress / Needs Info (Operational Workflow) */}
                   <Card className="border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-400 transition-colors">
                     <CardContent className="p-3.5 space-y-1">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-indigo-400">
                         In Progress / Info
                       </p>
-                      <p className="text-2xl font-black tracking-tight text-indigo-300">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-indigo-300">
                         {kpis.inProgress + kpis.needsInfo}
                       </p>
                       <p className="text-[10px] text-slate-500 truncate">
@@ -2025,10 +2039,10 @@ export default function AdminDashboardPage() {
                   {/* 6. Resolved / Closed (Completed Work) */}
                   <Card className="border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400 transition-colors">
                     <CardContent className="p-3.5 space-y-1">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-emerald-400">
                         Resolved / Closed
                       </p>
-                      <p className="text-2xl font-black tracking-tight text-emerald-300">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-300">
                         {kpis.resolvedClosed}
                       </p>
                       <p className="text-[10px] text-slate-500 truncate">
@@ -2043,13 +2057,13 @@ export default function AdminDashboardPage() {
                       setAssignmentFilter('ALL');
                       setActiveSection('ALL_TICKETS');
                     }}
-                    className="cursor-pointer border-slate-800 bg-slate-900/60 hover:border-slate-700 transition-colors"
+                    className="cursor-pointer border-slate-800 bg-slate-900/60 hover:border-slate-700 transition-colors col-span-2 sm:col-span-3 lg:col-span-2 2xl:col-span-1"
                   >
                     <CardContent className="p-3.5 space-y-1">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-slate-400">
                         Total Tickets
                       </p>
-                      <p className="text-2xl font-extrabold tracking-tight text-slate-200">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-slate-200">
                         {kpis.total}
                       </p>
                       <p className="text-[10px] text-slate-500 truncate">

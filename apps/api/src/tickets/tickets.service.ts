@@ -192,7 +192,7 @@ export class TicketsService implements OnModuleInit {
     creatorId?: string,
     actor?: TicketActorContext,
   ): Promise<TicketResponseDto> {
-    return this.runTransaction(async (tx) => {
+    const { record, user } = await this.runTransaction(async (tx) => {
       const effectiveCreatorId = actor?.id || creatorId || dto.creatorId;
       const user = await this.resolveCreatorUser(effectiveCreatorId, tx);
       const createData = TicketMapper.toCreateInput(dto, user.id);
@@ -219,8 +219,19 @@ export class TicketsService implements OnModuleInit {
         include: this.standardTicketInclude,
       });
 
-      return TicketMapper.toResponseDto(record);
+      return { record, user };
     });
+
+    if (this.notificationsService) {
+      const creatorName = user.fullName || user.email || 'Customer';
+      await this.notificationsService.notifyAdmins({
+        ticketId: record.id,
+        title: `New Ticket: ${record.title.slice(0, 40)}`,
+        message: `A new ticket #${record.id.slice(-6)} was submitted by ${creatorName} and is pending triage.`,
+      });
+    }
+
+    return TicketMapper.toResponseDto(record);
   }
 
   async addComment(
@@ -647,7 +658,7 @@ export class TicketsService implements OnModuleInit {
           userId: assigneeId,
           ticketId: id,
           type: 'TICKET_STATUS_CHANGED',
-          title: `Customer Rated Ticket (${dto.rating}★)`,
+          title: `Customer Rated Ticket (${dto.rating}/5)`,
           message: dto.comment
             ? `Customer submitted a ${dto.rating}/5 rating: "${dto.comment.trim().slice(0, 100)}"`
             : `Customer rated ticket "${(existingTicket as any).title?.slice(0, 30) || id}" with ${dto.rating} out of 5 stars.`,

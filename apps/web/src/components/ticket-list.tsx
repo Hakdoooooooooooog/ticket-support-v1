@@ -260,7 +260,7 @@ export function TicketList() {
           <button
             type="button"
             onClick={() => refetch()}
-            className="text-xs text-slate-500 hover:text-slate-800 underline dark:text-slate-400"
+            className="text-xs text-slate-500 hover:text-slate-800 underline dark:text-slate-400 w-16 text-center shrink-0"
           >
             {isFetching && hasLoadedTickets ? 'Syncing...' : 'Refresh'}
           </button>
