@@ -6,10 +6,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "test": "turbo test",
+    "dev": "turbo dev --color",
+    "dev:stream": "turbo dev --ui=stream --color",
+    "build": "turbo build --color",
+    "lint": "turbo lint --color",
+    "test": "turbo test --color",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:studio": "npm run db:studio --workspace=api",
