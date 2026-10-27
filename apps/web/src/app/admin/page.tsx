@@ -1335,15 +1335,18 @@ export default function AdminDashboardPage() {
          ------------------------------------------------------------- */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 z-20 select-none">
         {/* Brand Header */}
-        <div className="h-16 px-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
+        <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-sm shrink-0">
+              TS
+            </div>
+            <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate">
               TicketSupport
             </span>
           </div>
-          <Badge variant="default" className="text-[10px] tracking-wide font-bold">
-            IT CONSOLE
-          </Badge>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap shrink-0">
+            IT Console
+          </span>
         </div>
 
         {/* Current Staff User Profile Card */}
@@ -1534,21 +1537,24 @@ export default function AdminDashboardPage() {
           2. MOBILE NAVBAR & RESPONSIVE DRAWER (<lg)
          ------------------------------------------------------------- */}
       <div className="lg:hidden sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             aria-label="Toggle navigation menu"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+            className="p-1.5 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
           >
             <span className="text-xl">☰</span>
           </button>
+          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-sm shrink-0">
+            TS
+          </div>
           <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
             TicketSupport
           </span>
-          <Badge variant="default" className="text-[10px]">
-            IT
-          </Badge>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap">
+            IT Console
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1577,7 +1583,12 @@ export default function AdminDashboardPage() {
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-                <span className="font-extrabold text-base">TicketSupport</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-blue-600 text-white font-black flex items-center justify-center text-[11px] shadow-sm shrink-0">
+                    TS
+                  </div>
+                  <span className="font-extrabold text-base tracking-tight">TicketSupport</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
