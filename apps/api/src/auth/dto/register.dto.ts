@@ -16,8 +16,14 @@ export const registerSchema = z.object({
     .describe('User password (minimum 6 characters)'),
   role: z
     .enum(['ADMIN', 'AGENT', 'CUSTOMER'])
+    .optional()
     .default('CUSTOMER')
-    .describe('Account role: CUSTOMER, AGENT, or ADMIN'),
+    .describe('Requested account role (admin/agent requires valid inviteCode)'),
+  inviteCode: z
+    .string()
+    .trim()
+    .optional()
+    .describe('Admin invite code for provisioning IT agent or administrator accounts'),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

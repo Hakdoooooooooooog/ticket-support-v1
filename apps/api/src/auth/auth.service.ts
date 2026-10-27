@@ -2,6 +2,9 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  ForbiddenException,
+  BadRequestException,
+  NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
 import { createHmac, randomBytes } from 'node:crypto';
@@ -9,7 +12,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service.js';
-import { LoginDto, RegisterDto, AuthResponseDto, UserResponseDto } from './dto/index.js';
+import {
+  LoginDto,
+  RegisterDto,
+  AuthResponseDto,
+  UserResponseDto,
+  CreateInviteDto,
+  AdminCreateUserDto,
+} from './dto/index.js';
 import { AuthMapper } from './mappers/auth.mapper.js';
 import { getJwtSecret } from './strategies/jwt.strategy.js';
 
@@ -169,6 +179,45 @@ export class AuthService implements OnModuleInit {
     const passwordHash = await this.hashPassword(validatedInput.password);
 
     const user = await this.runTransaction(async (tx) => {
+      let resolvedRole: 'CUSTOMER' | 'AGENT' | 'ADMIN' = 'CUSTOMER';
+
+      if (validatedInput.inviteCode) {
+        if (typeof tx.invite?.findUnique !== 'function') {
+          throw new BadRequestException('Invitations are not supported on this deployment');
+        }
+
+        const invite = await tx.invite.findUnique({
+          where: { code: validatedInput.inviteCode.trim() },
+        });
+
+        if (!invite) {
+          throw new BadRequestException('Invalid staff invitation code');
+        }
+
+        if (invite.accepted) {
+          throw new BadRequestException('This staff invitation code has already been redeemed');
+        }
+
+        if (new Date() > new Date(invite.expiresAt)) {
+          throw new BadRequestException('This staff invitation code has expired');
+        }
+
+        resolvedRole = invite.role as 'AGENT' | 'ADMIN';
+
+        await tx.invite.update({
+          where: { id: invite.id },
+          data: { accepted: true, acceptedAt: new Date() },
+        });
+      } else {
+        // Without an invite code, public registration is strictly for CUSTOMER accounts only
+        if (validatedInput.role && validatedInput.role !== 'CUSTOMER') {
+          throw new ForbiddenException(
+            'Public registration is restricted to customer accounts only. Support engineers and administrators must be invited by an IT administrator.',
+          );
+        }
+        resolvedRole = 'CUSTOMER';
+      }
+
       const existing = await tx.user.findUnique({
         where: { email: validatedInput.email },
       });
@@ -183,7 +232,7 @@ export class AuthService implements OnModuleInit {
             email: validatedInput.email,
             fullName: validatedInput.fullName,
             passwordHash,
-            role: validatedInput.role ?? 'CUSTOMER',
+            role: resolvedRole,
           },
         });
       } catch (err: unknown) {
@@ -211,6 +260,187 @@ export class AuthService implements OnModuleInit {
       user: sanitizedUser,
       accessToken,
     };
+  }
+
+  /**
+   * Generates a new staff invitation with an expiration date and unique claim code.
+   */
+  async createInvite(
+    dto: CreateInviteDto,
+    actor?: { id: string; role: string },
+  ) {
+    if (actor && actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Only administrators can issue staff invitations');
+    }
+
+    const code = `inv_${randomBytes(12).toString('hex')}`;
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    const creatorId = actor?.id || (await this.resolveAdminUser()).id;
+
+    const invite = await this.prisma.invite.create({
+      data: {
+        email: dto.email.toLowerCase().trim(),
+        role: dto.role,
+        code,
+        createdById: creatorId,
+        expiresAt,
+      },
+      include: {
+        createdBy: {
+          select: { id: true, fullName: true, email: true },
+        },
+      },
+    });
+
+    return {
+      id: invite.id,
+      email: invite.email,
+      role: invite.role,
+      code: invite.code,
+      accepted: invite.accepted,
+      acceptedAt: invite.acceptedAt ? invite.acceptedAt.toISOString() : null,
+      createdAt: invite.createdAt.toISOString(),
+      expiresAt: invite.expiresAt.toISOString(),
+      createdById: invite.createdById,
+      createdBy: invite.createdBy,
+    };
+  }
+
+  /**
+   * Lists all issued staff invitations ordered by creation date.
+   */
+  async listInvites(actor?: { id: string; role: string }) {
+    if (actor && actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Only administrators can view staff invitations');
+    }
+
+    const invites = await this.prisma.invite.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        createdBy: {
+          select: { id: true, fullName: true, email: true },
+        },
+      },
+    });
+
+    return invites.map((invite) => ({
+      id: invite.id,
+      email: invite.email,
+      role: invite.role,
+      code: invite.code,
+      accepted: invite.accepted,
+      acceptedAt: invite.acceptedAt ? invite.acceptedAt.toISOString() : null,
+      createdAt: invite.createdAt.toISOString(),
+      expiresAt: invite.expiresAt.toISOString(),
+      createdById: invite.createdById,
+      createdBy: invite.createdBy,
+    }));
+  }
+
+  /**
+   * Revokes an existing invitation by ID.
+   */
+  async revokeInvite(inviteId: string, actor?: { id: string; role: string }) {
+    if (actor && actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Only administrators can revoke staff invitations');
+    }
+
+    const existing = await this.prisma.invite.findUnique({
+      where: { id: inviteId },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Invitation "${inviteId}" not found`);
+    }
+
+    await this.prisma.invite.delete({ where: { id: inviteId } });
+    return { message: 'Invitation revoked successfully' };
+  }
+
+  /**
+   * Public check to verify an invitation code before completing registration.
+   */
+  async verifyInviteCode(code: string) {
+    if (!code || !code.trim()) {
+      return { valid: false, message: 'Invitation code required' };
+    }
+
+    const invite = await this.prisma.invite.findUnique({
+      where: { code: code.trim() },
+      include: {
+        createdBy: { select: { fullName: true } },
+      },
+    });
+
+    if (!invite) {
+      return { valid: false, message: 'Invalid invitation code' };
+    }
+    if (invite.accepted) {
+      return { valid: false, message: 'This invitation has already been redeemed' };
+    }
+    if (new Date() > new Date(invite.expiresAt)) {
+      return { valid: false, message: 'This invitation has expired' };
+    }
+
+    return {
+      valid: true,
+      email: invite.email,
+      role: invite.role,
+      invitedBy: invite.createdBy?.fullName || 'Administrator',
+    };
+  }
+
+  /**
+   * Allows an administrator to directly create a staff account without an email invitation.
+   */
+  async adminCreateUser(
+    dto: AdminCreateUserDto,
+    actor?: { id: string; role: string },
+  ) {
+    if (actor && actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Only administrators can directly provision staff accounts');
+    }
+
+    const normalizedEmail = dto.email.toLowerCase().trim();
+    const existing = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const passwordHash = await this.hashPassword(dto.password);
+    const user = await this.prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        fullName: dto.fullName.trim(),
+        passwordHash,
+        role: dto.role,
+      },
+    });
+
+    return AuthMapper.toUserResponseDto(user);
+  }
+
+  /**
+   * Resolves an administrator user model or creates a fallback administrator.
+   */
+  protected async resolveAdminUser() {
+    const admin = await this.prisma.user.findFirst({
+      where: { role: 'ADMIN' },
+    });
+    if (admin) return admin;
+
+    return this.prisma.user.upsert({
+      where: { email: 'admin@ticketsupport.local' },
+      update: {},
+      create: {
+        email: 'admin@ticketsupport.local',
+        fullName: 'System Administrator',
+        passwordHash: await this.hashPassword('Admin123!'),
+        role: 'ADMIN',
+      },
+    });
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {

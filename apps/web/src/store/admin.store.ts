@@ -4,7 +4,11 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthUser } from '@lib/helpers';
 
-export type AdminSection = 'DASHBOARD' | 'ALL_TICKETS' | 'ASSIGNED_TICKETS';
+export type AdminSection =
+  | 'DASHBOARD'
+  | 'ALL_TICKETS'
+  | 'ASSIGNED_TICKETS'
+  | 'TEAM_MANAGEMENT';
 
 export interface AdminState {
   agents: AuthUser[];

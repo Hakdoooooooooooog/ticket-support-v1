@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnauthorizedException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from '../../../src/auth/auth.service.js';
 import { PrismaService } from '../../../src/database/prisma.service.js';
 import bcrypt from 'bcryptjs';
@@ -10,7 +15,16 @@ describe('AuthService', () => {
   let prisma: {
     user: {
       findUnique: ReturnType<typeof vi.fn>;
+      findFirst: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
+      upsert: ReturnType<typeof vi.fn>;
+    };
+    invite: {
+      findUnique: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+      delete: ReturnType<typeof vi.fn>;
     };
   };
 
@@ -20,7 +34,16 @@ describe('AuthService', () => {
     prisma = {
       user: {
         findUnique: vi.fn(),
+        findFirst: vi.fn(),
         create: vi.fn(),
+        upsert: vi.fn(),
+      },
+      invite: {
+        findUnique: vi.fn(),
+        findMany: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
       },
     };
 
@@ -74,6 +97,75 @@ describe('AuthService', () => {
       expect((result.user as any).passwordHash).toBeUndefined();
     });
 
+    it('should throw ForbiddenException if public registration attempts to specify AGENT role without invite', async () => {
+      const registerDto = {
+        fullName: 'Sneaky Agent',
+        email: 'agent@example.com',
+        password: 'Password123!',
+        role: 'AGENT',
+      };
+
+      await expect(service.register(registerDto as any)).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('should allow staff registration when a valid inviteCode is provided', async () => {
+      const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24);
+      prisma.invite.findUnique.mockResolvedValue({
+        id: 'inv-1',
+        code: 'inv_validcode123',
+        role: 'AGENT',
+        accepted: false,
+        expiresAt: futureDate,
+      });
+      prisma.invite.update.mockResolvedValue({});
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'user-agent-1',
+        email: 'invited@example.com',
+        fullName: 'Invited Agent',
+        passwordHash: 'hash',
+        role: 'AGENT',
+        createdAt: mockDate,
+      });
+
+      const registerDto = {
+        fullName: 'Invited Agent',
+        email: 'invited@example.com',
+        password: 'Password123!',
+        inviteCode: 'inv_validcode123',
+      };
+
+      const result = await service.register(registerDto as any);
+      expect(result.user.role).toBe('AGENT');
+      expect(prisma.invite.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'inv-1' },
+          data: expect.objectContaining({ accepted: true }),
+        }),
+      );
+    });
+
+    it('should throw BadRequestException if staff invitation code has expired', async () => {
+      const pastDate = new Date(Date.now() - 1000 * 60);
+      prisma.invite.findUnique.mockResolvedValue({
+        id: 'inv-1',
+        code: 'inv_expired',
+        role: 'AGENT',
+        accepted: false,
+        expiresAt: pastDate,
+      });
+
+      const registerDto = {
+        fullName: 'Late Agent',
+        email: 'late@example.com',
+        password: 'Password123!',
+        inviteCode: 'inv_expired',
+      };
+
+      await expect(service.register(registerDto as any)).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw ConflictException if email is already registered', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'existing-id' });
 
@@ -84,6 +176,81 @@ describe('AuthService', () => {
       };
 
       await expect(service.register(registerDto as any)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('createInvite & adminCreateUser', () => {
+    it('should allow ADMIN to generate staff invitations', async () => {
+      prisma.user.findFirst.mockResolvedValue({ id: 'admin-1', role: 'ADMIN' });
+      prisma.invite.create.mockResolvedValue({
+        id: 'inv-new',
+        email: 'newagent@example.com',
+        role: 'AGENT',
+        code: 'inv_testcode',
+        accepted: false,
+        acceptedAt: null,
+        createdAt: mockDate,
+        expiresAt: new Date(Date.now() + 100000),
+        createdById: 'admin-1',
+        createdBy: { id: 'admin-1', fullName: 'IT Admin', email: 'admin@example.com' },
+      });
+
+      const result = await service.createInvite(
+        { email: 'newagent@example.com', role: 'AGENT' },
+        { id: 'admin-1', role: 'ADMIN' },
+      );
+
+      expect(result.email).toBe('newagent@example.com');
+      expect(result.role).toBe('AGENT');
+      expect(prisma.invite.create).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if AGENT attempts to create an invitation', async () => {
+      await expect(
+        service.createInvite(
+          { email: 'colleague@example.com', role: 'AGENT' },
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow ADMIN to directly provision a staff account', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'agent-created',
+        email: 'directagent@example.com',
+        fullName: 'Direct Agent',
+        passwordHash: 'hash',
+        role: 'AGENT',
+        createdAt: mockDate,
+      });
+
+      const result = await service.adminCreateUser(
+        {
+          fullName: 'Direct Agent',
+          email: 'directagent@example.com',
+          password: 'Password123!',
+          role: 'AGENT',
+        },
+        { id: 'admin-1', role: 'ADMIN' },
+      );
+
+      expect(result.email).toBe('directagent@example.com');
+      expect(result.role).toBe('AGENT');
+    });
+
+    it('should throw ForbiddenException if AGENT attempts to provision a staff account', async () => {
+      await expect(
+        service.adminCreateUser(
+          {
+            fullName: 'Direct Agent',
+            email: 'directagent@example.com',
+            password: 'Password123!',
+            role: 'AGENT',
+          },
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

@@ -39,9 +39,26 @@ model User {
   createdTickets  Ticket[]       @relation("CreatedTickets")
   assignedTickets Ticket[]       @relation("AssignedTickets")
   comments        Comment[]
+  createdInvites  Invite[]       @relation("CreatedInvites")
 
   @@index([role, fullName])
   @@map("users")
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  email       String
+  role        Role      @default(AGENT)
+  code        String    @unique
+  createdById String
+  createdBy   User      @relation("CreatedInvites", fields: [createdById], references: [id], onDelete: Cascade)
+  accepted    Boolean   @default(false)
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+
+  @@index([email, code, accepted])
+  @@map("invites")
 }
 
 model Ticket {

@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@ui/card';
 import { Input } from '@ui/input';
 import { Label } from '@ui/label';
 import { Button } from '@ui/button';
+import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { apiClient } from '@lib/api-client';
 import {
@@ -16,8 +17,19 @@ import {
 } from '@lib/helpers';
 import { useAuthStore } from '@store/auth.store';
 
-export default function AuthRootPage() {
+interface VerifiedInviteInfo {
+  valid: boolean;
+  email?: string;
+  role?: 'AGENT' | 'ADMIN';
+  invitedBy?: string;
+  message?: string;
+}
+
+function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlInviteCode = searchParams.get('invite') || searchParams.get('inviteCode') || '';
+
   const {
     user: storedUser,
     isSessionVerified,
@@ -30,7 +42,10 @@ export default function AuthRootPage() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [fullName, setFullName] = React.useState('');
-  const [role, setRole] = React.useState<'CUSTOMER' | 'AGENT' | 'ADMIN'>('CUSTOMER');
+  const [inviteCode, setInviteCode] = React.useState(urlInviteCode);
+  const [showInviteInput, setShowInviteInput] = React.useState(Boolean(urlInviteCode));
+  const [inviteInfo, setInviteInfo] = React.useState<VerifiedInviteInfo | null>(null);
+  const [isVerifyingInvite, setIsVerifyingInvite] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -53,6 +68,38 @@ export default function AuthRootPage() {
       }
     });
   }, [isSessionVerified, storedUser, ensureSessionVerified, redirectByUserRole]);
+
+  // If an invite code is present in URL, auto-switch to register mode and verify invite
+  React.useEffect(() => {
+    if (urlInviteCode) {
+      setMode('register');
+      setInviteCode(urlInviteCode);
+      setShowInviteInput(true);
+      verifyCode(urlInviteCode);
+    }
+  }, [urlInviteCode]);
+
+  const verifyCode = async (code: string) => {
+    if (!code.trim()) {
+      setInviteInfo(null);
+      return;
+    }
+
+    setIsVerifyingInvite(true);
+    try {
+      const res = await apiClient.get<VerifiedInviteInfo>(
+        `/auth/invites/verify/${encodeURIComponent(code.trim())}`,
+      );
+      setInviteInfo(res.data);
+      if (res.data.email && !email) {
+        setEmail(res.data.email);
+      }
+    } catch {
+      setInviteInfo({ valid: false, message: 'Unable to verify invitation code' });
+    } finally {
+      setIsVerifyingInvite(false);
+    }
+  };
 
   if (isVerifyingSession && !storedUser) {
     return (
@@ -80,12 +127,22 @@ export default function AuthRootPage() {
         setSession({ accessToken, user: verified });
         redirectByUserRole(verified);
       } else {
-        const res = await apiClient.post('/auth/register', {
+        const payload: {
+          fullName: string;
+          email: string;
+          password: string;
+          inviteCode?: string;
+        } = {
           fullName,
           email,
           password,
-          role,
-        });
+        };
+
+        if (inviteCode.trim()) {
+          payload.inviteCode = inviteCode.trim();
+        }
+
+        const res = await apiClient.post('/auth/register', payload);
         const { accessToken, user } = res.data;
         const verified = (await verifyPassportSession(accessToken)) || user;
         setSession({ accessToken, user: verified });
@@ -157,7 +214,9 @@ export default function AuthRootPage() {
               <CardDescription>
                 {mode === 'login'
                   ? 'Enter your email and password to continue.'
-                  : 'Set up a customer or support team account.'}
+                  : inviteInfo?.valid
+                    ? `Staff Invitation: Registering as ${inviteInfo.role === 'ADMIN' ? 'Administrator' : 'Support Engineer'}.`
+                    : 'Register as a customer to submit and track support tickets.'}
               </CardDescription>
             </div>
           </CardHeader>
@@ -167,6 +226,31 @@ export default function AuthRootPage() {
               {error && (
                 <div className="p-3 text-xs font-medium rounded-md bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800">
                   {error}
+                </div>
+              )}
+
+              {mode === 'register' && inviteInfo && (
+                <div
+                  className={`p-3 rounded-md border text-xs space-y-1 ${
+                    inviteInfo.valid
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300'
+                      : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                  }`}
+                >
+                  {inviteInfo.valid ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <span>
+                        <strong>Staff Invitation Detected:</strong> Role:{' '}
+                        <Badge variant="default" className="ml-1 text-[10px]">
+                          {inviteInfo.role === 'ADMIN'
+                            ? 'Administrator'
+                            : 'Support Engineer'}
+                        </Badge>
+                      </span>
+                    </div>
+                  ) : (
+                    <span>{inviteInfo.message || 'Invalid or expired invitation code.'}</span>
+                  )}
                 </div>
               )}
 
@@ -207,21 +291,59 @@ export default function AuthRootPage() {
                 />
               </div>
 
+              {/* Staff invitation code toggle (Invite-only mechanism) */}
               {mode === 'register' && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="role">Account Role / Workspace</Label>
-                  <select
-                    id="role"
-                    value={role}
-                    onChange={(e) =>
-                      setRole(e.target.value as 'CUSTOMER' | 'AGENT' | 'ADMIN')
-                    }
-                    className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 dark:border-slate-800 dark:bg-slate-950 dark:focus-visible:ring-slate-300"
-                  >
-                    <option value="CUSTOMER">Customer</option>
-                    <option value="AGENT">Support Engineer</option>
-                    <option value="ADMIN">Administrator</option>
-                  </select>
+                <div className="pt-1">
+                  {!showInviteInput ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowInviteInput(true)}
+                      className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+                    >
+                      Have an IT staff invitation code?
+                    </button>
+                  ) : (
+                    <div className="space-y-1.5 p-3 rounded-md bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="inviteCode" className="text-xs font-semibold">
+                          Staff Invitation Code
+                        </Label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowInviteInput(false);
+                            setInviteCode('');
+                            setInviteInfo(null);
+                          }}
+                          className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          id="inviteCode"
+                          placeholder="e.g. inv_xxxxxxxxxxxx"
+                          value={inviteCode}
+                          onChange={(e) => setInviteCode(e.target.value)}
+                          className="text-xs h-8"
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => verifyCode(inviteCode)}
+                          disabled={isVerifyingInvite || !inviteCode.trim()}
+                          className="text-xs h-8 shrink-0"
+                        >
+                          {isVerifyingInvite ? 'Checking...' : 'Apply'}
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        IT Support Engineers and Administrators must be invited by an IT Administrator.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -232,12 +354,30 @@ export default function AuthRootPage() {
                   ? 'Authenticating...'
                   : mode === 'login'
                     ? 'Sign In'
-                    : 'Create Account & Continue'}
+                    : inviteInfo?.valid
+                      ? 'Activate Staff Account'
+                      : 'Create Customer Account'}
               </Button>
             </CardFooter>
           </form>
         </Card>
       </div>
     </main>
+  );
+}
+
+export default function AuthRootPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <ContextualLoader
+          context="auth-session"
+          label="Loading Authentication"
+          sublabel="Please wait..."
+        />
+      }
+    >
+      <AuthForm />
+    </React.Suspense>
   );
 }

@@ -97,6 +97,30 @@ export default function AdminDashboardPage() {
   const [followUpAttachment, setFollowUpAttachment] = React.useState<File | null>(null);
   const [actionErrors, setActionErrors] = React.useState<Record<string, string>>({});
 
+  // Responsive mobile navigation drawer
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  // Team Management subtab state
+  const [teamManagementSubtab, setTeamManagementSubtab] = React.useState<
+    'MEMBERS' | 'INVITE' | 'PROVISION'
+  >('MEMBERS');
+
+  // Staff Invitation states
+  const [inviteEmail, setInviteEmail] = React.useState('');
+  const [inviteRole, setInviteRole] = React.useState<'AGENT' | 'ADMIN'>('AGENT');
+  const [generatedInviteCode, setGeneratedInviteCode] = React.useState<string | null>(null);
+  const [inviteSuccessMessage, setInviteSuccessMessage] = React.useState<string | null>(null);
+  const [inviteError, setInviteError] = React.useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = React.useState(false);
+
+  // Direct Staff Provisioning states
+  const [provisionFullName, setProvisionFullName] = React.useState('');
+  const [provisionEmail, setProvisionEmail] = React.useState('');
+  const [provisionPassword, setProvisionPassword] = React.useState('');
+  const [provisionRole, setProvisionRole] = React.useState<'AGENT' | 'ADMIN'>('AGENT');
+  const [provisionSuccessMessage, setProvisionSuccessMessage] = React.useState<string | null>(null);
+  const [provisionError, setProvisionError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     if (isSessionVerified && user) {
       return;
@@ -147,7 +171,7 @@ export default function AdminDashboardPage() {
     }
   }, [tickets, initializeDefaultExpansion]);
 
-  const { data: queriedAgents } = useQuery<AuthUser[]>({
+  const { data: queriedAgents, refetch: refetchAgents } = useQuery<AuthUser[]>({
     queryKey: ['agents'],
     initialData: hasLoadedAgents ? storedAgents : undefined,
     refetchOnWindowFocus: 'always',
@@ -243,6 +267,91 @@ export default function AdminDashboardPage() {
       setActionErrors((prev) => ({ ...prev, [variables]: message }));
     },
   });
+
+  // Staff Invitations Query (Administrators only)
+  const { data: invites = [], refetch: refetchInvites } = useQuery<
+    Array<{
+      id: string;
+      email: string;
+      role: 'AGENT' | 'ADMIN';
+      code: string;
+      accepted: boolean;
+      acceptedAt: string | null;
+      createdAt: string;
+      expiresAt: string;
+      createdBy?: { fullName: string };
+    }>
+  >({
+    queryKey: ['admin-invites'],
+    enabled: user?.role === 'ADMIN',
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get('/auth/admin/invites');
+        return res.data;
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const createInviteMutation = useMutation({
+    mutationFn: async (payload: { email: string; role: 'AGENT' | 'ADMIN' }) => {
+      const res = await apiClient.post('/auth/admin/invites', payload);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      refetchInvites();
+      setGeneratedInviteCode(data.code);
+      setInviteSuccessMessage(`Invitation link generated for ${data.email}!`);
+      setInviteError(null);
+      setInviteEmail('');
+    },
+    onError: (err) => {
+      setInviteError(extractApiErrorMessage(err, 'Failed to create staff invitation'));
+      setInviteSuccessMessage(null);
+    },
+  });
+
+  const adminCreateUserMutation = useMutation({
+    mutationFn: async (payload: {
+      fullName: string;
+      email: string;
+      password: string;
+      role: 'AGENT' | 'ADMIN';
+    }) => {
+      const res = await apiClient.post('/auth/admin/users', payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      refetchAgents();
+      setProvisionSuccessMessage('Staff account created and active!');
+      setProvisionError(null);
+      setProvisionFullName('');
+      setProvisionEmail('');
+      setProvisionPassword('');
+    },
+    onError: (err) => {
+      setProvisionError(extractApiErrorMessage(err, 'Failed to provision staff member'));
+      setProvisionSuccessMessage(null);
+    },
+  });
+
+  const revokeInviteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/auth/admin/invites/${id}`);
+    },
+    onSuccess: () => {
+      refetchInvites();
+    },
+  });
+
+  const handleCopyInviteLink = (code: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const link = `${origin}?invite=${code}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
 
   const handleSignOut = () => {
     clearSession();
@@ -1220,51 +1329,408 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
+      {/* -------------------------------------------------------------
+          1. DESKTOP SIDEBAR (lg:flex, w-64, fixed on left)
+         ------------------------------------------------------------- */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 z-20 select-none">
+        {/* Brand Header */}
+        <div className="h-16 px-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
             <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
               TicketSupport
             </span>
-            <Badge variant="default">IT Admin &amp; Operations Console</Badge>
           </div>
+          <Badge variant="default" className="text-[10px] tracking-wide font-bold">
+            IT CONSOLE
+          </Badge>
+        </div>
 
-          <div className="flex items-center gap-3">
-            <Link href="/portal">
-              <Button variant="outline" size="sm">
-                Customer Portal
-              </Button>
-            </Link>
-            {user && (
-              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                <span className="font-medium">{user.fullName}</span>
-                <Badge variant="secondary">{user.role}</Badge>
+        {/* Current Staff User Profile Card */}
+        {user && (
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center shrink-0 border border-blue-500/20 text-xs">
+                {user.fullName.charAt(0).toUpperCase()}
               </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-xs truncate text-slate-900 dark:text-white">
+                  {user.fullName}
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Badge
+                    variant={user.role === 'ADMIN' ? 'default' : 'secondary'}
+                    className="text-[10px] py-0 px-1.5"
+                  >
+                    {user.role}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Routes */}
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => setActiveSection('DASHBOARD')}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
+              activeSection === 'DASHBOARD'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+            }`}
+          >
+            <span className="flex items-center gap-2.5">
+              <span>📊</span>
+              <span>Dashboard Overview</span>
+            </span>
+            {unassignedTickets.length > 0 && (
+              <span
+                className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                  activeSection === 'DASHBOARD'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-amber-500/20 text-amber-500'
+                }`}
+              >
+                {unassignedTickets.length}
+              </span>
             )}
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              Sign Out
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSection('ALL_TICKETS')}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
+              activeSection === 'ALL_TICKETS'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+            }`}
+          >
+            <span className="flex items-center gap-2.5">
+              <span>📋</span>
+              <span>All Tickets</span>
+            </span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                activeSection === 'ALL_TICKETS'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {tickets.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSection('ASSIGNED_TICKETS')}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
+              activeSection === 'ASSIGNED_TICKETS'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+            }`}
+          >
+            <span className="flex items-center gap-2.5">
+              <span>👤</span>
+              <span>Assigned Tickets</span>
+            </span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                activeSection === 'ASSIGNED_TICKETS'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-blue-500/20 text-blue-500'
+              }`}
+            >
+              {myAssignedTickets.length}
+            </span>
+          </button>
+
+          {/* Admin Exclusive: IT Support Team & Staff Invites */}
+          {user?.role === 'ADMIN' && (
+            <button
+              type="button"
+              onClick={() => setActiveSection('TEAM_MANAGEMENT')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
+                activeSection === 'TEAM_MANAGEMENT'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <span>👥</span>
+                <span>Team &amp; Invites</span>
+              </span>
+              <span
+                className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wider ${
+                  activeSection === 'TEAM_MANAGEMENT'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-500/20 text-emerald-500'
+                }`}
+              >
+                Admin
+              </span>
+            </button>
+          )}
+
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Link
+              href="/portal"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900 transition-colors"
+            >
+              <span className="flex items-center gap-2.5">
+                <span>🌐</span>
+                <span>Customer Portal</span>
+              </span>
+              <span className="text-[10px] text-slate-400">↗</span>
+            </Link>
+          </div>
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3 bg-slate-50/50 dark:bg-slate-950/50">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span
+                  className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    isFetching ? 'bg-blue-400' : 'bg-emerald-400'
+                  }`}
+                />
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    isFetching ? 'bg-blue-500' : 'bg-emerald-500'
+                  }`}
+                />
+              </span>
+              <span className="text-[11px] font-medium">
+                {isFetching ? 'Syncing...' : 'Live Connected'}
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="h-7 px-2 text-[11px]"
+            >
+              Refresh
             </Button>
           </div>
-        </div>
-      </header>
 
-      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="w-full justify-start text-xs h-8 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+          >
+            ← Sign Out
+          </Button>
+        </div>
+      </aside>
+
+      {/* -------------------------------------------------------------
+          2. MOBILE NAVBAR & RESPONSIVE DRAWER (<lg)
+         ------------------------------------------------------------- */}
+      <div className="lg:hidden sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label="Toggle navigation menu"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+          >
+            <span className="text-xl">☰</span>
+          </button>
+          <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
+            TicketSupport
+          </span>
+          <Badge variant="default" className="text-[10px]">
+            IT
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {user && (
+            <Badge variant="secondary" className="text-[10px]">
+              {user.role}
+            </Badge>
+          )}
+          <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 text-xs">
+            Sign Out
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="lg:hidden fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-72 max-w-[80vw] h-full bg-white dark:bg-slate-950 p-4 flex flex-col justify-between shadow-2xl"
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <span className="font-extrabold text-base">TicketSupport</span>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 rounded text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {user && (
+                <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900 text-xs space-y-1">
+                  <p className="font-semibold">{user.fullName}</p>
+                  <p className="text-slate-500">{user.email}</p>
+                  <Badge variant="secondary">{user.role}</Badge>
+                </div>
+              )}
+
+              <nav className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection('DASHBOARD');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
+                    activeSection === 'DASHBOARD'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                  }`}
+                >
+                  <span>📊 Dashboard Overview</span>
+                  {unassignedTickets.length > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-400">
+                      {unassignedTickets.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection('ALL_TICKETS');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
+                    activeSection === 'ALL_TICKETS'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                  }`}
+                >
+                  <span>📋 All Tickets</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800">
+                    {tickets.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection('ASSIGNED_TICKETS');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
+                    activeSection === 'ASSIGNED_TICKETS'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                  }`}
+                >
+                  <span>👤 Assigned Tickets</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-400">
+                    {myAssignedTickets.length}
+                  </span>
+                </button>
+
+                {user?.role === 'ADMIN' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSection('TEAM_MANAGEMENT');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
+                      activeSection === 'TEAM_MANAGEMENT'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                    }`}
+                  >
+                    <span>👥 Team &amp; Invites</span>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 uppercase">
+                      Admin
+                    </span>
+                  </button>
+                )}
+
+                <div className="pt-2">
+                  <Link
+                    href="/portal"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                  >
+                    <span>🌐 Customer Portal</span>
+                    <span>↗</span>
+                  </Link>
+                </div>
+              </nav>
+            </div>
+
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSignOut}
+                className="w-full text-xs"
+              >
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -------------------------------------------------------------
+          3. MAIN CONTENT WORKSPACE (lg:pl-64, flex-1)
+         ------------------------------------------------------------- */}
+      <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
+        <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 space-y-6 max-w-7xl w-full mx-auto">
+          {/* Main Top Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                IT Service Desk Console
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                {activeSection === 'DASHBOARD' && 'IT Service Desk Queue'}
+                {activeSection === 'ALL_TICKETS' && 'All Customer Tickets'}
+                {activeSection === 'ASSIGNED_TICKETS' && 'Assigned Incidents Queue'}
+                {activeSection === 'TEAM_MANAGEMENT' && 'IT Support Team & Staff Invitations'}
               </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Monitor live SLA metrics, triage incoming unassigned tickets, and resolve assigned incidents.
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+                {activeSection === 'DASHBOARD' &&
+                  'Monitor live SLA metrics, triage incoming unassigned tickets, and resolve assigned incidents.'}
+                {activeSection === 'ALL_TICKETS' &&
+                  'Browse, filter, and inspect all incoming customer incidents across priorities and statuses.'}
+                {activeSection === 'ASSIGNED_TICKETS' &&
+                  'Dedicated workspace for support engineers resolving their active queue.'}
+                {activeSection === 'TEAM_MANAGEMENT' &&
+                  'Invite-only access: invite support engineers, generate secure claim links, and manage staff accounts.'}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2.5">
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
               {formattedLastUpdated && (
                 <div
                   data-testid="dashboard-last-updated"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 text-xs text-slate-600 dark:text-slate-300"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300"
                 >
                   <span className="relative flex h-2 w-2">
                     <span
@@ -1292,69 +1758,26 @@ export default function AdminDashboardPage() {
               {deleteTicketMutation.isPending && (
                 <ContextualLoader context="ticket-delete" />
               )}
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs h-8">
                 {isFetching && hasLoadedTickets ? 'Syncing...' : 'Refresh Queue'}
               </Button>
             </div>
           </div>
 
-          {/* Primary Navigation Sections (Zustand-backed) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={activeSection === 'DASHBOARD' ? 'default' : 'outline'}
-                onClick={() => setActiveSection('DASHBOARD')}
-                className="text-xs font-semibold"
-              >
-                Dashboard Overview
-                {unassignedTickets.length > 0 && (
-                  <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-500/20 text-amber-400">
-                    {unassignedTickets.length} unassigned
-                  </span>
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                variant={activeSection === 'ALL_TICKETS' ? 'default' : 'outline'}
-                onClick={() => setActiveSection('ALL_TICKETS')}
-                className="text-xs font-semibold"
-              >
-                All Tickets
-                <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-500/20">
-                  {tickets.length}
-                </span>
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                variant={activeSection === 'ASSIGNED_TICKETS' ? 'default' : 'outline'}
-                onClick={() => setActiveSection('ASSIGNED_TICKETS')}
-                className="text-xs font-semibold"
-              >
-                Assigned Tickets
-                <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-400">
-                  {myAssignedTickets.length} mine / {allAssignedTickets.length} total
-                </span>
-              </Button>
-            </div>
-
-            {displayedTickets.length > 0 && (
+          {/* Expand / Collapse toggle for ticket sections */}
+          {activeSection !== 'TEAM_MANAGEMENT' && displayedTickets.length > 0 && (
+            <div className="flex justify-end">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={handleToggleAllAccordions}
-                className="h-8 text-xs"
+                className="h-7 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
               >
                 {allExpanded ? 'Collapse All Cards' : 'Expand All Cards'}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* ===================================================================
               SECTION 1: DASHBOARD OVERVIEW
@@ -1736,8 +2159,408 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           )}
-        </div>
-      </main>
+          {/* ===================================================================
+              SECTION 4: IT SUPPORT TEAM & STAFF INVITATIONS (ADMIN ONLY)
+             =================================================================== */}
+          {activeSection === 'TEAM_MANAGEMENT' && user?.role === 'ADMIN' && (
+            <div className="space-y-6">
+              {/* Subtab Switcher */}
+              <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={teamManagementSubtab === 'MEMBERS' ? 'default' : 'outline'}
+                  onClick={() => setTeamManagementSubtab('MEMBERS')}
+                  className="text-xs font-semibold"
+                >
+                  IT Staff Members ({agents.length})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={teamManagementSubtab === 'INVITE' ? 'default' : 'outline'}
+                  onClick={() => setTeamManagementSubtab('INVITE')}
+                  className="text-xs font-semibold"
+                >
+                  Generate Staff Invitation
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={teamManagementSubtab === 'PROVISION' ? 'default' : 'outline'}
+                  onClick={() => setTeamManagementSubtab('PROVISION')}
+                  className="text-xs font-semibold"
+                >
+                  Direct Provision Account
+                </Button>
+              </div>
+
+              {/* SUBTAB 1: TEAM MEMBERS */}
+              {teamManagementSubtab === 'MEMBERS' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {agents.map((agent) => {
+                      const assignedCount = tickets.filter(
+                        (t) => resolveTicketAssigneeId(t) === agent.id && t.status !== 'CLOSED',
+                      ).length;
+                      return (
+                        <Card key={agent.id} className="border-slate-200 dark:border-slate-800">
+                          <CardContent className="p-4 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center shrink-0 border border-blue-500/20 text-xs">
+                                {agent.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm truncate text-slate-900 dark:text-white">
+                                  {agent.fullName}
+                                </p>
+                                <p className="text-xs text-slate-500 truncate">{agent.email}</p>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 space-y-1">
+                              <Badge variant={agent.role === 'ADMIN' ? 'default' : 'secondary'}>
+                                {agent.role}
+                              </Badge>
+                              <p className="text-[11px] text-slate-400">
+                                {assignedCount} active {assignedCount === 1 ? 'ticket' : 'tickets'}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* SUBTAB 2: GENERATE STAFF INVITATION */}
+              {teamManagementSubtab === 'INVITE' && (
+                <div className="space-y-6">
+                  <Card className="border-slate-200 dark:border-slate-800">
+                    <CardHeader>
+                      <CardTitle className="text-base font-bold">
+                        Issue Staff Invitation Link / Code
+                      </CardTitle>
+                      <p className="text-xs text-slate-500">
+                        Generate a secure invitation link for new Support Engineers or Administrators. Public registration only creates customer accounts; staff members must redeem this invitation to activate engineer permissions.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {inviteSuccessMessage && (
+                        <div className="p-3 text-xs rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                          {inviteSuccessMessage}
+                        </div>
+                      )}
+                      {inviteError && (
+                        <div className="p-3 text-xs rounded-md bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300">
+                          {inviteError}
+                        </div>
+                      )}
+
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          createInviteMutation.mutate({
+                            email: inviteEmail,
+                            role: inviteRole,
+                          });
+                        }}
+                        className="space-y-4 max-w-xl"
+                      >
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="invite-email"
+                            className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                          >
+                            Staff Email Address
+                          </label>
+                          <Input
+                            id="invite-email"
+                            type="email"
+                            placeholder="engineer@company.com"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            required
+                            className="text-xs h-9"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="invite-role"
+                            className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                          >
+                            Staff Role
+                          </label>
+                          <select
+                            id="invite-role"
+                            value={inviteRole}
+                            onChange={(e) =>
+                              setInviteRole(e.target.value as 'AGENT' | 'ADMIN')
+                            }
+                            className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                          >
+                            <option value="AGENT">Support Engineer (AGENT)</option>
+                            <option value="ADMIN">Administrator (ADMIN)</option>
+                          </select>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={createInviteMutation.isPending || !inviteEmail}
+                          className="text-xs"
+                        >
+                          {createInviteMutation.isPending
+                            ? 'Generating...'
+                            : 'Generate Invitation Link'}
+                        </Button>
+                      </form>
+
+                      {generatedInviteCode && (
+                        <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/25 space-y-2">
+                          <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                            Active Invitation Link Generated
+                          </span>
+                          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                            <Input
+                              readOnly
+                              value={
+                                typeof window !== 'undefined'
+                                  ? `${window.location.origin}?invite=${generatedInviteCode}`
+                                  : generatedInviteCode
+                              }
+                              className="text-xs font-mono h-9 bg-white dark:bg-slate-950 flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleCopyInviteLink(generatedInviteCode)}
+                              className="text-xs shrink-0"
+                            >
+                              {copiedLink ? 'Copied to Clipboard!' : 'Copy Invite Link'}
+                            </Button>
+                          </div>
+                          <p className="text-[11px] text-blue-600/80 dark:text-blue-300/80">
+                            The recipient can open this link to register their staff account directly.
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Pending & Historical Invites List */}
+                  <Card className="border-slate-200 dark:border-slate-800">
+                    <CardHeader>
+                      <CardTitle className="text-base font-bold">
+                        Staff Invitations ({invites.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {invites.length === 0 ? (
+                        <p className="p-6 text-center text-xs text-slate-500">
+                          No staff invitations issued yet.
+                        </p>
+                      ) : (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-x-auto">
+                          {invites.map((invite) => {
+                            const isExpired = new Date() > new Date(invite.expiresAt);
+                            return (
+                              <div
+                                key={invite.id}
+                                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <strong className="text-slate-900 dark:text-white">
+                                      {invite.email}
+                                    </strong>
+                                    <Badge
+                                      variant={
+                                        invite.role === 'ADMIN' ? 'default' : 'secondary'
+                                      }
+                                    >
+                                      {invite.role}
+                                    </Badge>
+                                    {invite.accepted ? (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-600 font-medium">
+                                        Redeemed
+                                      </span>
+                                    ) : isExpired ? (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/10 text-red-600 font-medium">
+                                        Expired
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-600 font-medium">
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-400 font-mono">
+                                    Code: {invite.code} • Expires{' '}
+                                    {new Date(invite.expiresAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {!invite.accepted && !isExpired && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleCopyInviteLink(invite.code)}
+                                      className="h-7 text-[11px]"
+                                    >
+                                      Copy Link
+                                    </Button>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => revokeInviteMutation.mutate(invite.id)}
+                                    className="h-7 text-[11px] text-red-500 hover:text-red-700"
+                                  >
+                                    Revoke
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* SUBTAB 3: DIRECT PROVISIONING */}
+              {teamManagementSubtab === 'PROVISION' && (
+                <Card className="border-slate-200 dark:border-slate-800 max-w-xl">
+                  <CardHeader>
+                    <CardTitle className="text-base font-bold">
+                      Directly Provision Staff Account
+                    </CardTitle>
+                    <p className="text-xs text-slate-500">
+                      Create an IT Support Engineer or Administrator account immediately with an initial password.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {provisionSuccessMessage && (
+                      <div className="p-3 text-xs rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                        {provisionSuccessMessage}
+                      </div>
+                    )}
+                    {provisionError && (
+                      <div className="p-3 text-xs rounded-md bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300">
+                        {provisionError}
+                      </div>
+                    )}
+
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        adminCreateUserMutation.mutate({
+                          fullName: provisionFullName,
+                          email: provisionEmail,
+                          password: provisionPassword,
+                          role: provisionRole,
+                        });
+                      }}
+                      className="space-y-4"
+                    >
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="provision-name"
+                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                          Full Name
+                        </label>
+                        <Input
+                          id="provision-name"
+                          placeholder="e.g. Alex Rivera"
+                          value={provisionFullName}
+                          onChange={(e) => setProvisionFullName(e.target.value)}
+                          required
+                          className="text-xs h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="provision-email"
+                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                          Email Address
+                        </label>
+                        <Input
+                          id="provision-email"
+                          type="email"
+                          placeholder="alex.rivera@company.com"
+                          value={provisionEmail}
+                          onChange={(e) => setProvisionEmail(e.target.value)}
+                          required
+                          className="text-xs h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="provision-password"
+                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                          Initial Password
+                        </label>
+                        <Input
+                          id="provision-password"
+                          type="password"
+                          placeholder="Minimum 6 characters"
+                          value={provisionPassword}
+                          onChange={(e) => setProvisionPassword(e.target.value)}
+                          required
+                          className="text-xs h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="provision-role"
+                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                          Account Role
+                        </label>
+                        <select
+                          id="provision-role"
+                          value={provisionRole}
+                          onChange={(e) =>
+                            setProvisionRole(e.target.value as 'AGENT' | 'ADMIN')
+                          }
+                          className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                        >
+                          <option value="AGENT">Support Engineer (AGENT)</option>
+                          <option value="ADMIN">Administrator (ADMIN)</option>
+                        </select>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={adminCreateUserMutation.isPending}
+                        className="text-xs"
+                      >
+                        {adminCreateUserMutation.isPending
+                          ? 'Provisioning...'
+                          : 'Provision Staff Account'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
 
       {/* Full-Screen Image Lightbox Modal */}
       {lightboxImage && (
