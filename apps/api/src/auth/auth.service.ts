@@ -2,15 +2,19 @@ import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/co
 import { PrismaService } from '../database/prisma.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { AuthMapper } from './mappers/auth.mapper.js';
+import { AuthResponseDto, UserResponseDto } from './schemas/auth.schema.js';
 import bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<{ message: string; user: UserResponseDto }> {
+    const validatedInput = AuthMapper.toRegisterInput(dto);
+
     const existing = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
+      where: { email: validatedInput.email },
     });
 
     if (existing) {
@@ -18,52 +22,43 @@ export class AuthService {
     }
 
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(dto.password, salt);
+    const passwordHash = await bcrypt.hash(validatedInput.password, salt);
 
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email.toLowerCase(),
-        fullName: dto.fullName,
+        email: validatedInput.email,
+        fullName: validatedInput.fullName,
         passwordHash,
         role: 'CUSTOMER',
-      },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        createdAt: true,
       },
     });
 
     return {
       message: 'User registered successfully',
-      user,
+      user: AuthMapper.toUserResponseDto(user),
     };
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<AuthResponseDto> {
+    const validatedInput = AuthMapper.toLoginInput(dto);
+
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
+      where: { email: validatedInput.email },
     });
 
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
+    const isMatch = await bcrypt.compare(validatedInput.password, user.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    return {
+    return AuthMapper.toAuthResponseDto({
       accessToken: `mock-jwt-token-for-${user.id}`,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-      },
-    };
+      user: AuthMapper.toUserResponseDto(user),
+      message: 'Authenticated successfully',
+    });
   }
 }

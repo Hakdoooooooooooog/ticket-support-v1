@@ -2,13 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { UpdateTicketDto } from './dto/update-ticket.dto.js';
+import { TicketMapper } from './mappers/ticket.mapper.js';
+import { TicketResponseDto } from './schemas/ticket.schema.js';
 
 @Injectable()
 export class TicketsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(status?: string) {
-    return this.prisma.ticket.findMany({
+  async findAll(status?: string): Promise<TicketResponseDto[]> {
+    const records = await this.prisma.ticket.findMany({
       where: status ? { status: status as any } : undefined,
       include: {
         creator: {
@@ -21,15 +23,17 @@ export class TicketsService {
           take: 5,
           orderBy: { createdAt: 'desc' },
           include: {
-            author: { select: { id: true, fullName: true } },
+            author: { select: { id: true, fullName: true, email: true } },
           },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return TicketMapper.toResponseDtoList(records);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<TicketResponseDto> {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
       include: {
@@ -41,7 +45,7 @@ export class TicketsService {
         },
         comments: {
           include: {
-            author: { select: { id: true, fullName: true } },
+            author: { select: { id: true, fullName: true, email: true } },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -52,10 +56,10 @@ export class TicketsService {
       throw new NotFoundException(`Ticket with ID "${id}" not found`);
     }
 
-    return ticket;
+    return TicketMapper.toResponseDto(ticket);
   }
 
-  async create(dto: CreateTicketDto, creatorId?: string) {
+  async create(dto: CreateTicketDto, creatorId?: string): Promise<TicketResponseDto> {
     let user = creatorId ? await this.prisma.user.findUnique({ where: { id: creatorId } }) : null;
     if (!user) {
       user = await this.prisma.user.upsert({
@@ -70,41 +74,45 @@ export class TicketsService {
       });
     }
 
-    return this.prisma.ticket.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-        priority: (dto.priority as any) ?? 'MEDIUM',
-        creatorId: user.id,
-      },
+    const createData = TicketMapper.toCreateInput(dto, user.id);
+
+    const record = await this.prisma.ticket.create({
+      data: createData,
       include: {
         creator: {
           select: { id: true, email: true, fullName: true, role: true },
         },
+        assignee: {
+          select: { id: true, email: true, fullName: true, role: true },
+        },
+        comments: true,
       },
     });
+
+    return TicketMapper.toResponseDto(record);
   }
 
-  async update(id: string, dto: UpdateTicketDto) {
+  async update(id: string, dto: UpdateTicketDto): Promise<TicketResponseDto> {
     await this.findOne(id);
-    return this.prisma.ticket.update({
+
+    const updateData = TicketMapper.toUpdateInput(dto);
+
+    const updated = await this.prisma.ticket.update({
       where: { id },
-      data: {
-        title: dto.title,
-        description: dto.description,
-        priority: dto.priority as any,
-        status: dto.status as any,
-      },
+      data: updateData as any,
       include: {
-        creator: { select: { id: true, email: true, fullName: true } },
-        assignee: { select: { id: true, email: true, fullName: true } },
+        creator: { select: { id: true, email: true, fullName: true, role: true } },
+        assignee: { select: { id: true, email: true, fullName: true, role: true } },
+        comments: true,
       },
     });
+
+    return TicketMapper.toResponseDto(updated);
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<void> {
     await this.findOne(id);
-    return this.prisma.ticket.delete({
+    await this.prisma.ticket.delete({
       where: { id },
     });
   }

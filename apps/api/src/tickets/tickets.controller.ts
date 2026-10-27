@@ -9,18 +9,30 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UsePipes,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { TicketsService } from './tickets.service.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { UpdateTicketDto } from './dto/update-ticket.dto.js';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
+import { ZodSerializerInterceptor } from '../common/interceptors/zod-serializer.interceptor.js';
+import { Serialize } from '../common/decorators/zod-serializer.decorator.js';
+import {
+  createTicketSchema,
+  updateTicketSchema,
+  ticketResponseSchema,
+} from './schemas/ticket.schema.js';
 
 @ApiTags('Tickets')
 @Controller('tickets')
+@UseInterceptors(ZodSerializerInterceptor)
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
   @Get()
+  @Serialize(ticketResponseSchema)
   @ApiOperation({ summary: 'List all tickets with optional status filter' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by ticket status' })
   @ApiResponse({ status: 200, description: 'Tickets retrieved successfully' })
@@ -29,6 +41,7 @@ export class TicketsController {
   }
 
   @Get(':id')
+  @Serialize(ticketResponseSchema)
   @ApiOperation({ summary: 'Get a single ticket by id' })
   @ApiResponse({ status: 200, description: 'Ticket found' })
   @ApiResponse({ status: 404, description: 'Ticket not found' })
@@ -37,6 +50,8 @@ export class TicketsController {
   }
 
   @Post()
+  @Serialize(ticketResponseSchema)
+  @UsePipes(new ZodValidationPipe(createTicketSchema))
   @ApiOperation({ summary: 'Create a new support ticket' })
   @ApiResponse({ status: 201, description: 'Ticket successfully created' })
   create(@Body() createTicketDto: CreateTicketDto) {
@@ -44,6 +59,8 @@ export class TicketsController {
   }
 
   @Patch(':id')
+  @Serialize(ticketResponseSchema)
+  @UsePipes(new ZodValidationPipe(updateTicketSchema))
   @ApiOperation({ summary: 'Update an existing ticket' })
   @ApiResponse({ status: 200, description: 'Ticket updated successfully' })
   @ApiResponse({ status: 404, description: 'Ticket not found' })
