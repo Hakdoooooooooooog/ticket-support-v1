@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import type { ZodType } from 'zod';
 import { ZOD_SERIALIZER_SCHEMA_KEY } from '../decorators/zod-serializer.decorator.js';
+import { sanitizeDeep } from '../utils/sanitize.util.js';
 
 @Injectable()
 export class ZodSerializerInterceptor implements NestInterceptor {
@@ -20,23 +21,25 @@ export class ZodSerializerInterceptor implements NestInterceptor {
       [context.getHandler(), context.getClass()],
     );
 
-    if (!schema) {
-      return next.handle();
-    }
-
     return next.handle().pipe(
       map((data) => {
         if (data === null || data === undefined) {
           return data;
         }
 
+        const sanitizedData = sanitizeDeep(data);
+
+        if (!schema) {
+          return sanitizedData;
+        }
+
         // If response is an array of items (e.g. findAll)
-        if (Array.isArray(data)) {
-          return data.map((item) => schema.parse(item));
+        if (Array.isArray(sanitizedData)) {
+          return sanitizedData.map((item) => sanitizeDeep(schema.parse(item)));
         }
 
         // If response is a single entity
-        return schema.parse(data);
+        return sanitizeDeep(schema.parse(sanitizedData));
       }),
     );
   }

@@ -1,13 +1,20 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
-import { ticketPriorityEnum } from './create-ticket.dto.js';
+import { ticketPriorityEnum, encryptedAttachmentSchema } from './create-ticket.dto.js';
 
-export const ticketStatusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']);
+export const ticketStatusEnum = z.enum([
+  'OPEN',
+  'IN_PROGRESS',
+  'NEEDS_INFO',
+  'RESOLVED',
+  'CLOSED',
+]);
 export type TicketStatusType = z.infer<typeof ticketStatusEnum>;
 
 export enum TicketStatus {
   OPEN = 'OPEN',
   IN_PROGRESS = 'IN_PROGRESS',
+  NEEDS_INFO = 'NEEDS_INFO',
   RESOLVED = 'RESOLVED',
   CLOSED = 'CLOSED',
 }
@@ -32,10 +39,44 @@ export const updateTicketSchema = z.object({
     .describe('Updated priority level: LOW, MEDIUM, HIGH, URGENT'),
   status: ticketStatusEnum
     .optional()
-    .describe('Updated ticket status: OPEN, IN_PROGRESS, RESOLVED, CLOSED'),
+    .describe('Updated ticket status: OPEN, IN_PROGRESS, NEEDS_INFO, RESOLVED, CLOSED'),
+  assigneeId: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Assigned IT agent User ID (or null to unassign)'),
+  encryptedAttachment: encryptedAttachmentSchema
+    .nullable()
+    .optional()
+    .describe('Optional image attachment to add/replace (or null to remove)'),
+  amendmentNote: z
+    .string()
+    .trim()
+    .min(2)
+    .max(1000)
+    .optional()
+    .describe('Optional customer amendment summary or admin follow-up request note'),
+  actorId: z
+    .string()
+    .optional()
+    .describe('Optional User ID performing the amendment or follow-up request'),
 });
 
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
 // 2. Turns into a DTO usable in NestJS Controllers and visible in Swagger
 export class UpdateTicketDto extends createZodDto(updateTicketSchema) {}
+
+export const createCommentSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(2, { message: 'Comment must be at least 2 characters' })
+    .describe('Comment or resolution note content'),
+  authorId: z
+    .string()
+    .optional()
+    .describe('Optional author User ID'),
+});
+
+export class CreateCommentDto extends createZodDto(createCommentSchema) {}

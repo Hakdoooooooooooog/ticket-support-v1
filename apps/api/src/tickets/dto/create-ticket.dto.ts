@@ -11,6 +11,14 @@ export enum TicketPriority {
   URGENT = 'URGENT',
 }
 
+export const encryptedAttachmentSchema = z.object({
+  ciphertext: z.string().min(1).describe('Attachment payload'),
+  iv: z.string().min(1).describe('Payload vector'),
+  fileName: z.string().trim().min(1).max(255).describe('Attachment file name'),
+  mimeType: z.string().trim().min(1).max(100).describe('Attachment MIME type'),
+  originalSize: z.number().int().positive().optional().describe('Attachment byte size'),
+});
+
 // 1. Single source of truth for validation, type inference, and OpenAPI documentation
 export const createTicketSchema = z.object({
   title: z
@@ -27,6 +35,13 @@ export const createTicketSchema = z.object({
   priority: ticketPriorityEnum
     .default('MEDIUM')
     .describe('Priority level: LOW, MEDIUM, HIGH, URGENT'),
+  creatorId: z
+    .string()
+    .optional()
+    .describe('Optional creator User ID'),
+  encryptedAttachment: encryptedAttachmentSchema
+    .optional()
+    .describe('Optional image attachment'),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;

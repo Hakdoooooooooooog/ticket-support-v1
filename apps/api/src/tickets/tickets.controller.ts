@@ -20,8 +20,10 @@ import { Serialize } from '../common/decorators/zod-serializer.decorator.js';
 import {
   CreateTicketDto,
   UpdateTicketDto,
+  CreateCommentDto,
   createTicketSchema,
   updateTicketSchema,
+  createCommentSchema,
   ticketResponseSchema,
 } from './dto/index.js';
 
@@ -49,6 +51,16 @@ export class TicketsController {
     return this.ticketsService.findOne(id);
   }
 
+  @Get(':id/attachment')
+  @ApiOperation({
+    summary: 'Retrieve ticket image attachment',
+  })
+  @ApiResponse({ status: 200, description: 'Attachment retrieved' })
+  @ApiResponse({ status: 404, description: 'Ticket or attachment not found' })
+  getAttachment(@Param('id') id: string) {
+    return this.ticketsService.getAttachment(id);
+  }
+
   @Post()
   @Serialize(ticketResponseSchema)
   @UsePipes(new ZodValidationPipe(createTicketSchema))
@@ -66,6 +78,16 @@ export class TicketsController {
   @ApiResponse({ status: 404, description: 'Ticket not found' })
   update(@Param('id') id: string, @Body() updateTicketDto: UpdateTicketDto) {
     return this.ticketsService.update(id, updateTicketDto);
+  }
+
+  @Post(':id/comments')
+  @Serialize(ticketResponseSchema)
+  @UsePipes(new ZodValidationPipe(createCommentSchema))
+  @ApiOperation({ summary: 'Add a comment or resolution note to a ticket' })
+  @ApiResponse({ status: 201, description: 'Comment added successfully' })
+  @ApiResponse({ status: 404, description: 'Ticket not found' })
+  addComment(@Param('id') id: string, @Body() dto: CreateCommentDto) {
+    return this.ticketsService.addComment(id, dto.content, dto.authorId);
   }
 
   @Delete(':id')

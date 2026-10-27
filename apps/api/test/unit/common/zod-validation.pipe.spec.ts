@@ -71,5 +71,19 @@ describe('ZodValidationPipe', () => {
 
       expect(result).toBe('raw-string');
     });
+
+    it('should sanitize XSS script blocks, HTML tags, and inline event handlers from inputs', () => {
+      const xssPayload = {
+        username: '  <script>alert("xss")</script><b>darenz</b>  ',
+        age: 24,
+      };
+      const result = pipe.transform(xssPayload, {
+        type: 'body',
+        metatype: SampleZodDto,
+      }) as { username: string; age: number };
+
+      expect(result.username).toBe('darenz');
+      expect(result.age).toBe(24);
+    });
   });
 });

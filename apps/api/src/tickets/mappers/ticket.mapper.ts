@@ -2,10 +2,9 @@ import {
   createTicketSchema,
   updateTicketSchema,
   ticketResponseSchema,
-  CreateTicketInput,
-  UpdateTicketInput,
   TicketResponseDto,
 } from '../dto/index.js';
+import { decryptAndCompressAttachment } from '../attachment-crypto.util.js';
 
 export class TicketMapper {
   /**
@@ -14,11 +13,16 @@ export class TicketMapper {
    */
   static toCreateInput(dto: unknown, creatorId: string) {
     const validated = createTicketSchema.parse(dto);
+    const compressedAttachment = validated.encryptedAttachment
+      ? decryptAndCompressAttachment(validated.encryptedAttachment)
+      : undefined;
+
     return {
       title: validated.title,
       description: validated.description,
       priority: validated.priority,
       creatorId,
+      ...(compressedAttachment ? compressedAttachment : {}),
     };
   }
 
@@ -27,11 +31,29 @@ export class TicketMapper {
    */
   static toUpdateInput(dto: unknown) {
     const validated = updateTicketSchema.parse(dto);
+    let attachmentPatch: Record<string, unknown> = {};
+
+    if (validated.encryptedAttachment) {
+      attachmentPatch = {
+        ...decryptAndCompressAttachment(validated.encryptedAttachment),
+      };
+    } else if (validated.encryptedAttachment === null) {
+      attachmentPatch = {
+        attachmentName: null,
+        attachmentMimeType: null,
+        attachmentCompressed: null,
+        attachmentOriginalSize: null,
+        attachmentCompressedSize: null,
+      };
+    }
+
     return {
       ...(validated.title ? { title: validated.title } : {}),
       ...(validated.description ? { description: validated.description } : {}),
       ...(validated.priority ? { priority: validated.priority } : {}),
       ...(validated.status ? { status: validated.status } : {}),
+      ...(validated.assigneeId !== undefined ? { assigneeId: validated.assigneeId } : {}),
+      ...attachmentPatch,
     };
   }
 
@@ -41,7 +63,17 @@ export class TicketMapper {
    * strips unwanted fields, and populates missing fields with safe defaults.
    */
   static toResponseDto(rawEntity: unknown): TicketResponseDto {
-    return ticketResponseSchema.parse(rawEntity);
+    const record = (rawEntity && typeof rawEntity === 'object' ? rawEntity : {}) as Record<
+      string,
+      unknown
+    >;
+    const hasAttachment = Boolean(
+      record.hasAttachment || record.attachmentName || record.attachmentCompressed,
+    );
+    return ticketResponseSchema.parse({
+      ...record,
+      hasAttachment,
+    });
   }
 
   /**

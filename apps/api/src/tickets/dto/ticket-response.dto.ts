@@ -30,6 +30,10 @@ export const ticketResponseSchema = z.object({
   creator: userSummarySchema.nullable().default(null),
   assigneeId: z.string().nullable().optional().default(null),
   assignee: userSummarySchema.nullable().default(null),
+  hasAttachment: z.boolean().default(false),
+  attachmentName: z.string().nullable().optional().default(null),
+  attachmentMimeType: z.string().nullable().optional().default(null),
+  attachmentOriginalSize: z.number().nullable().optional().default(null),
   comments: z.array(commentResponseSchema).default([]),
   tags: z.array(z.any()).default([]),
 });

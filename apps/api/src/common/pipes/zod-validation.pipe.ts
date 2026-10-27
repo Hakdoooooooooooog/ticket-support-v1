@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { ZodType } from 'zod';
 import { ZodError } from 'zod';
+import { sanitizeDeep } from '../utils/sanitize.util.js';
 
 export function isZodDto(metatype: unknown): metatype is { isZodDto: true; schema: ZodType } {
   return Boolean(
@@ -22,8 +23,10 @@ export class ZodValidationPipe implements PipeTransform {
   constructor(private readonly schema?: ZodType) {}
 
   transform(value: unknown, metadata?: ArgumentMetadata) {
+    const sanitizedValue = sanitizeDeep(value);
+
     if (this.schema && metadata?.type && metadata.type !== 'body') {
-      return value;
+      return sanitizedValue;
     }
 
     const targetSchema: ZodType | undefined =
@@ -33,10 +36,10 @@ export class ZodValidationPipe implements PipeTransform {
         : undefined);
 
     if (!targetSchema) {
-      return value;
+      return sanitizedValue;
     }
 
-    const result = targetSchema.safeParse(value);
+    const result = targetSchema.safeParse(sanitizedValue);
 
     if (!result.success) {
       const formattedErrors = (result.error as ZodError).issues.map((issue) => ({
@@ -52,7 +55,7 @@ export class ZodValidationPipe implements PipeTransform {
       });
     }
 
-    return result.data;
+    return sanitizeDeep(result.data);
   }
 }
 

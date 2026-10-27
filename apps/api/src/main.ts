@@ -1,14 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { AppModule } from './app.module.js';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe.js';
+import { PiiRedactingLoggingInterceptor } from './common/interceptors/pii-logging.interceptor.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const payloadLimit = process.env.MAX_PAYLOAD_SIZE || '10mb';
+  app.use(json({ limit: payloadLimit }));
+  app.use(urlencoded({ extended: true, limit: payloadLimit }));
+
   // Global validation pipe with Zod DTO schema support
   app.useGlobalPipes(new ZodValidationPipe());
+
+  // Global PII-redacting request/response interceptor
+  app.useGlobalInterceptors(new PiiRedactingLoggingInterceptor());
 
   // Enable CORS for Next.js frontend
   app.enableCors({

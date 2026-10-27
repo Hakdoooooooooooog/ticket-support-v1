@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -81,7 +82,7 @@ describe('TicketSupport API (e2e)', () => {
         .expect(409);
     });
 
-    it('POST /auth/login -> should authenticate valid user and return accessToken', async () => {
+    it('POST /auth/login -> should authenticate valid user and return accessToken, then verify GET /auth/me via Passport JWT', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
@@ -93,6 +94,17 @@ describe('TicketSupport API (e2e)', () => {
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.user.email).toBe(testEmail);
       expect(res.body.user.passwordHash).toBeUndefined();
+
+      const meRes = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${res.body.accessToken}`)
+        .expect(200);
+
+      expect(meRes.body.email).toBe(testEmail);
+
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .expect(401);
     });
 
     it('POST /auth/login -> should return 401 Unauthorized on wrong password', async () => {
@@ -173,6 +185,83 @@ describe('TicketSupport API (e2e)', () => {
 
       expect(res.body.status).toBe('IN_PROGRESS');
       expect(res.body.priority).toBe('HIGH');
+    });
+
+    it('POST /tickets/:id/comments -> should add an IT resolution note to the ticket', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/tickets/${createdTicketId}/comments`)
+        .send({
+          content: 'Investigating database pool limits and scaling PgBouncer.',
+        })
+        .expect(201);
+
+      expect(res.body.comments).toHaveLength(1);
+      expect(res.body.comments[0].content).toBe(
+        'Investigating database pool limits and scaling PgBouncer.',
+      );
+    });
+
+    it('PATCH /tickets/:id & GET /tickets/:id/attachment -> should handle admin NEEDS_INFO follow-up, customer amendment with AES-256-GCM encrypted image, Brotli compression, and on-demand decompression', async () => {
+      // 1. Admin requests additional info / follow-up
+      const followUpRes = await request(app.getHttpServer())
+        .patch(`/tickets/${createdTicketId}`)
+        .send({
+          status: 'NEEDS_INFO',
+          amendmentNote: '[FOLLOW-UP REQUESTED] Please attach a screenshot of the error.',
+        })
+        .expect(200);
+
+      expect(followUpRes.body.status).toBe('NEEDS_INFO');
+
+      // 2. Customer amends ticket with AES-256-GCM encrypted image attachment
+      const secret =
+        process.env.NEXT_PUBLIC_ATTACHMENT_KEY
+
+      if (!secret) {
+        throw new Error('NEXT_PUBLIC_ATTACHMENT_KEY is not defined');
+      }
+
+      const key = createHash('sha256').update(secret, 'utf8').digest();
+      const iv = randomBytes(12);
+      const sampleDataUrl =
+        'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+      const cipher = createCipheriv('aes-256-gcm', key, iv);
+      const encrypted = Buffer.concat([
+        cipher.update(Buffer.from(sampleDataUrl, 'utf8')),
+        cipher.final(),
+      ]);
+      const authTag = cipher.getAuthTag();
+      const ciphertext = Buffer.concat([encrypted, authTag]).toString('base64');
+
+      const amendRes = await request(app.getHttpServer())
+        .patch(`/tickets/${createdTicketId}`)
+        .send({
+          description:
+            'Updated description with requested reproduction steps and encrypted screenshot.',
+          amendmentNote: '[CUSTOMER AMENDMENT] Attached error screenshot.',
+          encryptedAttachment: {
+            ciphertext,
+            iv: iv.toString('base64'),
+            fileName: 'error-screenshot.webp',
+            mimeType: 'image/webp',
+            originalSize: sampleDataUrl.length,
+          },
+        })
+        .expect(200);
+
+      expect(amendRes.body.status).toBe('OPEN');
+      expect(amendRes.body.hasAttachment).toBe(true);
+      expect(amendRes.body.attachmentName).toBe('error-screenshot.webp');
+
+      // 3. Decompress attachment on-demand
+      const attachRes = await request(app.getHttpServer())
+        .get(`/tickets/${createdTicketId}/attachment`)
+        .expect(200);
+
+      expect(attachRes.body.ticketId).toBe(createdTicketId);
+      expect(attachRes.body.fileName).toBe('error-screenshot.webp');
+      expect(attachRes.body.encrypted.ciphertext).toBeDefined();
+      expect(attachRes.body.encrypted.iv).toBeDefined();
     });
 
     it('DELETE /tickets/:id -> should delete the ticket and return 204', async () => {

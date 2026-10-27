@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { TicketsService } from '../../../src/tickets/tickets.service.js';
 import { PrismaService } from '../../../src/database/prisma.service.js';
 
@@ -206,6 +211,50 @@ describe('TicketsService', () => {
       await expect(
         service.update('missing', { title: 'Updated Title' } as any),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException inside transaction if assigneeId does not exist', async () => {
+      prisma.ticket.findUnique.mockResolvedValue(mockDbTicket);
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update('ticket-1', { assigneeId: 'unknown-agent' } as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.ticket.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException inside transaction if assigneeId belongs to a CUSTOMER', async () => {
+      prisma.ticket.findUnique.mockResolvedValue(mockDbTicket);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'customer-1',
+        role: 'CUSTOMER',
+      });
+
+      await expect(
+        service.update('ticket-1', { assigneeId: 'customer-1' } as any),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.ticket.update).not.toHaveBeenCalled();
+    });
+
+    it('should reject duplicate active ticket creation via ConflictException', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'creator@example.com',
+        fullName: 'Alice Walker',
+        role: 'CUSTOMER',
+      });
+      (prisma.ticket as any).findFirst = vi.fn().mockResolvedValue({ id: 'existing-ticket' });
+
+      await expect(
+        service.create(
+          {
+            title: 'VPN Connection Failure',
+            description: 'Duplicate active ticket submission',
+          } as any,
+          'user-1',
+        ),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.ticket.create).not.toHaveBeenCalled();
     });
   });
 
