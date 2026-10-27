@@ -12,6 +12,14 @@ enum Role {
   CUSTOMER
 }
 
+enum NotificationType {
+  TICKET_FOLLOW_UP_REQUESTED
+  TICKET_CUSTOMER_AMENDED
+  TICKET_NOTE_POSTED
+  TICKET_ASSIGNED
+  TICKET_STATUS_CHANGED
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS
@@ -40,6 +48,7 @@ model User {
   assignedTickets Ticket[]       @relation("AssignedTickets")
   comments        Comment[]
   createdInvites  Invite[]       @relation("CreatedInvites")
+  notifications   Notification[] @relation("UserNotifications")
 
   @@index([role, fullName])
   @@map("users")
@@ -82,11 +91,33 @@ model Ticket {
   assigneeId  String?
   assignee    User?          @relation("AssignedTickets", fields: [assigneeId], references: [id], onDelete: SetNull)
 
-  comments    Comment[]
-  tags        TicketTag[]
+  comments      Comment[]
+  tags          TicketTag[]
+  notifications Notification[]
+
+  csatRating    Int?
+  csatComment   String?
+  csatRatedAt   DateTime?
 
   @@index([creatorId, status, title])
   @@map("tickets")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  ticketId  String
+  ticket    Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
+  @@map("notifications")
 }
 
 model Comment {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TicketForm } from '@components/forms/ticket-form';
 import { TicketList } from '@components/ticket-list';
+import { NotificationCenter } from '@components/notification-center';
 import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
@@ -21,7 +22,15 @@ export default function CustomerPortalPage() {
     ensureSessionVerified,
     clearSession,
   } = useAuthStore();
-  const { clearTickets } = useTicketsStore();
+  const { clearTickets, toggleTicketExpanded } = useTicketsStore();
+
+  const handleSelectTicket = (ticketId: string) => {
+    toggleTicketExpanded(ticketId);
+    setTimeout(() => {
+      const el = document.getElementById(`ticket-${ticketId}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
 
   React.useEffect(() => {
     if (isSessionVerified && user) {
@@ -63,6 +72,7 @@ export default function CustomerPortalPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationCenter onSelectTicket={handleSelectTicket} />
             {(user?.role === 'ADMIN' || user?.role === 'AGENT') && (
               <Link href="/admin">
                 <Button variant="outline" size="sm">

@@ -24,9 +24,11 @@ import {
   CreateTicketDto,
   UpdateTicketDto,
   CreateCommentDto,
+  CreateCsatDto,
   createTicketSchema,
   updateTicketSchema,
   createCommentSchema,
+  createCsatSchema,
   ticketResponseSchema,
 } from './dto/index.js';
 
@@ -171,6 +173,24 @@ export class TicketsController {
           dto.authorId,
           dto.encryptedAttachment,
         );
+  }
+
+  @Post(':id/csat')
+  @HttpCode(HttpStatus.OK)
+  @Serialize(ticketResponseSchema)
+  @UsePipes(new ZodValidationPipe(createCsatSchema))
+  @ApiOperation({ summary: 'Submit customer satisfaction feedback on a resolved ticket' })
+  @ApiResponse({ status: 200, description: 'CSAT rating submitted successfully' })
+  @ApiResponse({ status: 400, description: 'Ticket is not resolved or invalid rating' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Ticket not found' })
+  submitCsat(
+    @Param('id') id: string,
+    @Body() dto: CreateCsatDto,
+    @Req() req?: AuthenticatedRequest,
+  ) {
+    const actor = req?.user ?? undefined;
+    return this.ticketsService.submitCsat(id, dto, actor);
   }
 
   @Delete(':id')

@@ -32,6 +32,8 @@ import {
   EncryptedAttachmentPayload,
 } from '@lib/helpers';
 import { Ticket } from '@components/ticket-list';
+import { NotificationCenter } from '@components/notification-center';
+import { CannedResponsesMenu } from '@components/canned-responses-menu';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
 import { useAdminStore } from '@store/admin.store';
@@ -359,6 +361,19 @@ export default function AdminDashboardPage() {
     router.replace('/');
   };
 
+  const handleSelectTicket = (ticketId: string) => {
+    setActiveSection('ALL_TICKETS');
+    setAssignmentFilter('ALL');
+    setStatusFilter('ALL');
+    setPriorityFilter('ALL');
+    setSearchQuery('');
+    toggleTicketExpanded(ticketId);
+    setTimeout(() => {
+      const el = document.getElementById(`ticket-${ticketId}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+  };
+
   const handleSendFollowUpRequest = async (ticket: Ticket) => {
     setActionErrors((prev) => ({ ...prev, [ticket.id]: '' }));
     try {
@@ -546,6 +561,7 @@ export default function AdminDashboardPage() {
       return (
         <Card
           key={ticket.id}
+          id={`ticket-${ticket.id}`}
           className={`transition-colors ${
             ticket.status === 'NEEDS_INFO'
               ? 'border-amber-400/80 dark:border-amber-500/60'
@@ -624,6 +640,12 @@ export default function AdminDashboardPage() {
                 {totalAttachments > 0 && (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/20 font-medium">
                     {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
+                  </span>
+                )}
+                {typeof ticket.csatRating === 'number' && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 font-semibold flex items-center gap-1">
+                    <span>★</span>
+                    <span>{ticket.csatRating}/5 CSAT</span>
                   </span>
                 )}
                 <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
@@ -990,13 +1012,23 @@ export default function AdminDashboardPage() {
               {/* Inline Follow-Up Request Composer */}
               {isTicketAssigned && !isClosed && canManageTicket && isFollowUpOpen && (
                 <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
                       Request Customer Follow-Up / Additional Info
                     </span>
-                    <span className="text-[11px] text-amber-600/80 dark:text-amber-300/80">
-                      Sets ticket status to NEEDS INFO
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <CannedResponsesMenu
+                        buttonLabel="⚡ Quick Templates"
+                        onSelect={(snippet) =>
+                          setFollowUpPrompt(
+                            followUpPrompt ? `${followUpPrompt} ${snippet}` : snippet,
+                          )
+                        }
+                      />
+                      <span className="text-[11px] text-amber-600/80 dark:text-amber-300/80">
+                        Sets status to NEEDS INFO
+                      </span>
+                    </div>
                   </div>
 
                   <textarea
@@ -1050,6 +1082,44 @@ export default function AdminDashboardPage() {
                       </Button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Customer Satisfaction Feedback Card (if rated by customer) */}
+              {typeof ticket.csatRating === 'number' && (
+                <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-amber-500 uppercase tracking-wider text-[11px]">
+                        Customer Satisfaction Feedback
+                      </span>
+                      <div className="flex items-center text-amber-400">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span
+                            key={star}
+                            className={
+                              star <= ticket.csatRating! ? 'opacity-100' : 'opacity-25'
+                            }
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        ({ticket.csatRating} / 5 Stars)
+                      </span>
+                    </div>
+                    {ticket.csatRatedAt && (
+                      <span className="text-[10px] text-slate-500">
+                        Rated on {formatTicketDateTime(ticket.csatRatedAt)}
+                      </span>
+                    )}
+                  </div>
+                  {ticket.csatComment && (
+                    <p className="text-slate-700 dark:text-slate-300 italic bg-white/60 dark:bg-slate-900/60 p-2.5 rounded border border-amber-500/10">
+                      &ldquo;{ticket.csatComment}&rdquo;
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -1307,6 +1377,18 @@ export default function AdminDashboardPage() {
                         </button>
                       )}
                     </div>
+
+                    <CannedResponsesMenu
+                      buttonLabel="⚡ Canned Responses"
+                      onSelect={(snippet) =>
+                        setCommentDraft(
+                          ticket.id,
+                          commentDrafts[ticket.id]
+                            ? `${commentDrafts[ticket.id]} ${snippet}`
+                            : snippet,
+                        )
+                      }
+                    />
                   </div>
                 </form>
               )}
@@ -1558,6 +1640,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <NotificationCenter onSelectTicket={handleSelectTicket} />
           {user && (
             <Badge variant="secondary" className="text-[10px]">
               {user.role}
@@ -1769,6 +1852,7 @@ export default function AdminDashboardPage() {
               {deleteTicketMutation.isPending && (
                 <ContextualLoader context="ticket-delete" />
               )}
+              <NotificationCenter onSelectTicket={handleSelectTicket} />
               <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs h-8">
                 {isFetching && hasLoadedTickets ? 'Syncing...' : 'Refresh Queue'}
               </Button>
@@ -1798,7 +1882,7 @@ export default function AdminDashboardPage() {
               {showInitialSkeleton ? (
                 <ContextualLoader context="admin-kpi" />
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
                   <Card
                     onClick={() => {
                       setAssignmentFilter('ALL');
@@ -1875,6 +1959,25 @@ export default function AdminDashboardPage() {
                       </p>
                       <p className="text-2xl font-extrabold mt-1">
                         {kpis.resolvedClosed}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="hover:border-amber-400 dark:hover:border-amber-500 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-amber-500 uppercase">
+                          CSAT Score
+                        </p>
+                        <span className="text-xs">⭐</span>
+                      </div>
+                      <p className="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">
+                        {kpis.csatAverage ? `${kpis.csatAverage} / 5` : 'N/A'}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">
+                        {kpis.csatCount > 0
+                          ? `${kpis.csatCount} ${kpis.csatCount === 1 ? 'review' : 'reviews'}`
+                          : 'No reviews yet'}
                       </p>
                     </CardContent>
                   </Card>

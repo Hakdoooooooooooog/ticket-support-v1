@@ -40,6 +40,9 @@ export const ticketResponseSchema = z.object({
   attachmentOriginalSize: z.number().nullable().optional().default(null),
   comments: z.array(commentResponseSchema).default([]),
   tags: z.array(z.any()).default([]),
+  csatRating: z.number().int().min(1).max(5).nullable().optional().default(null),
+  csatComment: z.string().nullable().optional().default(null),
+  csatRatedAt: dateToIsoString.nullable().optional().default(null),
 });
 
 export class TicketResponseDto extends createZodDto(ticketResponseSchema) {}

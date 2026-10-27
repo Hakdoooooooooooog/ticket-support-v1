@@ -293,6 +293,44 @@ describe('TicketSupport API (e2e)', () => {
       expect(attachRes.body.encrypted.iv).toBeDefined();
     });
 
+    it('POST /tickets/:id/csat -> should submit CSAT feedback on a resolved ticket and reject invalid rating', async () => {
+      // 1. Mark ticket as RESOLVED
+      await request(app.getHttpServer())
+        .patch(`/tickets/${createdTicketId}`)
+        .send({ status: 'RESOLVED' })
+        .expect(200);
+
+      // 2. Submit valid CSAT
+      const csatRes = await request(app.getHttpServer())
+        .post(`/tickets/${createdTicketId}/csat`)
+        .send({
+          rating: 5,
+          comment: 'Outstanding support experience! Fixed in 10 minutes.',
+        })
+        .expect(200);
+
+      expect(csatRes.body.csatRating).toBe(5);
+      expect(csatRes.body.csatComment).toBe(
+        'Outstanding support experience! Fixed in 10 minutes.',
+      );
+      expect(csatRes.body.csatRatedAt).toBeDefined();
+
+      // 3. Reject invalid rating (> 5)
+      await request(app.getHttpServer())
+        .post(`/tickets/${createdTicketId}/csat`)
+        .send({ rating: 6 })
+        .expect(400);
+    });
+
+    it('GET /notifications -> should return notification feed structure', async () => {
+      const notifRes = await request(app.getHttpServer())
+        .get('/notifications')
+        .expect(200);
+
+      expect(Array.isArray(notifRes.body.notifications)).toBe(true);
+      expect(typeof notifRes.body.unreadCount).toBe('number');
+    });
+
     it('DELETE /tickets/:id -> should delete the ticket and return 204', async () => {
       await request(app.getHttpServer())
         .delete(`/tickets/${createdTicketId}`)

@@ -27,6 +27,7 @@ import {
 } from '@lib/helpers';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
+import { CsatRatingWidget } from '@components/csat-rating-widget';
 
 export interface TicketComment {
   id: string;
@@ -70,6 +71,9 @@ export interface Ticket {
   attachmentMimeType?: string | null;
   attachmentOriginalSize?: number | null;
   comments?: TicketComment[];
+  csatRating?: number | null;
+  csatComment?: string | null;
+  csatRatedAt?: string | null;
 }
 
 export function TicketList() {
@@ -303,6 +307,7 @@ export function TicketList() {
           return (
             <Card
               key={ticket.id}
+              id={`ticket-${ticket.id}`}
               className={`overflow-hidden transition-all ${
                 ticket.status === 'NEEDS_INFO'
                   ? 'border-amber-400 dark:border-amber-600'
@@ -432,6 +437,36 @@ export function TicketList() {
                         )}
                       </div>
                     </div>
+                  )}
+
+                  {/* Customer Closed Ticket Callout & Re-Open */}
+                  {ticket.status === 'CLOSED' && (
+                    <div className="p-3 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 flex flex-wrap items-center justify-between gap-2">
+                      <span>
+                        <strong>Ticket Closed:</strong> This support request has been completed and closed.
+                      </span>
+                      {!isAmending && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openAmendPanel(ticket, false)}
+                          className="h-7 text-xs"
+                        >
+                          Re-Open Ticket
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Customer Satisfaction Feedback Widget */}
+                  {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
+                    <CsatRatingWidget
+                      ticketId={ticket.id}
+                      initialRating={ticket.csatRating}
+                      initialComment={ticket.csatComment}
+                      ratedAt={ticket.csatRatedAt}
+                    />
                   )}
 
                   {/* 1. Original Ticket Report */}

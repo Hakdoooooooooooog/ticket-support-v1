@@ -5,15 +5,22 @@ import {
   BadRequestException,
   ForbiddenException,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
-import { CreateTicketDto, UpdateTicketDto, TicketResponseDto } from './dto/index.js';
+import {
+  CreateTicketDto,
+  UpdateTicketDto,
+  CreateCsatDto,
+  TicketResponseDto,
+} from './dto/index.js';
 import { TicketMapper } from './mappers/ticket.mapper.js';
 import {
   decompressAndEncryptAttachment,
   EncryptedAttachmentInput,
   OnDemandAttachmentResponse,
 } from './attachment-crypto.util.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 export interface TicketActorContext {
   id: string;
@@ -29,7 +36,10 @@ export interface TicketQueryFilters {
 
 @Injectable()
 export class TicketsService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notificationsService?: NotificationsService,
+  ) {}
 
   /**
    * Migrates any legacy ticket-level attachment that was uploaded during a
@@ -297,6 +307,20 @@ export class TicketsService implements OnModuleInit {
         include: this.standardTicketInclude,
       });
 
+      if (this.notificationsService && (existingTicket as any).creatorId) {
+        const creatorId = (existingTicket as any).creatorId;
+        if (creatorId !== author.id) {
+          const isStaff = author.role === 'ADMIN' || author.role === 'AGENT';
+          await this.notificationsService.createNotification({
+            userId: creatorId,
+            ticketId,
+            type: 'TICKET_NOTE_POSTED',
+            title: isStaff ? 'Support Note Posted' : 'New Comment on Ticket',
+            message: `${author.fullName || 'IT Support'}: "${trimmedContent.slice(0, 100)}${trimmedContent.length > 100 ? '...' : ''}"`,
+          });
+        }
+      }
+
       return TicketMapper.toResponseDto(updatedTicket!);
     });
   }
@@ -474,6 +498,146 @@ export class TicketsService implements OnModuleInit {
         data: updateData as any,
         include: this.standardTicketInclude,
       });
+
+      // Dispatch notifications based on update events
+      if (this.notificationsService) {
+        const creatorId = (existingTicket as any).creatorId;
+        const ticketTitle = (existingTicket as any).title || 'Ticket';
+
+        // 1. Follow-up requested by staff
+        if (
+          dto.amendmentNote?.startsWith('[FOLLOW-UP') &&
+          creatorId &&
+          creatorId !== actor?.id
+        ) {
+          const prompt = dto.amendmentNote.replace(/^\[FOLLOW-UP[^\]]*\]\s*/, '');
+          await this.notificationsService.createNotification({
+            userId: creatorId,
+            ticketId: id,
+            type: 'TICKET_FOLLOW_UP_REQUESTED',
+            title: `Action Required: Info Requested for "${ticketTitle.slice(0, 30)}"`,
+            message: prompt
+              ? `"${prompt.slice(0, 120)}${prompt.length > 120 ? '...' : ''}"`
+              : 'Support requested additional details for your ticket.',
+          });
+        }
+
+        // 2. Customer amended or replied
+        if (
+          isCustomerAction &&
+          (isCustomerAmendment || dto.amendmentNote) &&
+          effectiveAssigneeId &&
+          effectiveAssigneeId !== actor?.id
+        ) {
+          await this.notificationsService.createNotification({
+            userId: effectiveAssigneeId,
+            ticketId: id,
+            type: 'TICKET_CUSTOMER_AMENDED',
+            title: `Customer Responded to "${ticketTitle.slice(0, 30)}"`,
+            message: `${(existingTicket as any).creator?.fullName || 'Customer'} provided follow-up details or attachments.`,
+          });
+        }
+
+        // 3. Ticket assigned to staff
+        if (
+          dto.assigneeId &&
+          dto.assigneeId !== existingAssigneeId &&
+          dto.assigneeId !== actor?.id
+        ) {
+          await this.notificationsService.createNotification({
+            userId: dto.assigneeId,
+            ticketId: id,
+            type: 'TICKET_ASSIGNED',
+            title: `Assigned to Ticket "${ticketTitle.slice(0, 30)}"`,
+            message: `You were assigned as the primary support engineer on this ticket.`,
+          });
+        }
+
+        // 4. Status changed
+        if (dto.status && dto.status !== currentStatus) {
+          if (
+            (dto.status === 'RESOLVED' || dto.status === 'CLOSED') &&
+            creatorId &&
+            creatorId !== actor?.id
+          ) {
+            await this.notificationsService.createNotification({
+              userId: creatorId,
+              ticketId: id,
+              type: 'TICKET_STATUS_CHANGED',
+              title: `Ticket ${dto.status === 'RESOLVED' ? 'Resolved' : 'Closed'}`,
+              message: `Your ticket "${ticketTitle.slice(0, 30)}" has been marked as ${dto.status.toLowerCase()}. Please check the resolution notes.`,
+            });
+          } else if (
+            dto.status === 'OPEN' &&
+            currentStatus === 'CLOSED' &&
+            effectiveAssigneeId &&
+            effectiveAssigneeId !== actor?.id
+          ) {
+            await this.notificationsService.createNotification({
+              userId: effectiveAssigneeId,
+              ticketId: id,
+              type: 'TICKET_STATUS_CHANGED',
+              title: `Ticket Reopened by Customer`,
+              message: `${(existingTicket as any).creator?.fullName || 'Customer'} reopened ticket "${ticketTitle.slice(0, 30)}".`,
+            });
+          }
+        }
+      }
+
+      return TicketMapper.toResponseDto(updated);
+    });
+  }
+
+  async submitCsat(
+    id: string,
+    dto: CreateCsatDto,
+    actor?: TicketActorContext,
+  ): Promise<TicketResponseDto> {
+    return this.runTransaction(async (tx) => {
+      const existingTicket = await tx.ticket.findUnique({
+        where: { id },
+        include: this.standardTicketInclude,
+      });
+
+      if (!existingTicket) {
+        throw new NotFoundException(`Ticket with ID "${id}" not found`);
+      }
+
+      this.assertCustomerOwnership(
+        existingTicket as { creatorId?: string },
+        actor,
+        'rate this ticket',
+      );
+
+      const status = (existingTicket as { status?: string }).status;
+      if (status !== 'RESOLVED' && status !== 'CLOSED') {
+        throw new BadRequestException(
+          'Satisfaction feedback can only be submitted for resolved or closed tickets',
+        );
+      }
+
+      const updated = await tx.ticket.update({
+        where: { id },
+        data: {
+          csatRating: dto.rating,
+          csatComment: dto.comment?.trim() || null,
+          csatRatedAt: new Date(),
+        },
+        include: this.standardTicketInclude,
+      });
+
+      const assigneeId = (existingTicket as { assigneeId?: string | null }).assigneeId;
+      if (this.notificationsService && assigneeId) {
+        await this.notificationsService.createNotification({
+          userId: assigneeId,
+          ticketId: id,
+          type: 'TICKET_STATUS_CHANGED',
+          title: `Customer Rated Ticket (${dto.rating}★)`,
+          message: dto.comment
+            ? `Customer submitted a ${dto.rating}/5 rating: "${dto.comment.trim().slice(0, 100)}"`
+            : `Customer rated ticket "${(existingTicket as any).title?.slice(0, 30) || id}" with ${dto.rating} out of 5 stars.`,
+        });
+      }
 
       return TicketMapper.toResponseDto(updated);
     });

@@ -6,6 +6,7 @@ import { AppService } from './app.service.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from './auth/auth.module.js';
       ],
     }),
     PrismaModule,
+    NotificationsModule,
     TicketsModule,
     AuthModule,
   ],

@@ -136,7 +136,7 @@ export function getWorkspacePathForRole(
 
 export function extractApiErrorMessage(
   err: unknown,
-  fallbackMessage: string,
+  fallbackMessage = 'An unexpected error occurred',
 ): string {
   const apiErr = (
     err as {
@@ -253,6 +253,8 @@ export interface TicketKpiSummary {
   needsInfo: number;
   urgentHigh: number;
   resolvedClosed: number;
+  csatAverage: number | null;
+  csatCount: number;
 }
 
 /**
@@ -291,6 +293,13 @@ export function filterTickets(
 }
 
 export function computeTicketKpis(tickets: Ticket[]): TicketKpiSummary {
+  const ratedTickets = tickets.filter(
+    (t) => typeof t.csatRating === 'number' && t.csatRating > 0,
+  );
+  const csatSum = ratedTickets.reduce((sum, t) => sum + (t.csatRating || 0), 0);
+  const csatAverage =
+    ratedTickets.length > 0 ? Number((csatSum / ratedTickets.length).toFixed(1)) : null;
+
   return {
     total: tickets.length,
     open: tickets.filter((t) => t.status === 'OPEN').length,
@@ -302,6 +311,8 @@ export function computeTicketKpis(tickets: Ticket[]): TicketKpiSummary {
     resolvedClosed: tickets.filter(
       (t) => t.status === 'RESOLVED' || t.status === 'CLOSED',
     ).length,
+    csatAverage,
+    csatCount: ratedTickets.length,
   };
 }
 
@@ -618,3 +629,102 @@ export async function fetchAndDecryptCommentAttachment(
     dataUrl,
   };
 }
+
+// ============================================================================
+// 10. In-App Notifications & Canned Responses
+// ============================================================================
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  ticketId: string;
+  type:
+    | 'TICKET_FOLLOW_UP_REQUESTED'
+    | 'TICKET_CUSTOMER_AMENDED'
+    | 'TICKET_NOTE_POSTED'
+    | 'TICKET_ASSIGNED'
+    | 'TICKET_STATUS_CHANGED';
+  title: string;
+  message: string;
+  read: boolean;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  notifications: AppNotification[];
+  unreadCount: number;
+}
+
+export interface CannedResponseTemplate {
+  id: string;
+  category: 'Troubleshooting' | 'Information Request' | 'Status & Escalation' | 'Resolution';
+  label: string;
+  content: string;
+}
+
+export const CANNED_RESPONSES: CannedResponseTemplate[] = [
+  {
+    id: 'power-cycle',
+    category: 'Troubleshooting',
+    label: 'Hardware Power Cycle',
+    content:
+      'Please perform a full power cycle on your device: shut down the system, disconnect the power cable for 30 seconds, reconnect, and restart. Please confirm if the issue persists after reboot.',
+  },
+  {
+    id: 'vpn-dns',
+    category: 'Troubleshooting',
+    label: 'VPN & DNS Cache Flush',
+    content:
+      'Please disconnect from the corporate VPN, open Command Prompt or Terminal, execute "ipconfig /flushdns" (or "sudo dscacheutil -flushcache" on macOS), and reconnect. Let us know if internal services are accessible.',
+  },
+  {
+    id: 'browser-cache',
+    category: 'Troubleshooting',
+    label: 'Clear Browser Cache & Cookies',
+    content:
+      'Please clear your browser cookies and cached images/files (or try in a private/incognito browsing window). Afterwards, refresh the page to see if the error clears.',
+  },
+  {
+    id: 'req-screenshot',
+    category: 'Information Request',
+    label: 'Request Screenshot / Error Log',
+    content:
+      'Could you please attach a full-screen screenshot showing the exact error message or dialogue, along with the browser console log (F12 > Console tab) if applicable?',
+  },
+  {
+    id: 'req-reproduction',
+    category: 'Information Request',
+    label: 'Request Step-by-Step Reproduction',
+    content:
+      'To help us isolate the root cause, could you share the exact steps to reproduce this behavior (e.g., URL visited, buttons clicked, expected vs actual outcome)?',
+  },
+  {
+    id: 'escalate-tier2',
+    category: 'Status & Escalation',
+    label: 'Escalate to Tier 2 Engineering',
+    content:
+      'This issue has been escalated to Tier 2 Infrastructure & Backend Engineering for detailed telemetry and log analysis. We will follow up with an update within 4 hours.',
+  },
+  {
+    id: 'vendor-ticket',
+    category: 'Status & Escalation',
+    label: 'Upstream Vendor / Provider Escalation',
+    content:
+      'We have opened an urgent upstream support incident with the service provider. We are monitoring the vendor SLA and will update this ticket as soon as new status is reported.',
+  },
+  {
+    id: 'resolution-applied',
+    category: 'Resolution',
+    label: 'Resolution Applied / Verification',
+    content:
+      'We have applied the configuration fix to your account/system. Please verify normal operation and let us know if everything is functioning as expected.',
+  },
+  {
+    id: 'resolution-closing',
+    category: 'Resolution',
+    label: 'Issue Resolved / Ready to Close',
+    content:
+      'The reported issue has been diagnosed and resolved. If no further issues occur, you may confirm resolution in the portal. Feel free to reply if you need any further assistance!',
+  },
+];
