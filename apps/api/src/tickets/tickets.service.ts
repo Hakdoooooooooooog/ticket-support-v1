@@ -241,11 +241,28 @@ export class TicketsService implements OnModuleInit {
         'comment on this ticket',
       );
 
+      if ((existingTicket as { status?: string }).status === 'CLOSED') {
+        throw new BadRequestException(
+          'Resolution notes cannot be added to a closed ticket. The ticket must be reopened first.',
+        );
+      }
+
       const currentAssigneeId = (existingTicket as { assigneeId?: string | null })
         .assigneeId;
       if (!currentAssigneeId) {
         throw new BadRequestException(
           'Ticket must be assigned to an IT agent or administrator before posting resolution notes',
+        );
+      }
+
+      // If actor is an agent, they can only comment if assigned to them or unassigned (after claiming)
+      if (
+        actor?.role === 'AGENT' &&
+        currentAssigneeId &&
+        currentAssigneeId !== actor.id
+      ) {
+        throw new ForbiddenException(
+          'Only the assigned support engineer or an administrator can post resolution notes on this ticket',
         );
       }
 
@@ -343,6 +360,7 @@ export class TicketsService implements OnModuleInit {
         ? TicketMapper.toCommentAttachmentInput(dto.encryptedAttachment)
         : {};
 
+      const currentStatus = (existingTicket as { status?: string }).status;
       const existingAssigneeId = (existingTicket as { assigneeId?: string | null })
         .assigneeId;
       const effectiveAssigneeId =
@@ -352,19 +370,42 @@ export class TicketsService implements OnModuleInit {
         actor?.role === 'CUSTOMER' ||
         Boolean(dto.amendmentNote?.trim().startsWith('[CUSTOMER AMENDMENT]'));
 
-      if (
-        !isCustomerAction &&
-        !effectiveAssigneeId &&
-        ((dto.status && dto.status !== 'OPEN') ||
-          Boolean(dto.amendmentNote?.trim().startsWith('[FOLLOW-UP')))
-      ) {
+      // Closed tickets are finalized and cannot be modified by staff (Admin or Agent)
+      if (currentStatus === 'CLOSED' && !isCustomerAction) {
         throw new BadRequestException(
-          'Ticket must be assigned to an IT agent or administrator before updating status or requesting a follow-up',
+          'Closed tickets cannot be modified. Only the customer can reopen this ticket.',
         );
       }
 
+      if (actor?.role === 'AGENT') {
+        // Support agents can only assign tickets to themselves or unassign themselves
+        if (dto.assigneeId !== undefined && dto.assigneeId !== null && dto.assigneeId !== actor.id) {
+          throw new ForbiddenException(
+            'Support agents can only claim tickets for themselves. Only administrators can assign tickets to other team members.',
+          );
+        }
+
+        // Support agents cannot modify status or priority of tickets assigned to other staff
+        const isClaiming = dto.assigneeId === actor.id;
+        if (existingAssigneeId && existingAssigneeId !== actor.id && !isClaiming) {
+          throw new ForbiddenException(
+            'Only the assigned support engineer or an administrator can update this ticket.',
+          );
+        }
+      }
+
+      if (!isCustomerAction && !effectiveAssigneeId) {
+        if (
+          (dto.status && dto.status !== 'OPEN') ||
+          Boolean(dto.amendmentNote?.trim().startsWith('[FOLLOW-UP'))
+        ) {
+          throw new BadRequestException(
+            'Ticket must be assigned to an IT agent or administrator before updating status or requesting a follow-up',
+          );
+        }
+      }
+
       // If an agent or admin unassigns an active ticket without specifying status, reset status to OPEN
-      const currentStatus = (existingTicket as { status?: string }).status;
       if (
         dto.assigneeId === null &&
         dto.status === undefined &&
@@ -373,7 +414,7 @@ export class TicketsService implements OnModuleInit {
         updateData.status = 'OPEN';
       }
 
-      // If a customer amends a ticket that was waiting on NEEDS_INFO or RESOLVED, automatically reopen it
+      // If a customer amends a ticket that was waiting on NEEDS_INFO or RESOLVED or CLOSED, automatically reopen it
       const isCustomerAmendment =
         !dto.status &&
         (dto.title !== undefined ||
@@ -382,8 +423,9 @@ export class TicketsService implements OnModuleInit {
           dto.amendmentNote !== undefined);
 
       if (
-        isCustomerAmendment &&
-        (currentStatus === 'NEEDS_INFO' || currentStatus === 'RESOLVED')
+        isCustomerAction &&
+        (isCustomerAmendment || dto.status === 'OPEN') &&
+        (currentStatus === 'NEEDS_INFO' || currentStatus === 'RESOLVED' || currentStatus === 'CLOSED')
       ) {
         updateData.status = existingAssigneeId ? 'IN_PROGRESS' : 'OPEN';
       }
@@ -544,8 +586,8 @@ export class TicketsService implements OnModuleInit {
   }
 
   async remove(id: string, actor?: TicketActorContext): Promise<void> {
-    if (actor?.role === 'CUSTOMER') {
-      throw new ForbiddenException('Customers are not permitted to delete tickets');
+    if (actor && actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Only administrators are permitted to delete tickets');
     }
 
     await this.runTransaction(async (tx) => {

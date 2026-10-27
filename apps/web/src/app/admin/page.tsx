@@ -26,6 +26,7 @@ import {
   parseTimelineComment,
   countTicketAttachments,
   computeTicketSlaStatus,
+  extractApiErrorMessage,
   sanitizeText,
   AuthUser,
   EncryptedAttachmentPayload,
@@ -183,10 +184,15 @@ export default function AdminDashboardPage() {
       if (updatedTicket?.id) {
         upsertTicket(updatedTicket);
         void ensureTicketAttachmentsLoaded(updatedTicket);
+        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: '' }));
       }
       closeFollowUpComposer();
       setFollowUpAttachment(null);
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+    onError: (err: unknown, variables) => {
+      const message = extractApiErrorMessage(err, 'Failed to update ticket');
+      setActionErrors((prev) => ({ ...prev, [variables.id]: message }));
     },
   });
 
@@ -213,8 +219,13 @@ export default function AdminDashboardPage() {
       if (updatedTicket?.id) {
         upsertTicket(updatedTicket);
         void ensureTicketAttachmentsLoaded(updatedTicket);
+        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: '' }));
       }
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+    onError: (err: unknown, variables) => {
+      const message = extractApiErrorMessage(err, 'Failed to post resolution note');
+      setActionErrors((prev) => ({ ...prev, [variables.ticketId]: message }));
     },
   });
 
@@ -226,6 +237,10 @@ export default function AdminDashboardPage() {
     onSuccess: (deletedId) => {
       removeTicket(deletedId);
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+    onError: (err: unknown, variables) => {
+      const message = extractApiErrorMessage(err, 'Failed to delete ticket');
+      setActionErrors((prev) => ({ ...prev, [variables]: message }));
     },
   });
 
@@ -402,7 +417,13 @@ export default function AdminDashboardPage() {
       const totalAttachments = countTicketAttachments(ticket);
       const commentCount = ticket.comments?.length || 0;
       const sla = computeTicketSlaStatus(ticket);
-      const isTicketAssigned = Boolean(resolveTicketAssigneeId(ticket));
+      const assigneeId = resolveTicketAssigneeId(ticket);
+      const isTicketAssigned = Boolean(assigneeId);
+      const isClosed = ticket.status === 'CLOSED';
+      const isAdmin = user?.role === 'ADMIN';
+      const isAssignedToMe = Boolean(user?.id && assigneeId === user.id);
+      const isAssignedToOther = Boolean(assigneeId && user?.id && assigneeId !== user.id);
+      const canManageTicket = isAdmin || isAssignedToMe;
       const initialAttachmentKey = `ticket:${ticket.id}`;
       const decryptedTicketImg = decryptedAttachments[initialAttachmentKey];
       const isLoadingTicketImg = Boolean(
@@ -509,10 +530,195 @@ export default function AdminDashboardPage() {
           {/* Accordion Body */}
           {isExpanded && (
             <CardContent className="p-4 sm:p-5 pt-0 space-y-5 border-t border-slate-100 dark:border-slate-800/80">
-              {/* 1. Admin Triage & Actions Bar */}
-              <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
-                <div className="flex flex-wrap items-center gap-3">
-                  {isTicketAssigned && (
+              {/* 1. Admin / Agent Triage & Actions Bar */}
+              {isClosed ? (
+                /* Closed Ticket Banner (Immutable by staff, can only be reopened by customer) */
+                <div className="pt-3 flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <span className="font-bold uppercase tracking-wider text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      Closed &amp; Archived
+                    </span>
+                    <span className="text-slate-600 dark:text-slate-300">
+                      This ticket is closed. It cannot be modified by staff unless the customer reopens it from the portal.
+                    </span>
+                  </div>
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteTicketMutation.mutate(ticket.id)}
+                      className="h-8 text-xs shrink-0"
+                    >
+                      Delete Ticket
+                    </Button>
+                  )}
+                </div>
+              ) : !isTicketAssigned ? (
+                /* Unassigned Active Ticket Bar */
+                <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-semibold text-amber-700 dark:text-amber-300">
+                      Unassigned Ticket:
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <label
+                        htmlFor={`priority-${ticket.id}`}
+                        className="text-xs font-medium text-slate-500"
+                      >
+                        Priority:
+                      </label>
+                      <select
+                        id={`priority-${ticket.id}`}
+                        value={ticket.priority}
+                        onChange={(e) =>
+                          updateTicketMutation.mutate({
+                            id: ticket.id,
+                            payload: {
+                              priority: e.target.value as Ticket['priority'],
+                            },
+                          })
+                        }
+                        className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                      >
+                        <option value="LOW">LOW</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="URGENT">URGENT</option>
+                      </select>
+                    </div>
+
+                    {isAdmin ? (
+                      /* Admin can delegate to any agent */
+                      <div className="flex items-center gap-1.5">
+                        <label
+                          htmlFor={`assignee-${ticket.id}`}
+                          className="text-xs font-medium text-slate-500"
+                        >
+                          Assignee:
+                        </label>
+                        <select
+                          id={`assignee-${ticket.id}`}
+                          value={resolveTicketAssigneeId(ticket)}
+                          onChange={(e) => {
+                            const nextAssignee = e.target.value || null;
+                            updateTicketMutation.mutate({
+                              id: ticket.id,
+                              payload: {
+                                assigneeId: nextAssignee,
+                                ...(nextAssignee && ticket.status === 'OPEN'
+                                  ? { status: 'IN_PROGRESS' as const }
+                                  : {}),
+                              },
+                            });
+                          }}
+                          className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                        >
+                          <option value="">Unassigned</option>
+                          {agents.map((agent) => (
+                            <option key={agent.id} value={agent.id}>
+                              {agent.fullName} ({agent.role})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      /* Support Agent sees Unassigned status */
+                      <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                        <span>Assignee:</span>
+                        <strong className="font-medium text-amber-600 dark:text-amber-400">
+                          Unassigned
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {user && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="default"
+                        onClick={() =>
+                          updateTicketMutation.mutate({
+                            id: ticket.id,
+                            payload: {
+                              assigneeId: user.id,
+                              status:
+                                ticket.status === 'OPEN'
+                                  ? 'IN_PROGRESS'
+                                  : ticket.status,
+                            },
+                          })
+                        }
+                        className="h-8 text-xs font-medium"
+                      >
+                        Claim &amp; Assign to Me
+                      </Button>
+                    )}
+
+                    {isAdmin && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteTicketMutation.mutate(ticket.id)}
+                        className="h-8 text-xs"
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : isAssignedToOther && !isAdmin ? (
+                /* Ticket assigned to another agent (read-only for non-admin agents with Take Over option) */
+                <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    <span className="text-slate-500">
+                      Assigned to:{' '}
+                      <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                        {ticket.assignee?.fullName || 'Another Agent'}
+                      </strong>
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500">
+                      Status:{' '}
+                      <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                        {ticket.status.replace('_', ' ')}
+                      </Badge>
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500">
+                      Priority:{' '}
+                      <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                        {ticket.priority}
+                      </Badge>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        updateTicketMutation.mutate({
+                          id: ticket.id,
+                          payload: {
+                            assigneeId: user!.id,
+                          },
+                        })
+                      }
+                      className="h-8 text-xs shrink-0"
+                    >
+                      Take Over &amp; Reassign to Me
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Assigned Active Ticket Bar (Managed by Assignee or Admin) */
+                <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor={`status-${ticket.id}`}
@@ -540,94 +746,97 @@ export default function AdminDashboardPage() {
                         <option value="CLOSED">CLOSED</option>
                       </select>
                     </div>
-                  )}
 
-                  <div className="flex items-center gap-1.5">
-                    <label
-                      htmlFor={`priority-${ticket.id}`}
-                      className="text-xs font-medium text-slate-500"
-                    >
-                      Priority:
-                    </label>
-                    <select
-                      id={`priority-${ticket.id}`}
-                      value={ticket.priority}
-                      onChange={(e) =>
-                        updateTicketMutation.mutate({
-                          id: ticket.id,
-                          payload: {
-                            priority: e.target.value as Ticket['priority'],
-                          },
-                        })
-                      }
-                      className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
-                    >
-                      <option value="LOW">LOW</option>
-                      <option value="MEDIUM">MEDIUM</option>
-                      <option value="HIGH">HIGH</option>
-                      <option value="URGENT">URGENT</option>
-                    </select>
+                    <div className="flex items-center gap-1.5">
+                      <label
+                        htmlFor={`priority-${ticket.id}`}
+                        className="text-xs font-medium text-slate-500"
+                      >
+                        Priority:
+                      </label>
+                      <select
+                        id={`priority-${ticket.id}`}
+                        value={ticket.priority}
+                        onChange={(e) =>
+                          updateTicketMutation.mutate({
+                            id: ticket.id,
+                            payload: {
+                              priority: e.target.value as Ticket['priority'],
+                            },
+                          })
+                        }
+                        className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                      >
+                        <option value="LOW">LOW</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="URGENT">URGENT</option>
+                      </select>
+                    </div>
+
+                    {isAdmin ? (
+                      /* Admin has full assignee selection across all agents */
+                      <div className="flex items-center gap-1.5">
+                        <label
+                          htmlFor={`assignee-${ticket.id}`}
+                          className="text-xs font-medium text-slate-500"
+                        >
+                          Assignee:
+                        </label>
+                        <select
+                          id={`assignee-${ticket.id}`}
+                          value={resolveTicketAssigneeId(ticket)}
+                          onChange={(e) => {
+                            const nextAssignee = e.target.value || null;
+                            updateTicketMutation.mutate({
+                              id: ticket.id,
+                              payload: {
+                                assigneeId: nextAssignee,
+                                ...(nextAssignee && ticket.status === 'OPEN'
+                                  ? { status: 'IN_PROGRESS' as const }
+                                  : {}),
+                              },
+                            });
+                          }}
+                          className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                        >
+                          <option value="">Unassigned</option>
+                          {agents.map((agent) => (
+                            <option key={agent.id} value={agent.id}>
+                              {agent.fullName} ({agent.role})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      /* Agent is assigned to this ticket: show their name and Unassign option */
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-slate-500">Assignee:</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          {ticket.assignee?.fullName || 'Assigned to You'}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            updateTicketMutation.mutate({
+                              id: ticket.id,
+                              payload: {
+                                assigneeId: null,
+                              },
+                            })
+                          }
+                          className="h-7 px-2 text-[11px] text-slate-500 hover:text-red-500"
+                        >
+                          Unassign
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <label
-                      htmlFor={`assignee-${ticket.id}`}
-                      className="text-xs font-medium text-slate-500"
-                    >
-                      Assignee:
-                    </label>
-                    <select
-                      id={`assignee-${ticket.id}`}
-                      value={resolveTicketAssigneeId(ticket)}
-                      onChange={(e) => {
-                        const nextAssignee = e.target.value || null;
-                        updateTicketMutation.mutate({
-                          id: ticket.id,
-                          payload: {
-                            assigneeId: nextAssignee,
-                            ...(nextAssignee && ticket.status === 'OPEN'
-                              ? { status: 'IN_PROGRESS' as const }
-                              : {}),
-                          },
-                        });
-                      }}
-                      className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
-                    >
-                      <option value="">Unassigned</option>
-                      {agents.map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.fullName} ({agent.role})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  {user && ticket.assigneeId !== user.id && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        updateTicketMutation.mutate({
-                          id: ticket.id,
-                          payload: {
-                            assigneeId: user.id,
-                            status:
-                              ticket.status === 'OPEN'
-                                ? 'IN_PROGRESS'
-                                : ticket.status,
-                          },
-                        })
-                      }
-                      className="h-8 text-xs"
-                    >
-                      Assign to Me
-                    </Button>
-                  )}
-
-                  {isTicketAssigned && ticket.status !== 'CLOSED' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Follow-up composer trigger */}
                     <Button
                       type="button"
                       variant={isFollowUpOpen ? 'default' : 'secondary'}
@@ -647,49 +856,19 @@ export default function AdminDashboardPage() {
                         ? 'Cancel Follow-Up'
                         : 'Request Info / Follow-Up'}
                     </Button>
-                  )}
 
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteTicketMutation.mutate(ticket.id)}
-                    className="h-8 text-xs"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-
-              {!isTicketAssigned && (
-                <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2">
-                  <span>
-                    <strong>Assignment Required:</strong> Assign this ticket to
-                    yourself or an IT agent first to unlock status updates,
-                    follow-up requests, and resolution notes.
-                  </span>
-                  {user && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        updateTicketMutation.mutate({
-                          id: ticket.id,
-                          payload: {
-                            assigneeId: user.id,
-                            status:
-                              ticket.status === 'OPEN'
-                                ? 'IN_PROGRESS'
-                                : ticket.status,
-                          },
-                        })
-                      }
-                      className="h-7 text-xs shrink-0"
-                    >
-                      Claim &amp; Assign to Me
-                    </Button>
-                  )}
+                    {isAdmin && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteTicketMutation.mutate(ticket.id)}
+                        className="h-8 text-xs"
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -700,7 +879,7 @@ export default function AdminDashboardPage() {
               )}
 
               {/* Inline Follow-Up Request Composer */}
-              {isTicketAssigned && isFollowUpOpen && (
+              {isTicketAssigned && !isClosed && canManageTicket && isFollowUpOpen && (
                 <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
@@ -962,8 +1141,8 @@ export default function AdminDashboardPage() {
                 )}
               </div>
 
-              {/* 4. Post IT Resolution Note Composer (visible once assigned) */}
-              {isTicketAssigned && (
+              {/* 4. Post IT Resolution Note Composer (visible once assigned, active, and manageable) */}
+              {isTicketAssigned && !isClosed && canManageTicket && (
                 <form
                   onSubmit={(e) => handlePostResolutionNote(ticket.id, e)}
                   className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5"
@@ -1021,6 +1200,17 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 </form>
+              )}
+
+              {/* Informative message for non-admin agents viewing someone else's active ticket */}
+              {!isClosed && isAssignedToOther && !isAdmin && (
+                <div className="p-3 rounded-md bg-slate-100/70 dark:bg-slate-900/50 text-xs text-slate-500 text-center border border-slate-200/50 dark:border-slate-800">
+                  This ticket is currently assigned to{' '}
+                  <strong className="text-slate-700 dark:text-slate-300">
+                    {ticket.assignee?.fullName}
+                  </strong>
+                  . Click &quot;Take Over &amp; Reassign to Me&quot; above to post resolution notes or request customer info.
+                </div>
               )}
             </CardContent>
           )}

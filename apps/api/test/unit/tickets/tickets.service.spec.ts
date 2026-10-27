@@ -257,6 +257,95 @@ describe('TicketsService', () => {
       expect(prisma.ticket.update).not.toHaveBeenCalled();
     });
 
+    it('should throw BadRequestException if staff attempts to modify a CLOSED ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'CLOSED',
+        assigneeId: 'agent-1',
+      });
+
+      await expect(
+        service.update(
+          'ticket-1',
+          { priority: 'LOW' } as any,
+          { id: 'admin-1', role: 'ADMIN' },
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.ticket.update).not.toHaveBeenCalled();
+    });
+
+    it('should allow customer amendment to reopen a CLOSED ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'CLOSED',
+        assigneeId: 'agent-1',
+      });
+      (prisma as any).comment = { create: vi.fn().mockResolvedValue({}) };
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'creator@example.com',
+        fullName: 'Alice Walker',
+        role: 'CUSTOMER',
+      });
+      prisma.ticket.update.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'IN_PROGRESS',
+        assigneeId: 'agent-1',
+      });
+
+      const result = await service.update(
+        'ticket-1',
+        {
+          amendmentNote: '[CUSTOMER AMENDMENT] Please look into this again',
+        } as any,
+        { id: 'user-1', role: 'CUSTOMER' },
+      );
+
+      expect(prisma.ticket.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'IN_PROGRESS' }),
+        }),
+      );
+      expect(result.status).toBe('IN_PROGRESS');
+    });
+
+    it('should throw ForbiddenException if an AGENT attempts to assign a ticket to another agent', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'OPEN',
+      });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'other-agent',
+        role: 'AGENT',
+      });
+
+      await expect(
+        service.update(
+          'ticket-1',
+          { assigneeId: 'other-agent' } as any,
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.ticket.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if an AGENT attempts to modify another agent ticket without claiming', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'IN_PROGRESS',
+        assigneeId: 'other-agent',
+      });
+
+      await expect(
+        service.update(
+          'ticket-1',
+          { priority: 'URGENT' } as any,
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.ticket.update).not.toHaveBeenCalled();
+    });
+
     it('should reject duplicate active ticket creation via ConflictException', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
@@ -302,6 +391,51 @@ describe('TicketsService', () => {
         service.remove('ticket-1', { id: 'user-1', role: 'CUSTOMER' }),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.ticket.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if an AGENT attempts to delete a ticket', async () => {
+      await expect(
+        service.remove('ticket-1', { id: 'agent-1', role: 'AGENT' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.ticket.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('addComment', () => {
+    it('should throw BadRequestException if adding a comment to a CLOSED ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'CLOSED',
+        assigneeId: 'agent-1',
+      });
+
+      await expect(
+        service.addComment(
+          'ticket-1',
+          'Resolution note on closed ticket',
+          undefined,
+          undefined,
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ForbiddenException if an AGENT attempts to comment on a ticket assigned to someone else', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'IN_PROGRESS',
+        assigneeId: 'other-agent',
+      });
+
+      await expect(
+        service.addComment(
+          'ticket-1',
+          'Attempting note on colleague ticket',
+          undefined,
+          undefined,
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
