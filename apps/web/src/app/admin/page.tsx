@@ -10,6 +10,7 @@ import { Badge } from '@ui/badge';
 import { Input } from '@ui/input';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { apiClient } from '@lib/api-client';
+import { APP_VERSION } from '@lib/constants';
 import {
   getPriorityBadgeVariant,
   getStatusBadgeVariant,
@@ -1449,23 +1450,47 @@ export default function AdminDashboardPage() {
         {/* Current Staff User Profile Card */}
         {user && (
           <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center shrink-0 border border-blue-500/20 text-xs">
-                {user.fullName.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-xs truncate text-slate-900 dark:text-white">
-                  {user.fullName}
-                </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Badge
-                    variant={user.role === 'ADMIN' ? 'default' : 'secondary'}
-                    className="text-[10px] py-0 px-1.5"
-                  >
-                    {user.role}
-                  </Badge>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center shrink-0 border border-blue-500/20 text-xs">
+                  {user.fullName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-xs truncate text-slate-900 dark:text-white">
+                    {user.fullName}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Badge
+                      variant={user.role === 'ADMIN' ? 'default' : 'secondary'}
+                      className="text-[10px] py-0 px-1.5"
+                    >
+                      {user.role}
+                    </Badge>
+                  </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                title="Sign out of staff account"
+                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors shrink-0"
+                aria-label="Sign out"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
             </div>
           </div>
         )}
@@ -1575,10 +1600,10 @@ export default function AdminDashboardPage() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3 bg-slate-50/50 dark:bg-slate-950/50">
+        <div className="p-4 pb-8 border-t border-slate-200 dark:border-slate-800 space-y-3 bg-slate-50/50 dark:bg-slate-950/50">
           <div className="flex items-center justify-between text-xs text-slate-500">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex h-2 w-2 shrink-0">
                 <span
                   className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                     isFetching ? 'bg-blue-400' : 'bg-emerald-400'
@@ -1590,29 +1615,48 @@ export default function AdminDashboardPage() {
                   }`}
                 />
               </span>
-              <span className="text-[11px] font-medium w-24 truncate">
+              <span className="text-[11px] font-medium truncate">
                 {isFetching ? 'Syncing...' : 'Live Connected'}
               </span>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="h-7 w-16 text-center px-1 text-[11px] shrink-0"
-            >
-              Refresh
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                className="h-6 px-1.5 text-[10px]"
+              >
+                Refresh
+              </Button>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                {APP_VERSION}
+              </span>
+            </div>
           </div>
 
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={handleSignOut}
-            className="w-full justify-start text-xs h-8 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+            className="w-full justify-center gap-2 h-9 text-xs font-semibold border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-rose-500/10 hover:border-rose-500/40 hover:text-rose-400 dark:hover:text-rose-300 transition-colors shadow-sm"
           >
-            ← Sign Out
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-3.5 h-3.5"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Sign Out
           </Button>
         </div>
       </aside>
@@ -1783,7 +1827,7 @@ export default function AdminDashboardPage() {
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
               <Button
                 type="button"
                 variant="outline"
@@ -1793,6 +1837,12 @@ export default function AdminDashboardPage() {
               >
                 Sign Out
               </Button>
+              <div className="flex items-center justify-between text-[11px] px-1">
+                <span className="text-slate-500 font-medium">Version</span>
+                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                  {APP_VERSION}
+                </span>
+              </div>
             </div>
           </div>
         </div>

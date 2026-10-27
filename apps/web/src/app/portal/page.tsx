@@ -10,6 +10,7 @@ import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { getStoredSession } from '@lib/helpers';
+import { APP_VERSION } from '@lib/constants';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
 
@@ -114,6 +115,15 @@ export default function CustomerPortalPage() {
           </div>
         </div>
       </main>
+
+      <footer className="border-t border-slate-200 dark:border-slate-800 py-6 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p>TicketSupport Helpdesk Platform</p>
+          <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+            Version {APP_VERSION}
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

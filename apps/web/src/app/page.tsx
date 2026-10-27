@@ -9,6 +9,7 @@ import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { apiClient } from '@lib/api-client';
+import { APP_VERSION } from '@lib/constants';
 import {
   verifyPassportSession,
   getWorkspacePathForRole,
@@ -361,6 +362,10 @@ function AuthForm() {
             </CardFooter>
           </form>
         </Card>
+
+        <p className="text-center font-mono text-[11px] text-slate-500 pt-2">
+          TicketSupport · {APP_VERSION}
+        </p>
       </div>
     </main>
   );
