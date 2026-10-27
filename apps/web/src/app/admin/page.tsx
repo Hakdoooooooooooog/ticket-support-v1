@@ -1804,15 +1804,15 @@ export default function AdminDashboardPage() {
       <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
         <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 space-y-6 max-w-7xl w-full mx-auto">
           {/* Main Top Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+            <div className="min-w-0 flex-1">
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {activeSection === 'DASHBOARD' && 'IT Service Desk Queue'}
                 {activeSection === 'ALL_TICKETS' && 'All Customer Tickets'}
                 {activeSection === 'ASSIGNED_TICKETS' && 'Assigned Incidents Queue'}
                 {activeSection === 'TEAM_MANAGEMENT' && 'IT Support Team & Staff Invitations'}
               </h1>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-xl leading-relaxed">
                 {activeSection === 'DASHBOARD' &&
                   'Monitor live SLA metrics, triage incoming unassigned tickets, and resolve assigned incidents.'}
                 {activeSection === 'ALL_TICKETS' &&
@@ -1824,11 +1824,11 @@ export default function AdminDashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5 shrink-0 flex-nowrap overflow-x-auto">
+            <div className="flex items-center gap-2.5 shrink-0">
               {formattedLastUpdated && (
                 <div
                   data-testid="dashboard-last-updated"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300 tabular-nums shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300 tabular-nums shrink-0 whitespace-nowrap"
                 >
                   <span className="relative flex h-2 w-2">
                     <span
@@ -1843,7 +1843,8 @@ export default function AdminDashboardPage() {
                     />
                   </span>
                   <span>
-                    Last updated: <strong className="font-semibold">{formattedLastUpdated}</strong>
+                    <span className="hidden sm:inline text-slate-400">Updated: </span>
+                    <strong className="font-semibold text-slate-700 dark:text-slate-200">{formattedLastUpdated}</strong>
                   </span>
                 </div>
               )}
