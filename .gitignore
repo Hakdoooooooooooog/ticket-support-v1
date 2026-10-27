@@ -23,6 +23,11 @@ coverage/
 .env.production.local
 !.env.example
 
+# Local seed & dummy account files (never committed)
+*.local.json
+seed.local.*
+demo-accounts.local.*
+
 # Prisma
 apps/api/prisma/*.db
 apps/api/prisma/*.db-journal

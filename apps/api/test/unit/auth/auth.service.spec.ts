@@ -55,7 +55,7 @@ describe('AuthService', () => {
         password: 'SecurePassword123!',
       };
 
-      const result = await service.register(registerDto);
+      const result = await service.register(registerDto as any);
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'newuser@example.com' },
@@ -83,7 +83,7 @@ describe('AuthService', () => {
         password: 'Password123!',
       };
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto as any)).rejects.toThrow(ConflictException);
     });
   });
 
@@ -109,7 +109,12 @@ describe('AuthService', () => {
 
       const result = await service.login(loginDto);
 
-      expect(result.accessToken).toBe('mock-jwt-token-for-user-auth-id');
+      expect(result.accessToken.split('.')).toHaveLength(3);
+      const decodedPayload = JSON.parse(
+        Buffer.from(result.accessToken.split('.')[1], 'base64url').toString(),
+      );
+      expect(decodedPayload.sub).toBe('user-auth-id');
+      expect(decodedPayload.email).toBe('login@example.com');
       expect(result.user.email).toBe('login@example.com');
       expect((result.user as any).passwordHash).toBeUndefined();
     });
