@@ -8,6 +8,7 @@ import { Label } from '@ui/label';
 import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
+import { ThemeToggle } from '@components/theme-toggle';
 import { apiClient } from '@lib/api-client';
 import { APP_VERSION } from '@lib/constants';
 import {
@@ -162,23 +163,26 @@ function AuthForm() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-spruce-50 dark:bg-spruce-950 text-spruce-950 dark:text-spruce-50 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="max-w-md w-full mx-auto space-y-8">
         <div className="text-center space-y-3">
-          <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 rounded-full dark:bg-blue-950 dark:text-blue-300">
+          <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider text-spruce-700 bg-spruce-100 dark:bg-spruce-800/80 dark:text-spruce-300 rounded-full border border-spruce-200 dark:border-spruce-700/60">
             Support Desk
           </span>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-4xl font-extrabold tracking-tight text-spruce-950 dark:text-white">
             TicketSupport
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm text-spruce-600 dark:text-spruce-300">
             Sign in to submit support requests or manage the service desk queue.
           </p>
         </div>
 
-        <Card className="shadow-lg border-slate-200 dark:border-slate-800">
+        <Card className="shadow-lg border-spruce-200 dark:border-spruce-700/80">
           <CardHeader className="space-y-3 pb-4">
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-slate-100 dark:bg-slate-900">
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800">
               <button
                 type="button"
                 onClick={() => {
@@ -187,8 +191,8 @@ function AuthForm() {
                 }}
                 className={`py-2 text-sm font-semibold rounded-md transition-colors ${
                   mode === 'login'
-                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    ? 'bg-white text-spruce-950 shadow-sm dark:bg-spruce-800 dark:text-spruce-200'
+                    : 'text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white'
                 }`}
               >
                 Sign In
@@ -201,8 +205,8 @@ function AuthForm() {
                 }}
                 className={`py-2 text-sm font-semibold rounded-md transition-colors ${
                   mode === 'register'
-                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    ? 'bg-white text-spruce-950 shadow-sm dark:bg-spruce-800 dark:text-spruce-200'
+                    : 'text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white'
                 }`}
               >
                 Create Account

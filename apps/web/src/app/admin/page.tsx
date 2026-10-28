@@ -34,6 +34,7 @@ import {
 } from '@lib/helpers';
 import { Ticket } from '@components/ticket-list';
 import { NotificationCenter } from '@components/notification-center';
+import { ThemeToggle } from '@components/theme-toggle';
 import { CannedResponsesMenu } from '@components/canned-responses-menu';
 import { useRealtimeEvents } from '@hooks/use-realtime-events';
 import { useAuthStore } from '@store/auth.store';
@@ -67,6 +68,10 @@ export default function AdminDashboardPage() {
     toggleTicketExpanded,
     setTicketExpanded,
     setAllTicketsExpanded,
+    viewedTicketIds,
+    markTicketViewed,
+    markTicketUnviewed,
+    markAllTicketsViewed,
     expandedCommentHistories,
     highlightedTicketId,
     toggleCommentHistory,
@@ -575,8 +580,8 @@ export default function AdminDashboardPage() {
 
     if (list.length === 0) {
       return (
-        <Card>
-          <CardContent className="p-8 text-center text-sm text-slate-500">
+        <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/40">
+          <CardContent className="p-8 text-center text-sm text-spruce-500">
             {emptyMessage}
           </CardContent>
         </Card>
@@ -604,18 +609,23 @@ export default function AdminDashboardPage() {
         hiddenAttachmentKeys[initialAttachmentKey],
       );
       const isFollowUpOpen = followUpTicketId === ticket.id;
+      const isViewed = Boolean(viewedTicketIds[ticket.id]);
 
       return (
         <Card
           key={ticket.id}
           id={`ticket-${ticket.id}`}
-          className={`transition-all ${
+          className={`overflow-hidden transition-all duration-150 ${
             ticket.status === 'NEEDS_INFO'
-              ? 'border-amber-400/80 dark:border-amber-500/60'
-              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              ? isViewed
+                ? 'border-amber-400/60 dark:border-amber-500/50 border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-amber-500/5'
+                : 'border-amber-400 dark:border-amber-500 border-l-4 border-l-amber-500 dark:border-l-amber-400 bg-amber-500/10 shadow-sm'
+              : !isViewed
+              ? 'border-spruce-300 dark:border-spruce-700/80 border-l-4 border-l-spruce-600 dark:border-l-spruce-300 bg-white dark:bg-spruce-900/85 shadow-sm hover:border-spruce-400 dark:hover:border-spruce-600'
+              : 'border-spruce-200/90 dark:border-spruce-800/80 border-l-4 border-l-spruce-200/70 dark:border-l-spruce-800/80 bg-white/70 dark:bg-spruce-950/50 hover:bg-white dark:hover:bg-spruce-900/60'
           } ${
             highlightedTicketId === ticket.id
-              ? 'ring-2 ring-blue-500 shadow-xl shadow-blue-500/20 dark:ring-blue-400'
+              ? 'ring-2 ring-spruce-400 shadow-xl shadow-spruce-500/20 dark:ring-spruce-300'
               : ''
           }`}
         >
@@ -625,30 +635,52 @@ export default function AdminDashboardPage() {
               type="button"
               aria-expanded={isExpanded}
               onClick={() => toggleTicketExpanded(ticket.id)}
-              className="w-full text-left p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded-t-xl"
+              className="w-full text-left p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-t-xl"
             >
               <div className="space-y-1.5 min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
-                    className={`inline-flex items-center justify-center w-5 h-5 rounded text-slate-400 transition-transform duration-200 ${
-                      isExpanded ? 'rotate-90 text-slate-700 dark:text-slate-200' : ''
+                    className={`inline-flex items-center justify-center w-5 h-5 rounded text-spruce-400 transition-transform duration-200 ${
+                      isExpanded ? 'rotate-90 text-spruce-800 dark:text-spruce-200' : ''
                     }`}
                     aria-hidden="true"
                   >
                     ▸
                   </span>
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="text-xs font-mono text-spruce-400 dark:text-spruce-400">
                     {formatShortTicketId(ticket.id)}
                   </span>
-                  <CardTitle className="text-base sm:text-lg font-bold truncate">
+
+                  {/* New vs Viewed Color Badge Variant */}
+                  {!isViewed ? (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-spruce-100 text-spruce-800 border border-spruce-300 dark:bg-spruce-300/15 dark:text-spruce-300 dark:border-spruce-400/40 shadow-xs">
+                      <span className="h-1.5 w-1.5 rounded-full bg-spruce-600 dark:bg-spruce-300 animate-pulse" />
+                      New
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-spruce-500 dark:text-spruce-400 bg-spruce-100/50 dark:bg-spruce-900/40 border border-spruce-200/60 dark:border-spruce-800/60">
+                      <svg className="w-3 h-3 text-spruce-400 dark:text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Viewed
+                    </span>
+                  )}
+
+                  <CardTitle
+                    className={`text-base sm:text-lg truncate ${
+                      !isViewed
+                        ? 'font-bold text-spruce-950 dark:text-white'
+                        : 'font-medium text-spruce-800 dark:text-spruce-300'
+                    }`}
+                  >
                     {ticket.title}
                   </CardTitle>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-7 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-7 text-xs text-spruce-500 dark:text-spruce-400">
                   <span>
                     Reported by{' '}
-                    <strong className="font-semibold text-slate-700 dark:text-slate-300">
+                    <strong className="font-semibold text-spruce-700 dark:text-spruce-300">
                       {ticket.creator?.fullName || 'Anonymous'}
                     </strong>
                   </span>
@@ -660,7 +692,7 @@ export default function AdminDashboardPage() {
                     <strong
                       className={`font-medium ${
                         isTicketAssigned
-                          ? 'text-slate-700 dark:text-slate-300'
+                          ? 'text-spruce-700 dark:text-spruce-300'
                           : 'text-amber-600 dark:text-amber-400'
                       }`}
                     >
@@ -678,7 +710,7 @@ export default function AdminDashboardPage() {
                   {totalAttachments > 0 && (
                     <>
                       <span>•</span>
-                      <span className="text-blue-500 dark:text-blue-400 font-medium">
+                      <span className="text-spruce-700 dark:text-spruce-300 font-medium">
                         {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
                       </span>
                     </>
@@ -692,7 +724,7 @@ export default function AdminDashboardPage() {
                             ? 'text-red-500 font-semibold'
                             : sla.isResolved
                             ? 'text-emerald-500 font-medium'
-                            : 'text-slate-500'
+                            : 'text-spruce-500'
                         }
                       >
                         SLA: {sla.label}
@@ -717,13 +749,38 @@ export default function AdminDashboardPage() {
                 <Badge variant={getStatusBadgeVariant(ticket.status)}>
                   {ticket.status.replace('_', ' ')}
                 </Badge>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isViewed) {
+                      markTicketUnviewed(ticket.id);
+                    } else {
+                      markTicketViewed(ticket.id);
+                    }
+                  }}
+                  title={isViewed ? 'Mark ticket as new / unviewed' : 'Mark ticket as viewed'}
+                  className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1"
+                  aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
+                >
+                  {isViewed ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-spruce-600 dark:text-spruce-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </button>
           </CardHeader>
 
           {/* Accordion Body */}
           {isExpanded && (
-            <CardContent className="p-4 sm:p-5 pt-0 space-y-5 border-t border-slate-100 dark:border-slate-800/80">
+            <CardContent className="p-4 sm:p-5 pt-0 space-y-5 border-t border-spruce-100 dark:border-spruce-800/80">
               {/* 1. Admin / Agent Triage & Actions Bar */}
               {isClosed ? (
                 /* Closed Ticket Banner (Immutable by staff, can only be reopened by customer) */
@@ -732,7 +789,7 @@ export default function AdminDashboardPage() {
                     <span className="font-bold uppercase tracking-wider text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
                       Closed &amp; Archived
                     </span>
-                    <span className="text-slate-600 dark:text-slate-300">
+                    <span className="text-spruce-600 dark:text-spruce-300">
                       This ticket is closed. It cannot be modified by staff unless the customer reopens it from the portal.
                     </span>
                   </div>
@@ -758,7 +815,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor={`priority-${ticket.id}`}
-                        className="text-xs font-medium text-slate-500"
+                        className="text-xs font-medium text-spruce-500"
                       >
                         Priority:
                       </label>
@@ -773,7 +830,7 @@ export default function AdminDashboardPage() {
                             },
                           })
                         }
-                        className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                        className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                       >
                         <option value="LOW">LOW</option>
                         <option value="MEDIUM">MEDIUM</option>
@@ -787,7 +844,7 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-1.5">
                         <label
                           htmlFor={`assignee-${ticket.id}`}
-                          className="text-xs font-medium text-slate-500"
+                          className="text-xs font-medium text-spruce-500"
                         >
                           Assignee:
                         </label>
@@ -806,7 +863,7 @@ export default function AdminDashboardPage() {
                               },
                             });
                           }}
-                          className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                          className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                         >
                           <option value="">Unassigned</option>
                           {agents.map((agent) => (
@@ -818,7 +875,7 @@ export default function AdminDashboardPage() {
                       </div>
                     ) : (
                       /* Support Agent sees Unassigned status */
-                      <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                      <div className="flex items-center gap-1.5 text-spruce-600 dark:text-spruce-300">
                         <span>Assignee:</span>
                         <strong className="font-medium text-amber-600 dark:text-amber-400">
                           Unassigned
@@ -866,25 +923,25 @@ export default function AdminDashboardPage() {
                 </div>
               ) : isAssignedToOther && !isAdmin ? (
                 /* Ticket assigned to another agent (read-only for non-admin agents with Take Over option) */
-                <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
+                <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-spruce-50/90 dark:bg-spruce-900/60 border border-spruce-200/70 dark:border-spruce-800">
                   <div className="flex flex-wrap items-center gap-3 text-xs">
-                    <span className="text-slate-500">
+                    <span className="text-spruce-500">
                       Assigned to:{' '}
-                      <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                      <strong className="font-semibold text-spruce-800 dark:text-spruce-200">
                         {ticket.assignee?.fullName || 'Another Agent'}
                       </strong>
                     </span>
-                    <span className="text-slate-400">•</span>
-                    <span className="text-slate-500">
+                    <span className="text-spruce-400">•</span>
+                    <span className="text-spruce-500">
                       Status:{' '}
-                      <strong className="text-slate-700 dark:text-slate-200">
+                      <strong className="text-spruce-700 dark:text-spruce-200">
                         {ticket.status.replace('_', ' ')}
                       </strong>
                     </span>
-                    <span className="text-slate-400">•</span>
-                    <span className="text-slate-500">
+                    <span className="text-spruce-400">•</span>
+                    <span className="text-spruce-500">
                       Priority:{' '}
-                      <strong className="text-slate-700 dark:text-slate-200">
+                      <strong className="text-spruce-700 dark:text-spruce-200">
                         {ticket.priority}
                       </strong>
                     </span>
@@ -911,12 +968,12 @@ export default function AdminDashboardPage() {
                 </div>
               ) : (
                 /* Assigned Active Ticket Bar (Managed by Assignee or Admin) */
-                <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800">
+                <div className="pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 rounded-lg bg-spruce-50/90 dark:bg-spruce-900/60 border border-spruce-200/70 dark:border-spruce-800">
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor={`status-${ticket.id}`}
-                        className="text-xs font-medium text-slate-500"
+                        className="text-xs font-medium text-spruce-500"
                       >
                         Status:
                       </label>
@@ -931,7 +988,7 @@ export default function AdminDashboardPage() {
                             },
                           })
                         }
-                        className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                        className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                       >
                         <option value="OPEN">OPEN</option>
                         <option value="IN_PROGRESS">IN_PROGRESS</option>
@@ -944,7 +1001,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor={`priority-${ticket.id}`}
-                        className="text-xs font-medium text-slate-500"
+                        className="text-xs font-medium text-spruce-500"
                       >
                         Priority:
                       </label>
@@ -959,7 +1016,7 @@ export default function AdminDashboardPage() {
                             },
                           })
                         }
-                        className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                        className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                       >
                         <option value="LOW">LOW</option>
                         <option value="MEDIUM">MEDIUM</option>
@@ -973,7 +1030,7 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-1.5">
                         <label
                           htmlFor={`assignee-${ticket.id}`}
-                          className="text-xs font-medium text-slate-500"
+                          className="text-xs font-medium text-spruce-500"
                         >
                           Assignee:
                         </label>
@@ -992,7 +1049,7 @@ export default function AdminDashboardPage() {
                               },
                             });
                           }}
-                          className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-950"
+                          className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                         >
                           <option value="">Unassigned</option>
                           {agents.map((agent) => (
@@ -1005,8 +1062,8 @@ export default function AdminDashboardPage() {
                     ) : (
                       /* Agent is assigned to this ticket: show their name and Unassign option */
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-slate-500">Assignee:</span>
-                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                        <span className="text-spruce-500">Assignee:</span>
+                        <span className="font-medium text-spruce-800 dark:text-spruce-200">
                           {ticket.assignee?.fullName || 'Assigned to You'}
                         </span>
                         <Button
@@ -1021,7 +1078,7 @@ export default function AdminDashboardPage() {
                               },
                             })
                           }
-                          className="h-7 px-2 text-[11px] text-slate-500 hover:text-red-500"
+                          className="h-7 px-2 text-[11px] text-spruce-500 hover:text-red-500"
                         >
                           Unassign
                         </Button>
@@ -1099,7 +1156,7 @@ export default function AdminDashboardPage() {
                     value={followUpPrompt}
                     onChange={(e) => setFollowUpPrompt(e.target.value)}
                     placeholder="Describe what details, steps, or screenshot you need from the customer..."
-                    className="flex w-full rounded-md border border-amber-500/30 bg-white dark:bg-slate-950 px-3 py-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
+                    className="flex w-full rounded-md border border-amber-500/40 bg-white dark:bg-spruce-950 px-3 py-2 text-xs shadow-sm text-spruce-900 dark:text-spruce-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
                   />
 
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -1113,7 +1170,7 @@ export default function AdminDashboardPage() {
                         className="text-xs h-8 max-w-xs cursor-pointer"
                       />
                       {followUpAttachment && (
-                        <span className="text-[11px] text-slate-500">
+                        <span className="text-[11px] text-spruce-500">
                           ({formatByteSize(followUpAttachment.size)})
                         </span>
                       )}
@@ -1154,10 +1211,10 @@ export default function AdminDashboardPage() {
                   <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-amber-400 uppercase tracking-wider text-[11px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                        <span className="font-bold text-amber-500 uppercase tracking-wider text-[11px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
                           CSAT Score {ticket.csatRating}.0 / 5.0
                         </span>
-                        <span className="font-semibold text-slate-200">
+                        <span className="font-semibold text-spruce-800 dark:text-spruce-200">
                           {ticket.csatRating === 5
                             ? 'Exceptional Resolution'
                             : ticket.csatRating === 4
@@ -1168,28 +1225,28 @@ export default function AdminDashboardPage() {
                         </span>
                       </div>
                       {ticket.csatRatedAt && (
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[10px] text-spruce-500">
                           Rated on {formatTicketDateTime(ticket.csatRatedAt)}
                         </span>
                       )}
                     </div>
                     {ticket.csatComment && (
-                      <p className="text-slate-700 dark:text-slate-300 italic bg-white/60 dark:bg-slate-900/60 p-2.5 rounded border border-amber-500/10">
+                      <p className="text-spruce-700 dark:text-spruce-300 italic bg-white/60 dark:bg-spruce-900/60 p-2.5 rounded border border-amber-500/10">
                         &ldquo;{ticket.csatComment}&rdquo;
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="p-3 rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 text-xs flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-slate-400">
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <div className="p-3 rounded-lg border border-dashed border-spruce-300 dark:border-spruce-700/60 bg-spruce-50/50 dark:bg-spruce-900/30 text-xs flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-spruce-500 dark:text-spruce-400">
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                         CSAT Pending
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-spruce-600 dark:text-spruce-400">
                         Awaiting feedback from customer ({ticket.creator?.fullName || 'Customer'})
                       </span>
                     </div>
-                    <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                    <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-spruce-200 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-400">
                       Pending Rating
                     </span>
                   </div>
@@ -1198,25 +1255,25 @@ export default function AdminDashboardPage() {
 
               {/* 2. Initial Ticket Report Section */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-spruce-500 dark:text-spruce-400">
                   <span>Initial Ticket Report</span>
                   <span>Opened {formatTicketDateTime(ticket.createdAt)}</span>
                 </div>
 
-                <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800 space-y-3">
-                  <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                <div className="p-3.5 rounded-lg bg-spruce-50/80 dark:bg-spruce-900/60 border border-spruce-200/70 dark:border-spruce-800 space-y-3">
+                  <p className="text-sm text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap leading-relaxed">
                     {ticket.description}
                   </p>
 
                   {ticket.hasAttachment && (
-                    <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-2">
+                    <div className="pt-2 border-t border-spruce-200/70 dark:border-spruce-800 space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          <span className="font-semibold text-spruce-900 dark:text-spruce-200">
                             {ticket.attachmentName || 'attachment.png'}
                           </span>
                           {ticket.attachmentOriginalSize && (
-                            <span className="text-slate-400">
+                            <span className="text-spruce-500 dark:text-spruce-400">
                               ({formatByteSize(ticket.attachmentOriginalSize)})
                             </span>
                           )}
@@ -1234,7 +1291,7 @@ export default function AdminDashboardPage() {
                             {isTicketImgHidden ? 'Show Image' : 'Hide Image'}
                           </Button>
                         ) : (
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-spruce-400">
                             {isLoadingTicketImg ? 'Loading image...' : ''}
                           </span>
                         )}
@@ -1247,7 +1304,7 @@ export default function AdminDashboardPage() {
                             alt={decryptedTicketImg.fileName}
                             onClick={() => setLightboxImage(decryptedTicketImg)}
                             title="Click to inspect full-size image"
-                            className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
+                            className="max-h-80 rounded-md border border-spruce-200 dark:border-spruce-700 object-contain bg-spruce-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
                           />
                         </div>
                       )}
@@ -1258,13 +1315,13 @@ export default function AdminDashboardPage() {
 
               {/* 3. Chronological Activity & Follow-Up History Timeline */}
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-spruce-500 dark:text-spruce-400">
                   <span>Activity &amp; Follow-Up History ({commentCount})</span>
                   <span>Chronological Order</span>
                 </div>
 
                 {commentCount === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-1">
+                  <p className="text-xs text-spruce-500 italic py-1">
                     No follow-up requests, customer amendments, or resolution notes yet.
                   </p>
                 ) : (() => {
@@ -1290,17 +1347,17 @@ export default function AdminDashboardPage() {
                           isFollowUpReq
                             ? 'bg-amber-500/10 border-amber-500/30'
                             : isCustomerAmend
-                              ? 'bg-blue-500/10 border-blue-500/30'
-                              : 'bg-slate-100/80 dark:bg-slate-900/90 border-slate-200/70 dark:border-slate-800'
+                              ? 'bg-spruce-100/80 dark:bg-spruce-900/80 border-spruce-300 dark:border-spruce-700'
+                              : 'bg-spruce-50/90 dark:bg-spruce-900/90 border-spruce-200/70 dark:border-spruce-800'
                         }`}
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-bold text-slate-900 dark:text-white">
+                            <span className="font-bold text-spruce-900 dark:text-white">
                               {comment.author?.fullName || 'Support User'}
                             </span>
                             {comment.author?.role && (
-                              <span className="text-[11px] text-slate-400 font-normal">
+                              <span className="text-[11px] text-spruce-500 dark:text-spruce-400 font-normal">
                                 ({comment.author.role.toLowerCase()})
                               </span>
                             )}
@@ -1314,25 +1371,25 @@ export default function AdminDashboardPage() {
                               </Badge>
                             ) : null}
                           </div>
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-spruce-500 dark:text-spruce-400">
                             {formatCommentTime(comment.createdAt)}
                           </span>
                         </div>
 
-                        <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                        <p className="text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap leading-relaxed">
                           {parsed.cleanText}
                         </p>
 
                         {/* Per-Message Attachment inside the timeline entry */}
                         {comment.hasAttachment && (
-                          <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 space-y-2">
+                          <div className="pt-2 border-t border-spruce-200/60 dark:border-spruce-800/80 space-y-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                <span className="font-semibold text-spruce-900 dark:text-spruce-200">
                                   {comment.attachmentName || 'attachment.png'}
                                 </span>
                                 {comment.attachmentOriginalSize && (
-                                  <span className="text-slate-400">
+                                  <span className="text-spruce-500 dark:text-spruce-400">
                                     ({formatByteSize(comment.attachmentOriginalSize)})
                                   </span>
                                 )}
@@ -1352,7 +1409,7 @@ export default function AdminDashboardPage() {
                                     : 'Hide Image'}
                                 </Button>
                               ) : (
-                                <span className="text-[11px] text-slate-400">
+                                <span className="text-[11px] text-spruce-400">
                                   {isLoadingCommentImg
                                     ? 'Loading image...'
                                     : ''}
@@ -1369,7 +1426,7 @@ export default function AdminDashboardPage() {
                                     setLightboxImage(decryptedCommentImg)
                                   }
                                   title="Click to inspect full-size image"
-                                  className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
+                                  className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-spruce-200 dark:border-spruce-700 object-contain bg-spruce-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
                                 />
                               </div>
                             )}
@@ -1380,17 +1437,17 @@ export default function AdminDashboardPage() {
                   };
 
                   return (
-                    <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="relative pl-4 border-l-2 border-spruce-200 dark:border-spruce-800 space-y-3">
                       {hasMultiple && (
                         <div className="pb-1">
                           <button
                             type="button"
                             onClick={() => toggleCommentHistory(ticket.id)}
-                            className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/60 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 text-xs text-slate-600 dark:text-slate-400 font-medium transition-colors"
+                            className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-spruce-200 dark:border-spruce-800 bg-spruce-100/70 dark:bg-spruce-900/60 hover:bg-spruce-200/60 dark:hover:bg-spruce-800/80 text-xs text-spruce-700 dark:text-spruce-300 font-medium transition-colors"
                           >
                             <span className="flex items-center gap-1.5">
                               <svg
-                                className="w-3.5 h-3.5 text-blue-500"
+                                className="w-3.5 h-3.5 text-spruce-600 dark:text-spruce-400"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1410,7 +1467,7 @@ export default function AdminDashboardPage() {
                                     }`}
                               </span>
                             </span>
-                            <span className="text-[11px] text-blue-500 font-semibold hover:underline">
+                            <span className="text-[11px] text-spruce-700 dark:text-spruce-300 font-semibold hover:underline">
                               {isHistoryExpanded ? 'Collapse thread \u2191' : 'Expand thread \u2193'}
                             </span>
                           </button>
@@ -1435,7 +1492,7 @@ export default function AdminDashboardPage() {
               {isTicketAssigned && !isClosed && canManageTicket && (
                 <form
                   onSubmit={(e) => handlePostResolutionNote(ticket.id, e)}
-                  className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5"
+                  className="pt-2 border-t border-spruce-100 dark:border-spruce-800/80 space-y-2.5"
                 >
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Input
@@ -1458,7 +1515,7 @@ export default function AdminDashboardPage() {
 
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-spruce-500">
                         Attach image to note (optional):
                       </span>
                       <Input
@@ -1508,9 +1565,9 @@ export default function AdminDashboardPage() {
 
               {/* Informative message for non-admin agents viewing someone else's active ticket */}
               {!isClosed && isAssignedToOther && !isAdmin && (
-                <div className="p-3 rounded-md bg-slate-100/70 dark:bg-slate-900/50 text-xs text-slate-500 text-center border border-slate-200/50 dark:border-slate-800">
+                <div className="p-3 rounded-md bg-spruce-100/70 dark:bg-spruce-900/50 text-xs text-spruce-600 dark:text-spruce-400 text-center border border-spruce-200/50 dark:border-spruce-800">
                   This ticket is currently assigned to{' '}
-                  <strong className="text-slate-700 dark:text-slate-300">
+                  <strong className="text-spruce-800 dark:text-spruce-200">
                     {ticket.assignee?.fullName}
                   </strong>
                   . Click &quot;Take Over &amp; Reassign to Me&quot; above to post resolution notes or request customer info.
@@ -1524,36 +1581,36 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-spruce-50 text-spruce-950 dark:bg-spruce-950 dark:text-spruce-50 transition-colors">
       {/* -------------------------------------------------------------
           1. DESKTOP SIDEBAR (lg:flex, w-64, fixed on left)
          ------------------------------------------------------------- */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 z-20 select-none">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-950 z-20 select-none shadow-sm">
         {/* Brand Header */}
-        <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 min-w-0">
+        <div className="h-16 px-4 border-b border-spruce-200 dark:border-spruce-800 flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-sm shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-spruce-800 text-spruce-300 dark:bg-spruce-300 dark:text-spruce-950 font-black flex items-center justify-center text-xs shadow-sm shrink-0">
               TS
             </div>
-            <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate">
+            <span className="font-extrabold text-base tracking-tight text-spruce-900 dark:text-white truncate">
               TicketSupport
             </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap shrink-0">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-spruce-100 text-spruce-800 dark:bg-spruce-800/80 dark:text-spruce-300 border border-spruce-300/60 dark:border-spruce-700 whitespace-nowrap shrink-0">
             IT Console
           </span>
         </div>
 
         {/* Current Staff User Profile Card */}
         {user && (
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40">
+          <div className="p-4 border-b border-spruce-200 dark:border-spruce-800 bg-spruce-50/70 dark:bg-spruce-900/40">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center shrink-0 border border-blue-500/20 text-xs">
+                <div className="w-9 h-9 rounded-full bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-300 font-bold flex items-center justify-center shrink-0 border border-spruce-300 dark:border-spruce-700 text-xs">
                   {user.fullName.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-xs truncate text-slate-900 dark:text-white">
+                  <p className="font-semibold text-xs truncate text-spruce-900 dark:text-white">
                     {user.fullName}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
@@ -1570,7 +1627,7 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={handleSignOut}
                 title="Sign out of staff account"
-                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors shrink-0"
+                className="p-1.5 text-spruce-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-md transition-colors shrink-0"
                 aria-label="Sign out"
               >
                 <svg
@@ -1599,8 +1656,8 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveSection('DASHBOARD')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
               activeSection === 'DASHBOARD'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+                ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950 shadow-sm'
+                : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900'
             }`}
           >
             <span>Dashboard Overview</span>
@@ -1608,7 +1665,7 @@ export default function AdminDashboardPage() {
               <span
                 className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
                   activeSection === 'DASHBOARD'
-                    ? 'bg-white/20 text-white'
+                    ? 'bg-white/20 text-white dark:bg-spruce-950/20 dark:text-spruce-950'
                     : 'bg-amber-500/20 text-amber-500'
                 }`}
               >
@@ -1622,16 +1679,16 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveSection('ALL_TICKETS')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
               activeSection === 'ALL_TICKETS'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+                ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950 shadow-sm'
+                : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900'
             }`}
           >
             <span>All Tickets</span>
             <span
               className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
                 activeSection === 'ALL_TICKETS'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  ? 'bg-white/20 text-white dark:bg-spruce-950/20 dark:text-spruce-950'
+                  : 'bg-spruce-200 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300'
               }`}
             >
               {tickets.length}
@@ -1643,16 +1700,16 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveSection('ASSIGNED_TICKETS')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
               activeSection === 'ASSIGNED_TICKETS'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+                ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950 shadow-sm'
+                : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900'
             }`}
           >
             <span>Assigned Tickets</span>
             <span
               className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
                 activeSection === 'ASSIGNED_TICKETS'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-blue-500/20 text-blue-500'
+                  ? 'bg-white/20 text-white dark:bg-spruce-950/20 dark:text-spruce-950'
+                  : 'bg-spruce-100 text-spruce-800 dark:bg-spruce-700 dark:text-spruce-200'
               }`}
             >
               {myAssignedTickets.length}
@@ -1666,15 +1723,15 @@ export default function AdminDashboardPage() {
               onClick={() => setActiveSection('TEAM_MANAGEMENT')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
                 activeSection === 'TEAM_MANAGEMENT'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900'
+                  ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950 shadow-sm'
+                  : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900'
               }`}
             >
               <span>Team &amp; Invites</span>
               <span
                 className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wider ${
                   activeSection === 'TEAM_MANAGEMENT'
-                    ? 'bg-white/20 text-white'
+                    ? 'bg-white/20 text-white dark:bg-spruce-950/20 dark:text-spruce-950'
                     : 'bg-emerald-500/20 text-emerald-500'
                 }`}
               >
@@ -1683,13 +1740,13 @@ export default function AdminDashboardPage() {
             </button>
           )}
 
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+          <div className="pt-3 border-t border-spruce-200 dark:border-spruce-800">
             <Link
               href="/portal"
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 transition-colors"
             >
               <span>Customer Portal</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-spruce-400 uppercase tracking-wider">
                 Portal
               </span>
             </Link>
@@ -1697,14 +1754,14 @@ export default function AdminDashboardPage() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 pb-8 border-t border-slate-200 dark:border-slate-800 space-y-3 bg-slate-50/50 dark:bg-slate-950/50">
-          <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="p-4 pb-8 border-t border-spruce-200 dark:border-spruce-800 space-y-3 bg-spruce-50/50 dark:bg-spruce-950/50">
+          <div className="flex items-center justify-between text-xs text-spruce-500">
             <div className="flex items-center gap-2 min-w-0">
               <span className="relative flex h-2 w-2 shrink-0">
                 <span
                   className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                     isFetching
-                      ? 'bg-blue-400'
+                      ? 'bg-spruce-400'
                       : realtimeStatus === 'connected'
                       ? 'bg-emerald-400'
                       : realtimeStatus === 'connecting'
@@ -1715,7 +1772,7 @@ export default function AdminDashboardPage() {
                 <span
                   className={`relative inline-flex rounded-full h-2 w-2 ${
                     isFetching
-                      ? 'bg-blue-500'
+                      ? 'bg-spruce-500'
                       : realtimeStatus === 'connected'
                       ? 'bg-emerald-500'
                       : realtimeStatus === 'connecting'
@@ -1744,7 +1801,7 @@ export default function AdminDashboardPage() {
               >
                 Refresh
               </Button>
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 text-spruce-600 dark:text-spruce-300">
                 {APP_VERSION}
               </span>
             </div>
@@ -1755,7 +1812,7 @@ export default function AdminDashboardPage() {
             variant="outline"
             size="sm"
             onClick={handleSignOut}
-            className="w-full justify-center gap-2 h-9 text-xs font-semibold border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-rose-500/10 hover:border-rose-500/40 hover:text-rose-400 dark:hover:text-rose-300 transition-colors shadow-sm"
+            className="w-full justify-center gap-2 h-9 text-xs font-semibold border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900 text-spruce-800 dark:text-spruce-200 hover:bg-rose-500/10 hover:border-rose-500/40 hover:text-rose-500 dark:hover:text-rose-300 transition-colors shadow-sm"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -1779,28 +1836,29 @@ export default function AdminDashboardPage() {
       {/* -------------------------------------------------------------
           2. MOBILE NAVBAR & RESPONSIVE DRAWER (<lg)
          ------------------------------------------------------------- */}
-      <div className="lg:hidden sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 h-16 flex items-center justify-between">
+      <div className="lg:hidden sticky top-0 z-30 border-b border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-950 px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
             aria-label="Toggle navigation menu"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900 border border-slate-700/60"
+            className="px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100 dark:text-spruce-300 dark:hover:bg-spruce-900 border border-spruce-300 dark:border-spruce-700/60"
           >
             Menu
           </button>
-          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-sm shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-spruce-800 text-spruce-300 dark:bg-spruce-300 dark:text-spruce-950 font-black flex items-center justify-center text-xs shadow-sm shrink-0">
             TS
           </div>
-          <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
+          <span className="font-extrabold text-base tracking-tight text-spruce-900 dark:text-white">
             TicketSupport
           </span>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap">
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-spruce-100 text-spruce-800 dark:bg-spruce-800/80 dark:text-spruce-300 border border-spruce-300/60 dark:border-spruce-700 whitespace-nowrap">
             IT Console
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <ThemeToggle />
           <NotificationCenter onSelectTicket={handleSelectTicket} />
           <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 text-xs">
             Sign Out
@@ -1814,16 +1872,16 @@ export default function AdminDashboardPage() {
           role="dialog"
           aria-modal="true"
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-40 bg-spruce-950/70 backdrop-blur-sm"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-72 max-w-[80vw] h-full bg-white dark:bg-slate-950 p-4 flex flex-col justify-between shadow-2xl"
+            className="w-72 max-w-[80vw] h-full bg-white dark:bg-spruce-950 p-4 flex flex-col justify-between shadow-2xl"
           >
             <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between pb-3 border-b border-spruce-200 dark:border-spruce-800">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-blue-600 text-white font-black flex items-center justify-center text-[11px] shadow-sm shrink-0">
+                  <div className="w-6 h-6 rounded-md bg-spruce-800 text-spruce-300 dark:bg-spruce-300 dark:text-spruce-950 font-black flex items-center justify-center text-[11px] shadow-sm shrink-0">
                     TS
                   </div>
                   <span className="font-extrabold text-base tracking-tight">TicketSupport</span>
@@ -1831,16 +1889,16 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="px-2 py-0.5 text-xs font-semibold rounded text-slate-400 hover:text-slate-200"
+                  className="px-2 py-0.5 text-xs font-semibold rounded text-spruce-400 hover:text-spruce-200"
                 >
                   Close
                 </button>
               </div>
 
               {user && (
-                <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900 text-xs space-y-1">
+                <div className="p-2.5 rounded-lg bg-spruce-100/70 dark:bg-spruce-900 text-xs space-y-1">
                   <p className="font-semibold">{user.fullName}</p>
-                  <p className="text-slate-500">{user.email}</p>
+                  <p className="text-spruce-500">{user.email}</p>
                   <Badge variant="secondary">{user.role}</Badge>
                 </div>
               )}
@@ -1854,13 +1912,13 @@ export default function AdminDashboardPage() {
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
                     activeSection === 'DASHBOARD'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                      ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950'
+                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
                   }`}
                 >
                   <span>Dashboard Overview</span>
                   {unassignedTickets.length > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-400 font-bold">
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-500 font-bold">
                       {unassignedTickets.length}
                     </span>
                   )}
@@ -1874,12 +1932,12 @@ export default function AdminDashboardPage() {
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
                     activeSection === 'ALL_TICKETS'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                      ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950'
+                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
                   }`}
                 >
                   <span>All Tickets</span>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 font-bold">
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-spruce-200 dark:bg-spruce-800 font-bold text-spruce-700 dark:text-spruce-300">
                     {tickets.length}
                   </span>
                 </button>
@@ -1892,12 +1950,12 @@ export default function AdminDashboardPage() {
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
                     activeSection === 'ASSIGNED_TICKETS'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                      ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950'
+                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
                   }`}
                 >
                   <span>Assigned Tickets</span>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-400 font-bold">
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-spruce-200 dark:bg-spruce-800 text-spruce-800 dark:text-spruce-300 font-bold">
                     {myAssignedTickets.length}
                   </span>
                 </button>
@@ -1911,12 +1969,12 @@ export default function AdminDashboardPage() {
                     }}
                     className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
                       activeSection === 'TEAM_MANAGEMENT'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                        ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950'
+                        : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
                     }`}
                   >
                     <span>Team &amp; Invites</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 uppercase font-bold">
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-500 uppercase font-bold">
                       Admin
                     </span>
                   </button>
@@ -1926,10 +1984,10 @@ export default function AdminDashboardPage() {
                   <Link
                     href="/portal"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                    className="w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                   >
                     <span>Customer Portal</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] font-bold text-spruce-400 uppercase tracking-wider">
                       Portal
                     </span>
                   </Link>
@@ -1937,7 +1995,7 @@ export default function AdminDashboardPage() {
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+            <div className="pt-4 border-t border-spruce-200 dark:border-spruce-800 space-y-2.5">
               <Button
                 type="button"
                 variant="outline"
@@ -1948,8 +2006,8 @@ export default function AdminDashboardPage() {
                 Sign Out
               </Button>
               <div className="flex items-center justify-between text-[11px] px-1">
-                <span className="text-slate-500 font-medium">Version</span>
-                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                <span className="text-spruce-500 font-medium">Version</span>
+                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 text-spruce-600 dark:text-spruce-300">
                   {APP_VERSION}
                 </span>
               </div>
@@ -1964,15 +2022,15 @@ export default function AdminDashboardPage() {
       <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
         <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 space-y-6 max-w-7xl w-full mx-auto">
           {/* Main Top Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-spruce-200 dark:border-spruce-800 pb-5">
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-spruce-900 dark:text-white">
                 {activeSection === 'DASHBOARD' && 'IT Service Desk Queue'}
                 {activeSection === 'ALL_TICKETS' && 'All Customer Tickets'}
                 {activeSection === 'ASSIGNED_TICKETS' && 'Assigned Incidents Queue'}
                 {activeSection === 'TEAM_MANAGEMENT' && 'IT Support Team & Staff Invitations'}
               </h1>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-xl leading-relaxed">
+              <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-400 mt-1 max-w-xl leading-relaxed">
                 {activeSection === 'DASHBOARD' &&
                   'Monitor live SLA metrics, triage incoming unassigned tickets, and resolve assigned incidents.'}
                 {activeSection === 'ALL_TICKETS' &&
@@ -1988,23 +2046,23 @@ export default function AdminDashboardPage() {
               {formattedLastUpdated && (
                 <div
                   data-testid="dashboard-last-updated"
-                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300 tabular-nums shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/80 text-xs text-spruce-700 dark:text-spruce-300 tabular-nums shrink-0 whitespace-nowrap shadow-sm"
                 >
                   <span className="relative flex h-2 w-2">
                     <span
                       className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                        isFetching ? 'bg-blue-400' : 'bg-emerald-400'
+                        isFetching ? 'bg-spruce-400' : 'bg-emerald-400'
                       }`}
                     />
                     <span
                       className={`relative inline-flex rounded-full h-2 w-2 ${
-                        isFetching ? 'bg-blue-500' : 'bg-emerald-500'
+                        isFetching ? 'bg-spruce-500' : 'bg-emerald-500'
                       }`}
                     />
                   </span>
                   <span>
-                    <span className="hidden sm:inline text-slate-400">Updated: </span>
-                    <strong className="font-semibold text-slate-700 dark:text-slate-200">{formattedLastUpdated}</strong>
+                    <span className="hidden sm:inline text-spruce-400">Updated: </span>
+                    <strong className="font-semibold text-spruce-900 dark:text-spruce-200">{formattedLastUpdated}</strong>
                   </span>
                 </div>
               )}
@@ -2019,6 +2077,7 @@ export default function AdminDashboardPage() {
                   <ContextualLoader context="ticket-delete" />
                 )}
               </div>
+              <ThemeToggle />
               <NotificationCenter onSelectTicket={handleSelectTicket} />
               <Button
                 variant="outline"
@@ -2040,21 +2099,21 @@ export default function AdminDashboardPage() {
 
           {/* Live Real-Time Stream Banner */}
           {realtimeAlert && (
-            <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-200 text-xs shadow-sm">
+            <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-spruce-300/80 bg-spruce-100/90 text-spruce-900 dark:border-spruce-600/50 dark:bg-spruce-900/80 dark:text-spruce-200 text-xs shadow-sm">
               <div className="flex items-center gap-2.5">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-spruce-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-spruce-500" />
                 </span>
                 <span className="font-semibold">{realtimeAlert}</span>
-                <span className="text-[10px] text-blue-300 font-mono uppercase px-1 py-0.5 rounded bg-blue-500/20">
+                <span className="text-[10px] text-spruce-800 dark:text-spruce-300 font-mono uppercase px-1 py-0.5 rounded bg-spruce-200 dark:bg-spruce-800">
                   Live SSE
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setRealtimeAlert(null)}
-                className="text-blue-400 hover:text-blue-100 text-xs font-semibold px-2 py-0.5 rounded hover:bg-blue-500/20 transition-colors"
+                className="text-spruce-700 hover:text-spruce-950 dark:text-spruce-300 dark:hover:text-white text-xs font-semibold px-2 py-0.5 rounded hover:bg-spruce-200/60 dark:hover:bg-spruce-800 transition-colors"
               >
                 Dismiss
               </button>
@@ -2069,7 +2128,7 @@ export default function AdminDashboardPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleToggleAllAccordions}
-                className="h-7 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                className="h-7 text-xs text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white"
               >
                 {allExpanded ? 'Collapse All Cards' : 'Expand All Cards'}
               </Button>
@@ -2091,31 +2150,23 @@ export default function AdminDashboardPage() {
                       setPriorityFilter('URGENT');
                       setActiveSection('ALL_TICKETS');
                     }}
-                    className={`cursor-pointer transition-all duration-150 ${
-                      kpis.urgentHigh > 0
-                        ? 'border-rose-500/50 bg-rose-500/10 shadow-md shadow-rose-950/20 hover:border-rose-400'
-                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                    }`}
+                    className="cursor-pointer border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 hover:border-spruce-300 dark:hover:border-spruce-700 transition-colors shadow-sm"
                   >
                     <CardContent className="p-3.5 space-y-1">
                       <div className="flex items-center justify-between gap-1.5 min-w-0">
-                        <p className={`text-[10px] font-extrabold uppercase tracking-wider truncate ${
-                          kpis.urgentHigh > 0 ? 'text-rose-400' : 'text-slate-400'
-                        }`}>
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-spruce-500 dark:text-spruce-400">
                           Urgent / High
                         </p>
                         {kpis.urgentHigh > 0 && (
-                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-300 border border-rose-500/30">
                             Critical
                           </span>
                         )}
                       </div>
-                      <p className={`text-3xl font-black tracking-tight ${
-                        kpis.urgentHigh > 0 ? 'text-rose-400' : 'text-slate-200'
-                      }`}>
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-spruce-900 dark:text-spruce-100">
                         {kpis.urgentHigh}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-[10px] text-spruce-500 dark:text-spruce-400 truncate">
                         {kpis.urgentHigh > 0 ? 'Production blockers active' : 'No critical incidents'}
                       </p>
                     </CardContent>
@@ -2127,31 +2178,23 @@ export default function AdminDashboardPage() {
                       setAssignmentFilter('UNASSIGNED');
                       setActiveSection('ALL_TICKETS');
                     }}
-                    className={`cursor-pointer transition-all duration-150 ${
-                      unassignedTickets.length > 0
-                        ? 'border-amber-500/50 bg-amber-500/10 shadow-md shadow-amber-950/20 hover:border-amber-400'
-                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                    }`}
+                    className="cursor-pointer border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 hover:border-spruce-300 dark:hover:border-spruce-700 transition-colors shadow-sm"
                   >
                     <CardContent className="p-3.5 space-y-1">
                       <div className="flex items-center justify-between gap-1.5 min-w-0">
-                        <p className={`text-[10px] font-extrabold uppercase tracking-wider truncate ${
-                          unassignedTickets.length > 0 ? 'text-amber-400' : 'text-slate-400'
-                        }`}>
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-spruce-500 dark:text-spruce-400">
                           Unassigned Queue
                         </p>
                         {unassignedTickets.length > 0 && (
-                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                             Triage
                           </span>
                         )}
                       </div>
-                      <p className={`text-3xl font-black tracking-tight ${
-                        unassignedTickets.length > 0 ? 'text-amber-300' : 'text-slate-200'
-                      }`}>
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-spruce-900 dark:text-spruce-100">
                         {unassignedTickets.length}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-[10px] text-spruce-500 dark:text-spruce-400 truncate">
                         {unassignedTickets.length > 0 ? 'Awaiting engineer claim' : 'Queue fully triaged'}
                       </p>
                     </CardContent>
@@ -2163,41 +2206,41 @@ export default function AdminDashboardPage() {
                       setAssignedScope('MINE');
                       setActiveSection('ASSIGNED_TICKETS');
                     }}
-                    className="cursor-pointer border-blue-500/40 bg-blue-500/10 hover:border-blue-400 transition-colors"
+                    className="cursor-pointer border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 hover:border-spruce-300 dark:hover:border-spruce-700 transition-colors shadow-sm"
                   >
                     <CardContent className="p-3.5 space-y-1">
                       <div className="flex items-center justify-between gap-1.5 min-w-0">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-blue-400">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-spruce-500 dark:text-spruce-400">
                           Assigned to Me
                         </p>
-                        <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-spruce-100 text-spruce-700 dark:bg-spruce-800 dark:text-spruce-300 border border-spruce-200 dark:border-spruce-700">
                           Active
                         </span>
                       </div>
-                      <p className="text-3xl font-black tracking-tight text-blue-400">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-spruce-900 dark:text-spruce-100">
                         {myAssignedTickets.length}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-[10px] text-spruce-500 dark:text-spruce-400 truncate">
                         My personal incidents
                       </p>
                     </CardContent>
                   </Card>
 
                   {/* 4. Customer Satisfaction Score (Quality KPI) */}
-                  <Card className="border-amber-500/30 bg-amber-500/5 hover:border-amber-400 transition-colors">
+                  <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 hover:border-spruce-300 dark:hover:border-spruce-700 transition-colors shadow-sm">
                     <CardContent className="p-3.5 space-y-1">
                       <div className="flex items-center justify-between gap-1.5 min-w-0">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-amber-400">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-spruce-500 dark:text-spruce-400">
                           CSAT Score
                         </p>
-                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-spruce-100 text-spruce-700 dark:bg-spruce-800 dark:text-spruce-300 border border-spruce-200 dark:border-spruce-700">
                           KPI
                         </span>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-amber-300">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-spruce-900 dark:text-spruce-100">
                         {kpis.csatAverage ? `${kpis.csatAverage} / 5.0` : 'N/A'}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-[10px] text-spruce-500 dark:text-spruce-400 truncate">
                         {kpis.csatCount > 0
                           ? `${kpis.csatCount} ${kpis.csatCount === 1 ? 'review recorded' : 'reviews recorded'}`
                           : 'Awaiting reviews'}
@@ -2206,30 +2249,30 @@ export default function AdminDashboardPage() {
                   </Card>
 
                   {/* 5. In Progress / Needs Info (Operational Workflow) */}
-                  <Card className="border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-400 transition-colors">
+                  <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 hover:border-spruce-300 dark:hover:border-spruce-700 transition-colors shadow-sm">
                     <CardContent className="p-3.5 space-y-1">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-indigo-400">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-spruce-500 dark:text-spruce-400">
                         In Progress / Info
                       </p>
-                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-indigo-300">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-spruce-900 dark:text-spruce-100">
                         {kpis.inProgress + kpis.needsInfo}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-[10px] text-spruce-500 dark:text-spruce-400 truncate">
                         Active investigations
                       </p>
                     </CardContent>
                   </Card>
 
                   {/* 6. Resolved / Closed (Completed Work) */}
-                  <Card className="border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400 transition-colors">
+                  <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 hover:border-spruce-300 dark:hover:border-spruce-700 transition-colors shadow-sm">
                     <CardContent className="p-3.5 space-y-1">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-emerald-400">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-spruce-500 dark:text-spruce-400">
                         Resolved / Closed
                       </p>
-                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-300">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-spruce-900 dark:text-spruce-100">
                         {kpis.resolvedClosed}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-[10px] text-spruce-500 dark:text-spruce-400 truncate">
                         Closed incidents
                       </p>
                     </CardContent>
@@ -2241,16 +2284,16 @@ export default function AdminDashboardPage() {
                       setAssignmentFilter('ALL');
                       setActiveSection('ALL_TICKETS');
                     }}
-                    className="cursor-pointer border-slate-800 bg-slate-900/60 hover:border-slate-700 transition-colors col-span-2 sm:col-span-3 lg:col-span-2 2xl:col-span-1"
+                    className="cursor-pointer border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 hover:border-spruce-300 dark:hover:border-spruce-700 transition-colors col-span-2 sm:col-span-3 lg:col-span-2 2xl:col-span-1 shadow-sm"
                   >
                     <CardContent className="p-3.5 space-y-1">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-slate-400">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider truncate text-spruce-500 dark:text-spruce-400">
                         Total Tickets
                       </p>
-                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-slate-200">
+                      <p className="text-2xl sm:text-3xl font-black tracking-tight text-spruce-900 dark:text-spruce-100">
                         {kpis.total}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-[10px] text-spruce-500 dark:text-spruce-400 truncate">
                         All incidents in desk
                       </p>
                     </CardContent>
@@ -2262,7 +2305,7 @@ export default function AdminDashboardPage() {
               {agents.length > 0 && (
                 <Card>
                   <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-spruce-500">
                       IT Support Team Workload
                     </CardTitle>
                     <Button
@@ -2293,20 +2336,20 @@ export default function AdminDashboardPage() {
                       return (
                         <div
                           key={agent.id}
-                          className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 flex items-center justify-between gap-2"
+                          className="p-3 rounded-lg border border-spruce-200 dark:border-spruce-800 bg-spruce-50/60 dark:bg-spruce-900/50 flex items-center justify-between gap-2"
                         >
                           <div className="space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              <span className="text-xs font-bold text-spruce-900 dark:text-white truncate">
                                 {agent.fullName}
                               </span>
                               <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
                                 {agent.role}
                               </Badge>
                             </div>
-                            <p className="text-[11px] text-slate-500">
-                              <strong className="text-blue-500">{activeCount} active</strong> ·{' '}
-                              <span className="text-emerald-500">{resolvedCount} resolved</span>
+                            <p className="text-[11px] text-spruce-500">
+                              <strong className="text-spruce-700 dark:text-spruce-300">{activeCount} active</strong> ·{' '}
+                              <span className="text-emerald-600 dark:text-emerald-400">{resolvedCount} resolved</span>
                             </p>
                           </div>
                           <Button
@@ -2334,10 +2377,10 @@ export default function AdminDashboardPage() {
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    <h2 className="text-lg font-bold text-spruce-900 dark:text-white">
                       Immediate Triage &amp; Unassigned Queue ({displayedTickets.length})
                     </h2>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-spruce-500">
                       Unassigned customer tickets waiting to be claimed and high-priority active incidents.
                     </p>
                   </div>
@@ -2410,12 +2453,12 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between pt-2 border-t border-spruce-100 dark:border-spruce-800">
                     <select
                       aria-label="Filter by Priority"
                       value={priorityFilter}
                       onChange={(e) => setPriorityFilter(e.target.value)}
-                      className="h-9 rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                      className="h-9 rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
                     >
                       <option value="ALL">All Priorities</option>
                       <option value="URGENT">Urgent Only</option>
@@ -2451,7 +2494,7 @@ export default function AdminDashboardPage() {
               <Card>
                 <CardContent className="p-4 flex flex-col gap-3">
                   {/* Scope Switcher: Assigned to Me vs All Assigned vs Specific Engineer */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-spruce-100 dark:border-spruce-800">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Button
                         type="button"
@@ -2517,7 +2560,7 @@ export default function AdminDashboardPage() {
                         aria-label="Filter by Priority"
                         value={priorityFilter}
                         onChange={(e) => setPriorityFilter(e.target.value)}
-                        className="h-9 rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                        className="h-9 rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
                       >
                         <option value="ALL">All Priorities</option>
                         <option value="URGENT">Urgent Only</option>
@@ -2553,7 +2596,7 @@ export default function AdminDashboardPage() {
           {activeSection === 'TEAM_MANAGEMENT' && user?.role === 'ADMIN' && (
             <div className="space-y-6">
               {/* Subtab Switcher */}
-              <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex flex-wrap items-center gap-2 border-b border-spruce-200 dark:border-spruce-800 pb-3">
                 <Button
                   type="button"
                   size="sm"
@@ -2592,24 +2635,24 @@ export default function AdminDashboardPage() {
                         (t) => resolveTicketAssigneeId(t) === agent.id && t.status !== 'CLOSED',
                       ).length;
                       return (
-                        <Card key={agent.id} className="border-slate-200 dark:border-slate-800">
+                        <Card key={agent.id} className="border-spruce-200 dark:border-spruce-800">
                           <CardContent className="p-4 flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 font-bold flex items-center justify-center shrink-0 border border-blue-500/20 text-xs">
+                              <div className="w-10 h-10 rounded-full bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-300 font-bold flex items-center justify-center shrink-0 border border-spruce-300 dark:border-spruce-700 text-xs">
                                 {agent.fullName.charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
-                                <p className="font-semibold text-sm truncate text-slate-900 dark:text-white">
+                                <p className="font-semibold text-sm truncate text-spruce-900 dark:text-white">
                                   {agent.fullName}
                                 </p>
-                                <p className="text-xs text-slate-500 truncate">{agent.email}</p>
+                                <p className="text-xs text-spruce-500 truncate">{agent.email}</p>
                               </div>
                             </div>
                             <div className="text-right shrink-0 space-y-1">
                               <Badge variant={agent.role === 'ADMIN' ? 'default' : 'secondary'}>
                                 {agent.role}
                               </Badge>
-                              <p className="text-[11px] text-slate-400">
+                              <p className="text-[11px] text-spruce-500 dark:text-spruce-400">
                                 {assignedCount} active {assignedCount === 1 ? 'ticket' : 'tickets'}
                               </p>
                             </div>
@@ -2624,12 +2667,12 @@ export default function AdminDashboardPage() {
               {/* SUBTAB 2: GENERATE STAFF INVITATION */}
               {teamManagementSubtab === 'INVITE' && (
                 <div className="space-y-6">
-                  <Card className="border-slate-200 dark:border-slate-800">
+                  <Card className="border-spruce-200 dark:border-spruce-800">
                     <CardHeader>
-                      <CardTitle className="text-base font-bold">
+                      <CardTitle className="text-base font-bold text-spruce-900 dark:text-white">
                         Issue Staff Invitation Link / Code
                       </CardTitle>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-spruce-500">
                         Generate a secure invitation link for new Support Engineers or Administrators. Public registration only creates customer accounts; staff members must redeem this invitation to activate engineer permissions.
                       </p>
                     </CardHeader>
@@ -2658,7 +2701,7 @@ export default function AdminDashboardPage() {
                         <div className="space-y-1.5">
                           <label
                             htmlFor="invite-email"
-                            className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                           >
                             Staff Email Address
                           </label>
@@ -2676,7 +2719,7 @@ export default function AdminDashboardPage() {
                         <div className="space-y-1.5">
                           <label
                             htmlFor="invite-role"
-                            className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                           >
                             Staff Role
                           </label>
@@ -2686,7 +2729,7 @@ export default function AdminDashboardPage() {
                             onChange={(e) =>
                               setInviteRole(e.target.value as 'AGENT' | 'ADMIN')
                             }
-                            className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                            className="flex h-9 w-full rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
                           >
                             <option value="AGENT">Support Engineer (AGENT)</option>
                             <option value="ADMIN">Administrator (ADMIN)</option>
@@ -2706,8 +2749,8 @@ export default function AdminDashboardPage() {
                       </form>
 
                       {generatedInviteCode && (
-                        <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/25 space-y-2">
-                          <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                        <div className="p-4 rounded-lg bg-spruce-100/80 border border-spruce-300 dark:bg-spruce-900/60 dark:border-spruce-700 space-y-2">
+                          <span className="text-xs font-bold text-spruce-900 dark:text-spruce-300 uppercase tracking-wider">
                             Active Invitation Link Generated
                           </span>
                           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
@@ -2718,7 +2761,7 @@ export default function AdminDashboardPage() {
                                   ? `${window.location.origin}?invite=${generatedInviteCode}`
                                   : generatedInviteCode
                               }
-                              className="text-xs font-mono h-9 bg-white dark:bg-slate-950 flex-1"
+                              className="text-xs font-mono h-9 bg-white dark:bg-spruce-950 flex-1"
                             />
                             <Button
                               type="button"
@@ -2730,7 +2773,7 @@ export default function AdminDashboardPage() {
                               {copiedLink ? 'Copied to Clipboard!' : 'Copy Invite Link'}
                             </Button>
                           </div>
-                          <p className="text-[11px] text-blue-600/80 dark:text-blue-300/80">
+                          <p className="text-[11px] text-spruce-700 dark:text-spruce-300/80">
                             The recipient can open this link to register their staff account directly.
                           </p>
                         </div>
@@ -2739,19 +2782,19 @@ export default function AdminDashboardPage() {
                   </Card>
 
                   {/* Pending & Historical Invites List */}
-                  <Card className="border-slate-200 dark:border-slate-800">
+                  <Card className="border-spruce-200 dark:border-spruce-800">
                     <CardHeader>
-                      <CardTitle className="text-base font-bold">
+                      <CardTitle className="text-base font-bold text-spruce-900 dark:text-white">
                         Staff Invitations ({invites.length})
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                       {invites.length === 0 ? (
-                        <p className="p-6 text-center text-xs text-slate-500">
+                        <p className="p-6 text-center text-xs text-spruce-500">
                           No staff invitations issued yet.
                         </p>
                       ) : (
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-x-auto">
+                        <div className="divide-y divide-spruce-100 dark:divide-spruce-800 overflow-x-auto">
                           {invites.map((invite) => {
                             const isExpired = new Date() > new Date(invite.expiresAt);
                             return (
@@ -2761,7 +2804,7 @@ export default function AdminDashboardPage() {
                               >
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <strong className="text-slate-900 dark:text-white">
+                                    <strong className="text-spruce-900 dark:text-white">
                                       {invite.email}
                                     </strong>
                                     <Badge
@@ -2772,20 +2815,20 @@ export default function AdminDashboardPage() {
                                       {invite.role}
                                     </Badge>
                                     {invite.accepted ? (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-600 font-medium">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium">
                                         Redeemed
                                       </span>
                                     ) : isExpired ? (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/10 text-red-600 font-medium">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/10 text-red-600 dark:text-red-400 font-medium">
                                         Expired
                                       </span>
                                     ) : (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-600 font-medium">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium">
                                         Pending
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-[11px] text-slate-400 font-mono">
+                                  <p className="text-[11px] text-spruce-500 dark:text-spruce-400 font-mono">
                                     Code: {invite.code} • Expires{' '}
                                     {new Date(invite.expiresAt).toLocaleDateString()}
                                   </p>
@@ -2825,12 +2868,12 @@ export default function AdminDashboardPage() {
 
               {/* SUBTAB 3: DIRECT PROVISIONING */}
               {teamManagementSubtab === 'PROVISION' && (
-                <Card className="border-slate-200 dark:border-slate-800 max-w-xl">
+                <Card className="border-spruce-200 dark:border-spruce-800 max-w-xl">
                   <CardHeader>
-                    <CardTitle className="text-base font-bold">
+                    <CardTitle className="text-base font-bold text-spruce-900 dark:text-white">
                       Directly Provision Staff Account
                     </CardTitle>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-spruce-500">
                       Create an IT Support Engineer or Administrator account immediately with an initial password.
                     </p>
                   </CardHeader>
@@ -2861,7 +2904,7 @@ export default function AdminDashboardPage() {
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-name"
-                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                         >
                           Full Name
                         </label>
@@ -2878,7 +2921,7 @@ export default function AdminDashboardPage() {
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-email"
-                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                         >
                           Email Address
                         </label>
@@ -2896,7 +2939,7 @@ export default function AdminDashboardPage() {
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-password"
-                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                         >
                           Initial Password
                         </label>
@@ -2914,7 +2957,7 @@ export default function AdminDashboardPage() {
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-role"
-                          className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                         >
                           Account Role
                         </label>
@@ -2924,7 +2967,7 @@ export default function AdminDashboardPage() {
                           onChange={(e) =>
                             setProvisionRole(e.target.value as 'AGENT' | 'ADMIN')
                           }
-                          className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-xs shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                          className="flex h-9 w-full rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
                         >
                           <option value="AGENT">Support Engineer (AGENT)</option>
                           <option value="ADMIN">Administrator (ADMIN)</option>
@@ -2956,16 +2999,16 @@ export default function AdminDashboardPage() {
           role="dialog"
           aria-modal="true"
           onClick={() => setLightboxImage(null)}
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-spruce-950/85 backdrop-blur-sm flex items-center justify-center p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-w-5xl w-full bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-2xl"
+            className="max-w-5xl w-full bg-white dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 rounded-xl p-4 space-y-3 shadow-2xl"
           >
-            <div className="flex items-center justify-between gap-3 text-xs text-slate-200">
+            <div className="flex items-center justify-between gap-3 text-xs text-spruce-800 dark:text-spruce-200">
               <div className="flex items-center gap-2 truncate">
                 <span className="font-semibold truncate">{lightboxImage.fileName}</span>
-                <span className="text-slate-400">
+                <span className="text-spruce-500 dark:text-spruce-400">
                   ({formatByteSize(lightboxImage.originalSize)})
                 </span>
               </div>
@@ -2979,7 +3022,7 @@ export default function AdminDashboardPage() {
                 Close Preview
               </Button>
             </div>
-            <div className="flex items-center justify-center max-h-[80vh] overflow-auto bg-slate-950 rounded-lg p-2">
+            <div className="flex items-center justify-center max-h-[80vh] overflow-auto bg-spruce-100/50 dark:bg-spruce-950 rounded-lg p-2">
               <img
                 src={lightboxImage.dataUrl}
                 alt={lightboxImage.fileName}

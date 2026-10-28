@@ -168,7 +168,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               id="priority"
               defaultValue="MEDIUM"
               {...register('priority')}
-              className="flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 dark:border-slate-800 dark:bg-slate-950 dark:focus-visible:ring-slate-300"
+              className="flex h-9 w-full rounded-md border border-spruce-300 bg-white dark:bg-spruce-900/80 px-3 py-1 text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-spruce-500 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300"
             >
               <option value="LOW">Low - General query or enhancement</option>
               <option value="MEDIUM">Medium - Normal operational issue</option>
@@ -204,10 +204,10 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               type="file"
               accept="image/*"
               onChange={handleImageChange}
-              className="cursor-pointer text-xs file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2.5 file:py-1 file:text-xs file:font-semibold dark:file:bg-slate-800 dark:file:text-slate-200"
+              className="cursor-pointer text-xs file:mr-3 file:rounded file:border-0 file:bg-spruce-100 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-spruce-900 dark:file:bg-spruce-800 dark:file:text-spruce-200"
             />
             {isEncryptingImage && (
-              <p className="text-xs text-blue-500 animate-pulse">
+              <p className="text-xs text-spruce-600 dark:text-spruce-300 animate-pulse">
                 Preparing attachment...
               </p>
             )}
@@ -215,12 +215,12 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               <p className="text-xs text-red-500 font-medium">{attachmentError}</p>
             )}
             {encryptedAttachment && !isEncryptingImage && (
-              <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+              <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 text-xs">
                 <div className="flex items-center gap-2 truncate">
-                  <span className="font-medium truncate">
+                  <span className="font-medium truncate text-spruce-950 dark:text-spruce-200">
                     {encryptedAttachment.fileName}
                   </span>
-                  <span className="text-slate-400 shrink-0">
+                  <span className="text-spruce-500 dark:text-spruce-400 shrink-0">
                     ({formatByteSize(encryptedAttachment.originalSize)})
                   </span>
                 </div>

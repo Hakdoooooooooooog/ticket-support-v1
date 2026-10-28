@@ -27,8 +27,51 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var stored = localStorage.getItem('ts_theme');
+                  var mql = window.matchMedia('(prefers-color-scheme: dark)');
+                  var isDark = stored === 'dark' || (!stored && mql.matches) || (stored === 'system' && mql.matches);
+                  var root = document.documentElement;
+                  if (isDark) {
+                    root.classList.add('dark');
+                    root.classList.remove('light');
+                  } else {
+                    root.classList.remove('dark');
+                    root.classList.add('light');
+                  }
+
+                  function onSystemSchemeChange(e) {
+                    var current = localStorage.getItem('ts_theme');
+                    if (!current || current === 'system') {
+                      if (e.matches) {
+                        root.classList.add('dark');
+                        root.classList.remove('light');
+                      } else {
+                        root.classList.remove('dark');
+                        root.classList.add('light');
+                      }
+                    }
+                  }
+
+                  if (mql.addEventListener) {
+                    mql.addEventListener('change', onSystemSchemeChange);
+                  } else if (mql.addListener) {
+                    mql.addListener(onSystemSchemeChange);
+                  }
+                } catch (err) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-spruce-50 text-spruce-950 dark:bg-spruce-950 dark:text-spruce-50 transition-colors duration-200">
         <Providers>{children}</Providers>
       </body>
     </html>

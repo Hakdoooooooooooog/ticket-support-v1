@@ -29,7 +29,7 @@ const RATING_DESCRIPTIONS: Record<number, string> = {
 const RATING_COLORS: Record<number, string> = {
   1: 'bg-rose-600 text-white border-rose-500 shadow-rose-900/40',
   2: 'bg-orange-600 text-white border-orange-500 shadow-orange-900/40',
-  3: 'bg-amber-500 text-slate-950 border-amber-400 shadow-amber-900/40 font-bold',
+  3: 'bg-amber-500 text-spruce-950 border-amber-400 shadow-amber-900/40 font-bold',
   4: 'bg-sky-600 text-white border-sky-500 shadow-sky-900/40 font-bold',
   5: 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/40 font-bold',
 };

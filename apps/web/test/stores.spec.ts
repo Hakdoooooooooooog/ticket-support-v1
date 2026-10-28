@@ -154,6 +154,40 @@ describe('Web State Management Stores (Zustand)', () => {
       store.setHighlightedTicketId(null);
       expect(useTicketsStore.getState().highlightedTicketId).toBeNull();
     });
+
+    it('manages viewed and unviewed ticket state for color variant highlighting', () => {
+      const store = useTicketsStore.getState();
+      expect(store.viewedTicketIds['ticket-new']).toBeUndefined();
+
+      // Expanding ticket marks it viewed automatically
+      store.toggleTicketExpanded('ticket-new');
+      expect(useTicketsStore.getState().viewedTicketIds['ticket-new']).toBe(true);
+
+      // Manual toggle to unviewed
+      store.markTicketUnviewed('ticket-new');
+      expect(useTicketsStore.getState().viewedTicketIds['ticket-new']).toBeUndefined();
+
+      // Explicit mark as viewed
+      store.markTicketViewed('ticket-new');
+      expect(useTicketsStore.getState().viewedTicketIds['ticket-new']).toBe(true);
+
+      // Bulk marking
+      store.markAllTicketsViewed([
+        mockTicket,
+        {
+          id: 'ticket-bulk-2',
+          title: 'Bulk 2',
+          description: 'desc',
+          status: 'OPEN',
+          priority: 'LOW',
+          createdAt: '2026-10-27T10:00:00Z',
+          updatedAt: '2026-10-27T10:00:00Z',
+        },
+      ]);
+      const bulkState = useTicketsStore.getState();
+      expect(bulkState.viewedTicketIds['ticket-1']).toBe(true);
+      expect(bulkState.viewedTicketIds['ticket-bulk-2']).toBe(true);
+    });
   });
 
   describe('AdminStore', () => {

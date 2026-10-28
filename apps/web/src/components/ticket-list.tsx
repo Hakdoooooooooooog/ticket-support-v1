@@ -86,6 +86,7 @@ export function TicketList() {
     lastUpdatedAt,
     expandedTicketIds,
     expandedCommentHistories,
+    viewedTicketIds,
     highlightedTicketId,
     portalSearchQuery,
     decryptedAttachments,
@@ -99,6 +100,8 @@ export function TicketList() {
     toggleTicketExpanded,
     setTicketExpanded,
     setAllTicketsExpanded,
+    markTicketViewed,
+    markTicketUnviewed,
     toggleCommentHistory,
     ensureTicketAttachmentsLoaded,
     toggleAttachmentVisibility,
@@ -236,15 +239,15 @@ export function TicketList() {
     <div className="w-full space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-2">
         <div className="space-y-0.5">
-          <h2 className="text-xl font-bold tracking-tight">Active Tickets</h2>
+          <h2 className="text-xl font-bold tracking-tight text-spruce-900 dark:text-white">Active Tickets</h2>
           {formattedLastUpdated && (
             <p
               data-testid="portal-last-updated"
-              className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5"
+              className="text-[11px] text-spruce-600 dark:text-spruce-400 flex items-center gap-1.5"
             >
               <span
                 className={`inline-block h-1.5 w-1.5 rounded-full ${
-                  isFetching ? 'bg-blue-500 animate-ping' : 'bg-emerald-500'
+                  isFetching ? 'bg-spruce-400 animate-ping' : 'bg-emerald-500'
                 }`}
               />
               <span>Last updated: {formattedLastUpdated} (15s auto-poll)</span>
@@ -256,7 +259,7 @@ export function TicketList() {
             <button
               type="button"
               onClick={toggleExpandAll}
-              className="text-xs text-slate-500 hover:text-slate-800 underline dark:text-slate-400"
+              className="text-xs text-spruce-600 hover:text-spruce-950 underline dark:text-spruce-400 dark:hover:text-white"
             >
               {allExpanded ? 'Collapse All' : 'Expand All'}
             </button>
@@ -264,7 +267,7 @@ export function TicketList() {
           <button
             type="button"
             onClick={() => refetch()}
-            className="text-xs text-slate-500 hover:text-slate-800 underline dark:text-slate-400 w-16 text-center shrink-0"
+            className="text-xs text-spruce-600 hover:text-spruce-950 underline dark:text-spruce-400 dark:hover:text-white w-16 text-center shrink-0"
           >
             {isFetching && hasLoadedTickets ? 'Syncing...' : 'Refresh'}
           </button>
@@ -288,8 +291,8 @@ export function TicketList() {
       )}
 
       {!showInitialSkeleton && filteredTickets.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center text-sm text-slate-500">
+        <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/40">
+          <CardContent className="p-8 text-center text-sm text-spruce-500">
             {portalSearchQuery.trim()
               ? 'No tickets match your search query.'
               : 'No tickets found. Submit your first ticket using the form!'}
@@ -300,6 +303,7 @@ export function TicketList() {
       {!showInitialSkeleton &&
         filteredTickets.map((ticket) => {
           const isExpanded = Boolean(expandedTicketIds[ticket.id]);
+          const isViewed = Boolean(viewedTicketIds[ticket.id]);
           const isAmending = amendingTicketId === ticket.id;
           const ticketAttachmentKey = `ticket:${ticket.id}`;
           const decryptedTicketImg = decryptedAttachments[ticketAttachmentKey];
@@ -312,13 +316,17 @@ export function TicketList() {
             <Card
               key={ticket.id}
               id={`ticket-${ticket.id}`}
-              className={`overflow-hidden transition-all ${
+              className={`overflow-hidden transition-all duration-150 ${
                 ticket.status === 'NEEDS_INFO'
-                  ? 'border-amber-400 dark:border-amber-600'
-                  : 'border-slate-200 dark:border-slate-800'
+                  ? isViewed
+                    ? 'border-amber-400/60 dark:border-amber-500/50 border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-amber-500/5'
+                    : 'border-amber-400 dark:border-amber-500 border-l-4 border-l-amber-500 dark:border-l-amber-400 bg-amber-500/10 shadow-sm'
+                  : !isViewed
+                  ? 'border-spruce-300 dark:border-spruce-700/80 border-l-4 border-l-spruce-600 dark:border-l-spruce-300 bg-white dark:bg-spruce-900/85 shadow-sm hover:border-spruce-400 dark:hover:border-spruce-600'
+                  : 'border-spruce-200/90 dark:border-spruce-800/80 border-l-4 border-l-spruce-200/70 dark:border-l-spruce-800/80 bg-white/70 dark:bg-spruce-950/50 hover:bg-white dark:hover:bg-spruce-900/60'
               } ${
                 highlightedTicketId === ticket.id
-                  ? 'ring-2 ring-blue-500 shadow-xl shadow-blue-500/20 dark:ring-blue-400'
+                  ? 'ring-2 ring-spruce-400 shadow-xl shadow-spruce-400/20 dark:ring-spruce-300'
                   : ''
               }`}
             >
@@ -327,12 +335,12 @@ export function TicketList() {
                 type="button"
                 aria-expanded={isExpanded}
                 onClick={() => toggleTicketExpanded(ticket.id)}
-                className="w-full text-left p-4 hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition-colors focus:outline-none"
+                className="w-full text-left p-4 hover:bg-spruce-50/80 dark:hover:bg-spruce-800/50 transition-colors focus:outline-none"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2.5 min-w-0">
                     <span
-                      className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900 text-[10px] text-slate-600 dark:text-slate-300 transition-transform ${
+                      className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-spruce-200 dark:border-spruce-700 bg-spruce-100 dark:bg-spruce-900 text-[10px] text-spruce-700 dark:text-spruce-300 transition-transform ${
                         isExpanded ? 'rotate-90' : ''
                       }`}
                     >
@@ -340,18 +348,40 @@ export function TicketList() {
                     </span>
                     <div className="space-y-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-mono text-slate-400">
+                        <span className="text-xs font-mono text-spruce-400">
                           {formatShortTicketId(ticket.id)}
                         </span>
-                        <CardTitle className="text-base font-semibold leading-snug">
+
+                        {/* New vs Viewed Color Badge Variant */}
+                        {!isViewed ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-spruce-100 text-spruce-800 border border-spruce-300 dark:bg-spruce-300/15 dark:text-spruce-300 dark:border-spruce-400/40 shadow-xs">
+                            <span className="h-1.5 w-1.5 rounded-full bg-spruce-600 dark:bg-spruce-300 animate-pulse" />
+                            New
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-spruce-500 dark:text-spruce-400 bg-spruce-100/50 dark:bg-spruce-900/40 border border-spruce-200/60 dark:border-spruce-800/60">
+                            <svg className="w-3 h-3 text-spruce-400 dark:text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Viewed
+                          </span>
+                        )}
+
+                        <CardTitle
+                          className={`text-base leading-snug truncate ${
+                            !isViewed
+                              ? 'font-bold text-spruce-950 dark:text-white'
+                              : 'font-medium text-spruce-800 dark:text-spruce-300'
+                          }`}
+                        >
                           {ticket.title}
                         </CardTitle>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-spruce-500 dark:text-spruce-400">
                         <span>{formatTicketDate(ticket.createdAt)}</span>
                         <span>
                           Assigned:{' '}
-                          <strong className="text-slate-600 dark:text-slate-300">
+                          <strong className="text-spruce-700 dark:text-spruce-300">
                             {ticket.assignee?.fullName || 'Unassigned'}
                           </strong>
                         </span>
@@ -359,7 +389,7 @@ export function TicketList() {
                           {commentCount} {commentCount === 1 ? 'message' : 'messages'}
                         </span>
                         {attachmentCount > 0 && (
-                          <span className="text-blue-600 dark:text-blue-400 font-medium">
+                          <span className="text-spruce-700 dark:text-spruce-300 font-medium">
                             {attachmentCount}{' '}
                             {attachmentCount === 1 ? 'attachment' : 'attachments'}
                           </span>
@@ -382,13 +412,38 @@ export function TicketList() {
                         ? 'NEEDS ADDITIONAL INFO'
                         : ticket.status}
                     </Badge>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isViewed) {
+                          markTicketUnviewed(ticket.id);
+                        } else {
+                          markTicketViewed(ticket.id);
+                        }
+                      }}
+                      title={isViewed ? 'Mark as unread / new' : 'Mark as viewed'}
+                      className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1"
+                      aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
+                    >
+                      {isViewed ? (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-spruce-600 dark:text-spruce-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
               </button>
 
               {/* Accordion Body */}
               {isExpanded && (
-                <CardContent className="p-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-4">
+                <CardContent className="p-4 pt-3 border-t border-spruce-100 dark:border-spruce-800/80 space-y-4">
                   {/* Follow-Up Required Callout */}
                   {ticket.status === 'NEEDS_INFO' && (
                     <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-2">
@@ -454,7 +509,7 @@ export function TicketList() {
 
                   {/* Customer Closed Ticket Callout & Re-Open */}
                   {ticket.status === 'CLOSED' && (
-                    <div className="p-3 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 flex flex-wrap items-center justify-between gap-2">
+                    <div className="p-3 rounded-md bg-spruce-100/70 dark:bg-spruce-900/60 border border-spruce-200 dark:border-spruce-800 text-xs text-spruce-800 dark:text-spruce-300 flex flex-wrap items-center justify-between gap-2">
                       <span>
                         <strong>Ticket Closed:</strong> This support request has been completed and closed.
                       </span>
@@ -487,9 +542,9 @@ export function TicketList() {
                   )}
 
                   {/* 1. Original Ticket Report */}
-                  <div className="p-3 rounded-lg bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="font-semibold uppercase tracking-wider text-slate-500">
+                  <div className="p-3 rounded-lg bg-spruce-50/80 dark:bg-spruce-900/50 border border-spruce-200/70 dark:border-spruce-800 space-y-2.5">
+                    <div className="flex items-center justify-between text-[11px] text-spruce-500 dark:text-spruce-400">
+                      <span className="font-semibold uppercase tracking-wider text-spruce-600 dark:text-spruce-400">
                         Initial Ticket Report
                       </span>
                       <span>
@@ -497,20 +552,20 @@ export function TicketList() {
                         {formatTicketDate(ticket.createdAt)}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
+                    <p className="text-sm text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap">
                       {ticket.description}
                     </p>
 
                     {/* Initial Ticket Attachment (auto-loaded once when viewed) */}
                     {ticket.hasAttachment && (
-                      <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-2">
+                      <div className="pt-2 border-t border-spruce-200/70 dark:border-spruce-800 space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-700 dark:text-slate-200">
+                            <span className="font-medium text-spruce-800 dark:text-spruce-200">
                               {ticket.attachmentName || 'attachment.webp'}
                             </span>
                             {ticket.attachmentOriginalSize && (
-                              <span className="text-slate-400">
+                              <span className="text-spruce-500 dark:text-spruce-400">
                                 ({formatByteSize(ticket.attachmentOriginalSize)})
                               </span>
                             )}
@@ -528,7 +583,7 @@ export function TicketList() {
                               {isTicketImgHidden ? 'Show Image' : 'Hide Image'}
                             </Button>
                           ) : (
-                            <span className="text-[11px] text-slate-400">
+                            <span className="text-[11px] text-spruce-400">
                               {isLoadingTicketImg ? 'Loading image...' : ''}
                             </span>
                           )}
@@ -541,7 +596,7 @@ export function TicketList() {
                               alt={decryptedTicketImg.fileName}
                               onClick={() => setLightboxImage(decryptedTicketImg)}
                               title="Click to inspect full-size image"
-                              className="max-h-64 rounded-md border border-slate-200 dark:border-slate-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
+                              className="max-h-64 rounded-md border border-spruce-200 dark:border-spruce-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
                             />
                           </div>
                         )}
@@ -552,7 +607,7 @@ export function TicketList() {
                   {/* 2. Chronological Activity & Follow-Up History Timeline */}
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <p className="text-xs font-semibold text-spruce-500 uppercase tracking-wider">
                         Activity &amp; Follow-Up History ({commentCount})
                       </p>
                       {ticket.status !== 'CLOSED' && !isAmending && (
@@ -560,15 +615,15 @@ export function TicketList() {
                           <button
                             type="button"
                             onClick={() => openAmendPanel(ticket, false)}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                            className="text-xs text-spruce-700 dark:text-spruce-300 hover:underline font-medium"
                           >
                             Add Follow-Up Reply
                           </button>
-                          <span className="text-slate-300 dark:text-slate-700">·</span>
+                          <span className="text-spruce-300 dark:text-spruce-700">·</span>
                           <button
                             type="button"
                             onClick={() => openAmendPanel(ticket, true)}
-                            className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:underline"
+                            className="text-xs text-spruce-500 hover:text-spruce-800 dark:hover:text-spruce-200 hover:underline"
                           >
                             Amend Ticket Details
                           </button>
@@ -577,7 +632,7 @@ export function TicketList() {
                     </div>
 
                     {commentCount === 0 ? (
-                      <p className="text-xs text-slate-400 italic py-1">
+                      <p className="text-xs text-spruce-400 italic py-1">
                         No follow-up messages or support notes yet.
                       </p>
                     ) : (() => {
@@ -596,10 +651,10 @@ export function TicketList() {
 
                         const cardTone =
                           parsed.kind === 'FOLLOW_UP'
-                            ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/80'
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200'
                             : parsed.kind === 'AMENDMENT'
-                              ? 'bg-blue-50/50 dark:bg-blue-950/25 border-blue-200/80 dark:border-blue-900/70'
-                              : 'bg-slate-50 dark:bg-slate-900/80 border-slate-200/70 dark:border-slate-800';
+                              ? 'bg-spruce-100/70 dark:bg-spruce-900/60 border-spruce-300 dark:border-spruce-700/80 text-spruce-950 dark:text-spruce-100'
+                              : 'bg-white dark:bg-spruce-900/40 border-spruce-200/90 dark:border-spruce-800 text-spruce-950 dark:text-spruce-200';
 
                         return (
                           <div
@@ -608,11 +663,11 @@ export function TicketList() {
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="font-semibold text-slate-900 dark:text-white">
+                                <span className="font-semibold text-spruce-900 dark:text-white">
                                   {comment.author?.fullName || 'Support'}
                                 </span>
                                 {comment.author?.role && (
-                                  <span className="text-[11px] text-slate-400 font-normal">
+                                  <span className="text-[11px] text-spruce-500 dark:text-spruce-400 font-normal">
                                     ({comment.author.role.toLowerCase()})
                                   </span>
                                 )}
@@ -626,25 +681,25 @@ export function TicketList() {
                                   </Badge>
                                 ) : null}
                               </div>
-                              <span className="text-[11px] text-slate-400">
+                              <span className="text-[11px] text-spruce-500 dark:text-spruce-400">
                                 {formatCommentTime(comment.createdAt)}
                               </span>
                             </div>
 
-                            <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                            <p className="text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap leading-relaxed">
                               {parsed.cleanText}
                             </p>
 
                             {/* Attachment linked directly to this Follow-Up / Amendment message */}
                             {comment.hasAttachment && (
-                              <div className="p-2.5 rounded-md bg-white/80 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                              <div className="p-2.5 rounded-md bg-white/80 dark:bg-spruce-950/70 border border-spruce-200/80 dark:border-spruce-800 space-y-2">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium text-slate-800 dark:text-slate-200">
+                                    <span className="font-medium text-spruce-800 dark:text-spruce-200">
                                       {comment.attachmentName || 'attachment.webp'}
                                     </span>
                                     {comment.attachmentOriginalSize && (
-                                      <span className="text-slate-400">
+                                      <span className="text-spruce-500 dark:text-spruce-400">
                                         ({formatByteSize(comment.attachmentOriginalSize)})
                                       </span>
                                     )}
@@ -662,7 +717,7 @@ export function TicketList() {
                                       {isCommentImgHidden ? 'Show Image' : 'Hide Image'}
                                     </Button>
                                   ) : (
-                                    <span className="text-[11px] text-slate-400">
+                                    <span className="text-[11px] text-spruce-400">
                                       {isLoadingCommentImg ? 'Loading image...' : ''}
                                     </span>
                                   )}
@@ -677,7 +732,7 @@ export function TicketList() {
                                         setLightboxImage(decryptedCommentImg)
                                       }
                                       title="Click to inspect full-size image"
-                                      className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-slate-200 dark:border-slate-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
+                                      className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-spruce-200 dark:border-spruce-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
                                     />
                                   </div>
                                 )}
@@ -688,17 +743,17 @@ export function TicketList() {
                       };
 
                       return (
-                        <div className="space-y-2.5 pl-2 border-l-2 border-slate-200 dark:border-slate-800">
+                        <div className="space-y-2.5 pl-2 border-l-2 border-spruce-200 dark:border-spruce-800">
                           {hasMultiple && (
                             <div className="pb-1">
                               <button
                                 type="button"
                                 onClick={() => toggleCommentHistory(ticket.id)}
-                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/60 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 text-xs text-slate-600 dark:text-slate-400 font-medium transition-colors"
+                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-spruce-200 dark:border-spruce-800 bg-spruce-100/70 dark:bg-spruce-900/60 hover:bg-spruce-200/60 dark:hover:bg-spruce-800/80 text-xs text-spruce-700 dark:text-spruce-300 font-medium transition-colors"
                               >
                                 <span className="flex items-center gap-1.5">
                                   <svg
-                                    className="w-3.5 h-3.5 text-blue-500"
+                                    className="w-3.5 h-3.5 text-spruce-600 dark:text-spruce-400"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -718,7 +773,7 @@ export function TicketList() {
                                         }`}
                                   </span>
                                 </span>
-                                <span className="text-[11px] text-blue-500 font-semibold hover:underline">
+                                <span className="text-[11px] text-spruce-700 dark:text-spruce-300 font-semibold hover:underline">
                                   {isHistoryExpanded ? 'Collapse thread \u2191' : 'Expand thread \u2193'}
                                 </span>
                               </button>
@@ -790,7 +845,7 @@ export function TicketList() {
                           <button
                             type="button"
                             onClick={() => setAmendingTicketId(null)}
-                            className="text-xs text-slate-400 hover:text-slate-600"
+                            className="text-xs text-spruce-400 hover:text-spruce-600 dark:hover:text-spruce-200"
                           >
                             Cancel
                           </button>
@@ -802,7 +857,7 @@ export function TicketList() {
                       )}
 
                       {showFieldEdit && (
-                        <div className="space-y-2.5 p-2.5 rounded-md bg-white/70 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800">
+                        <div className="space-y-2.5 p-2.5 rounded-md bg-white/70 dark:bg-spruce-900/70 border border-spruce-200/70 dark:border-spruce-800">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <div className="sm:col-span-2 space-y-1">
                               <Label className="text-xs">Amended Title</Label>
@@ -822,7 +877,7 @@ export function TicketList() {
                                     e.target.value as Ticket['priority'],
                                   )
                                 }
-                                className="flex h-8 w-full rounded-md border border-slate-200 bg-transparent px-2 text-xs dark:border-slate-800 dark:bg-slate-950"
+                                className="flex h-8 w-full rounded-md border border-spruce-300 bg-white px-2 text-xs text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                               >
                                 <option value="LOW">LOW</option>
                                 <option value="MEDIUM">MEDIUM</option>
@@ -923,16 +978,16 @@ export function TicketList() {
           role="dialog"
           aria-modal="true"
           onClick={() => setLightboxImage(null)}
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-spruce-950/85 backdrop-blur-sm flex items-center justify-center p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-w-5xl w-full bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-2xl"
+            className="max-w-5xl w-full bg-white dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 rounded-xl p-4 space-y-3 shadow-2xl"
           >
-            <div className="flex items-center justify-between gap-3 text-xs text-slate-200">
+            <div className="flex items-center justify-between gap-3 text-xs text-spruce-800 dark:text-spruce-200">
               <div className="flex items-center gap-2 truncate">
                 <span className="font-semibold truncate">{lightboxImage.fileName}</span>
-                <span className="text-slate-400">
+                <span className="text-spruce-500 dark:text-spruce-400">
                   ({formatByteSize(lightboxImage.originalSize)})
                 </span>
               </div>
@@ -946,7 +1001,7 @@ export function TicketList() {
                 Close Preview
               </Button>
             </div>
-            <div className="flex items-center justify-center max-h-[80vh] overflow-auto bg-slate-950 rounded-lg p-2">
+            <div className="flex items-center justify-center max-h-[80vh] overflow-auto bg-spruce-100/50 dark:bg-spruce-950 rounded-lg p-2">
               <img
                 src={lightboxImage.dataUrl}
                 alt={lightboxImage.fileName}

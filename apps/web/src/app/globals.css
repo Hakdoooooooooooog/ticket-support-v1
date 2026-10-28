@@ -1,8 +1,50 @@
 @import "tailwindcss";
 
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:not(.light, .light *)) {
+      @slot;
+    }
+  }
+}
+
+@theme {
+  --color-spruce-950: #092635; /* Deep Midnight Spruce - Canvas Base in dark mode */
+  --color-spruce-900: #0f3344; /* Deep Pine Background */
+  --color-spruce-800: #1b4242; /* Deep Forest Slate - Surface cards & sidebar */
+  --color-spruce-700: #265555; /* Subtle borders & elevated surfaces */
+  --color-spruce-600: #3f6a5e; /* Intermediate spruce */
+  --color-spruce-500: #5c8374; /* Muted Sage Green - Metadata, secondary actions, soft borders */
+  --color-spruce-400: #7da697; /* Intermediate Sage */
+  --color-spruce-300: #9ec8b9; /* Seafoam Mint - Primary interactive highlights & glow */
+  --color-spruce-200: #c4e0d6; /* Light mode card borders & subtle accents */
+  --color-spruce-100: #e6f3ee; /* Light mode elevated container & active pill fill */
+  --color-spruce-50:  #f4f9f7; /* Light mode canvas background */
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f9f7;
+  --foreground: #092635;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #092635;
+    --foreground: #f4f9f7;
+  }
+}
+
+.dark {
+  --background: #092635;
+  --foreground: #f4f9f7;
+}
+
+.light {
+  --background: #f4f9f7;
+  --foreground: #092635;
 }
 
 @theme inline {
@@ -12,17 +54,343 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Standard Elevated Card */
+  .ts-card {
+    background-color: #ffffff;
+    border: 1px solid var(--color-spruce-200);
+    color: var(--color-spruce-950);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(9, 38, 53, 0.04);
+    transition: all 0.2s ease-in-out;
+  }
+  .dark .ts-card {
+    background-color: rgba(27, 66, 66, 0.85);
+    border-color: rgba(38, 85, 85, 0.7);
+    color: #f4f9f7;
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* Sticky Top Navigation Header */
+  .ts-header {
+    background-color: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid var(--color-spruce-200);
+    backdrop-filter: blur(12px);
+  }
+  .dark .ts-header {
+    background-color: rgba(9, 38, 53, 0.92);
+    border-bottom: 1px solid var(--color-spruce-800);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Primary Action Button (High Importance / Focal CTA) */
+  .ts-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--color-spruce-800);
+    color: #ffffff;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease-in-out;
+  }
+  .ts-btn-primary:hover {
+    background-color: var(--color-spruce-950);
+  }
+  .dark .ts-btn-primary {
+    background-color: var(--color-spruce-300);
+    color: var(--color-spruce-950);
+    box-shadow: 0 0 12px rgba(158, 200, 185, 0.2);
+  }
+  .dark .ts-btn-primary:hover {
+    background-color: var(--color-spruce-200);
+    box-shadow: 0 0 16px rgba(158, 200, 185, 0.3);
+  }
+
+  /* Secondary Button */
+  .ts-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--color-spruce-100);
+    color: var(--color-spruce-900);
+    transition: all 0.15s ease-in-out;
+  }
+  .ts-btn-secondary:hover {
+    background-color: var(--color-spruce-200);
+  }
+  .dark .ts-btn-secondary {
+    background-color: rgba(38, 85, 85, 0.6);
+    color: var(--color-spruce-200);
+  }
+  .dark .ts-btn-secondary:hover {
+    background-color: var(--color-spruce-700);
+    color: #ffffff;
+  }
+
+  /* Outline Button */
+  .ts-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-spruce-300);
+    background-color: #ffffff;
+    color: var(--color-spruce-800);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    transition: all 0.15s ease-in-out;
+  }
+  .ts-btn-outline:hover {
+    background-color: var(--color-spruce-100);
+    color: var(--color-spruce-950);
+  }
+  .dark .ts-btn-outline {
+    border-color: rgba(38, 85, 85, 0.8);
+    background-color: rgba(16, 52, 68, 0.6);
+    color: var(--color-spruce-200);
+  }
+  .dark .ts-btn-outline:hover {
+    background-color: var(--color-spruce-800);
+    color: #ffffff;
+  }
+
+  /* Form Input */
+  .ts-input {
+    display: flex;
+    height: 2.25rem;
+    width: 100%;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-spruce-300);
+    background-color: #ffffff;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-spruce-950);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    transition: all 0.15s ease-in-out;
+  }
+  .ts-input::placeholder {
+    color: var(--color-spruce-500);
+  }
+  .ts-input:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-spruce-500);
+  }
+  .dark .ts-input {
+    border-color: rgba(38, 85, 85, 0.8);
+    background-color: rgba(16, 52, 68, 0.8);
+    color: #f4f9f7;
+  }
+  .dark .ts-input::placeholder {
+    color: var(--color-spruce-400);
+  }
+  .dark .ts-input:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-spruce-300);
+  }
+
+  /* Standard Badges */
+  .ts-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.375rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1rem;
+    transition: all 0.15s ease-in-out;
+  }
+  .ts-badge-spruce {
+    border: 1px solid rgba(158, 200, 185, 0.4);
+    background-color: var(--color-spruce-100);
+    color: var(--color-spruce-900);
+  }
+  .dark .ts-badge-spruce {
+    border-color: rgba(158, 200, 185, 0.3);
+    background-color: rgba(158, 200, 185, 0.15);
+    color: var(--color-spruce-300);
+  }
+  .ts-badge-success {
+    border: 1px solid rgba(92, 131, 116, 0.4);
+    background-color: rgba(92, 131, 116, 0.15);
+    color: var(--color-spruce-800);
+  }
+  .dark .ts-badge-success {
+    border-color: rgba(158, 200, 185, 0.3);
+    background-color: rgba(92, 131, 116, 0.25);
+    color: var(--color-spruce-200);
+  }
+
+  /* Metric / Stat Card */
+  .ts-stat-card {
+    background-color: #ffffff;
+    border: 1px solid var(--color-spruce-200);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(9, 38, 53, 0.04);
+  }
+  .dark .ts-stat-card {
+    background-color: rgba(27, 66, 66, 0.6);
+    border-color: rgba(38, 85, 85, 0.7);
+    box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  /* Navigation Sidebar Active / Inactive */
+  .ts-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-spruce-700);
+    transition: all 0.15s ease-in-out;
+  }
+  .ts-nav-item:hover {
+    background-color: var(--color-spruce-100);
+    color: var(--color-spruce-950);
+  }
+  .ts-nav-item.active {
+    background-color: var(--color-spruce-100);
+    color: var(--color-spruce-900);
+    font-weight: 700;
+    border-left: 3px solid var(--color-spruce-800);
+  }
+  .dark .ts-nav-item {
+    color: var(--color-spruce-400);
+  }
+  .dark .ts-nav-item:hover {
+    background-color: rgba(27, 66, 66, 0.7);
+    color: #ffffff;
+  }
+  .dark .ts-nav-item.active {
+    background-color: rgba(27, 66, 66, 0.95);
+    color: var(--color-spruce-300);
+    font-weight: 700;
+    border-left: 3px solid var(--color-spruce-300);
+  }
+
+  /* Filter Chip / Pill Button */
+  .ts-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-spruce-300);
+    background-color: transparent;
+    color: var(--color-spruce-700);
+    transition: all 0.15s ease-in-out;
+    cursor: pointer;
+  }
+  .ts-filter-chip:hover {
+    background-color: var(--color-spruce-100);
+    color: var(--color-spruce-950);
+  }
+  .ts-filter-chip.active {
+    background-color: var(--color-spruce-800);
+    border-color: var(--color-spruce-800);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  .dark .ts-filter-chip {
+    border-color: rgba(38, 85, 85, 0.8);
+    color: var(--color-spruce-300);
+  }
+  .dark .ts-filter-chip:hover {
+    background-color: rgba(27, 66, 66, 0.7);
+    color: #ffffff;
+  }
+  .dark .ts-filter-chip.active {
+    background-color: var(--color-spruce-300);
+    border-color: var(--color-spruce-300);
+    color: var(--color-spruce-950);
+    font-weight: 600;
+    box-shadow: 0 0 10px rgba(158, 200, 185, 0.25);
+  }
+
+  /* Templated Select Element */
+  .ts-select {
+    display: inline-flex;
+    height: 2.25rem;
+    align-items: center;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-spruce-300);
+    background-color: #ffffff;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-spruce-900);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    transition: border-color 0.15s ease-in-out;
+  }
+  .ts-select:focus {
+    outline: none;
+    border-color: var(--color-spruce-500);
+    box-shadow: 0 0 0 2px rgba(92, 131, 116, 0.2);
+  }
+  .dark .ts-select {
+    border-color: rgba(38, 85, 85, 0.8);
+    background-color: var(--color-spruce-950);
+    color: var(--color-spruce-100);
+  }
+  .dark .ts-select:focus {
+    border-color: var(--color-spruce-300);
+    box-shadow: 0 0 0 2px rgba(158, 200, 185, 0.25);
+  }
+
+  /* Templated Subtle Container */
+  .ts-subtle-box {
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-spruce-200);
+    background-color: rgba(230, 243, 238, 0.4);
+    color: var(--color-spruce-900);
+  }
+  .dark .ts-subtle-box {
+    border-color: rgba(38, 85, 85, 0.7);
+    background-color: rgba(16, 50, 60, 0.45);
+    color: var(--color-spruce-100);
+  }
+
+  /* Templated Dropdown / Popover */
+  .ts-dropdown-menu {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-spruce-200);
+    background-color: rgba(255, 255, 255, 0.98);
+    color: var(--color-spruce-950);
+    box-shadow: 0 10px 25px -5px rgba(9, 38, 53, 0.1), 0 8px 10px -6px rgba(9, 38, 53, 0.1);
+    backdrop-filter: blur(12px);
+  }
+  .dark .ts-dropdown-menu {
+    border-color: rgba(38, 85, 85, 0.8);
+    background-color: rgba(15, 51, 68, 0.98);
+    color: var(--color-spruce-50);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  }
 }
 
 @keyframes shimmer-slide {

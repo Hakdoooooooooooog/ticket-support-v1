@@ -9,15 +9,16 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-slate-900 text-slate-50 shadow hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90",
+          "bg-spruce-800 text-white shadow hover:bg-spruce-900 dark:bg-spruce-300 dark:text-spruce-950 dark:hover:bg-spruce-200 dark:font-semibold",
         destructive:
-          "bg-red-500 text-slate-50 shadow-sm hover:bg-red-500/90 dark:bg-red-900 dark:text-slate-50 dark:hover:bg-red-900/90",
+          "bg-rose-600 text-white shadow-sm hover:bg-rose-700 dark:bg-rose-900/80 dark:text-rose-100 dark:hover:bg-rose-800",
         outline:
-          "border border-slate-200 bg-white shadow-sm hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800 dark:hover:text-slate-50",
+          "border border-spruce-300/80 bg-white text-spruce-800 shadow-sm hover:bg-spruce-100 hover:text-spruce-950 dark:border-spruce-700/80 dark:bg-spruce-900/60 dark:text-spruce-200 dark:hover:bg-spruce-800",
         secondary:
-          "bg-slate-100 text-slate-900 shadow-sm hover:bg-slate-100/80 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-800/80",
-        ghost: "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-50",
-        link: "text-slate-900 underline-offset-4 hover:underline dark:text-slate-50",
+          "bg-spruce-100 text-spruce-900 shadow-sm hover:bg-spruce-200/80 dark:bg-spruce-700/60 dark:text-spruce-100 dark:hover:bg-spruce-700",
+        ghost:
+          "text-spruce-800 hover:bg-spruce-100 hover:text-spruce-950 dark:text-spruce-300 dark:hover:bg-spruce-800/70 dark:hover:text-white",
+        link: "text-spruce-700 underline-offset-4 hover:underline dark:text-spruce-300",
       },
       size: {
         default: "h-9 px-4 py-2",

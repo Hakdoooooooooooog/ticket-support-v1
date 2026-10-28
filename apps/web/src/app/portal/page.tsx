@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { TicketForm } from '@components/forms/ticket-form';
 import { TicketList } from '@components/ticket-list';
 import { NotificationCenter } from '@components/notification-center';
+import { ThemeToggle } from '@components/theme-toggle';
 import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
@@ -72,23 +73,23 @@ export default function CustomerPortalPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur sticky top-0 z-10">
+    <div className="min-h-screen flex flex-col bg-spruce-50 dark:bg-spruce-950 text-spruce-950 dark:text-spruce-50">
+      <header className="border-b border-spruce-200/90 dark:border-spruce-800 bg-white/90 dark:bg-spruce-950/90 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
+            <span className="font-extrabold text-lg tracking-tight text-spruce-950 dark:text-white">
               TicketSupport
             </span>
-            <span className="text-xs font-medium text-slate-500 border-l border-slate-300 dark:border-slate-800 pl-2.5">
+            <span className="text-xs font-semibold text-spruce-600 dark:text-spruce-300 border-l border-spruce-300 dark:border-spruce-700 pl-2.5">
               Customer Portal
             </span>
-            <div className="flex items-center gap-1.5 ml-1 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 ml-1 text-xs text-spruce-500">
               <span className="relative flex h-2 w-2 shrink-0">
                 <span
                   className={cn(
                     'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
                     realtimeStatus === 'connected'
-                      ? 'bg-emerald-400'
+                      ? 'bg-spruce-400'
                       : realtimeStatus === 'connecting'
                       ? 'bg-amber-400'
                       : 'bg-rose-400',
@@ -98,14 +99,14 @@ export default function CustomerPortalPage() {
                   className={cn(
                     'relative inline-flex rounded-full h-2 w-2',
                     realtimeStatus === 'connected'
-                      ? 'bg-emerald-500'
+                      ? 'bg-spruce-500'
                       : realtimeStatus === 'connecting'
                       ? 'bg-amber-500'
                       : 'bg-rose-500',
                   )}
                 />
               </span>
-              <span className="hidden sm:inline text-[11px] font-medium text-slate-400">
+              <span className="hidden sm:inline text-[11px] font-medium text-spruce-500 dark:text-spruce-400">
                 {realtimeStatus === 'connected'
                   ? 'Live Connected'
                   : realtimeStatus === 'connecting'
@@ -115,7 +116,8 @@ export default function CustomerPortalPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <ThemeToggle />
             <NotificationCenter onSelectTicket={handleSelectTicket} />
             {(user?.role === 'ADMIN' || user?.role === 'AGENT') && (
               <Link href="/admin">
@@ -125,8 +127,8 @@ export default function CustomerPortalPage() {
               </Link>
             )}
             {user && (
-              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                <span className="font-medium">{user.fullName}</span>
+              <div className="hidden sm:flex items-center gap-2 text-xs text-spruce-700 dark:text-spruce-300 font-medium">
+                <span>{user.fullName}</span>
               </div>
             )}
             <Button variant="ghost" size="sm" onClick={handleSignOut}>

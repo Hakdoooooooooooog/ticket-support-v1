@@ -88,7 +88,7 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
         aria-label="View notifications"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="relative p-2 rounded-lg text-spruce-600 dark:text-spruce-300 hover:text-spruce-950 dark:hover:text-white hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -105,7 +105,7 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
         </svg>
 
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow animate-pulse">
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -113,12 +113,12 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-slate-700/80 bg-slate-900/95 backdrop-blur-md shadow-2xl z-50 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex items-center justify-between p-3.5 border-b border-slate-800 bg-slate-950/60">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-spruce-200 dark:border-spruce-700/80 bg-white/95 dark:bg-spruce-900/95 backdrop-blur-md shadow-2xl z-50 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between p-3.5 border-b border-spruce-200 dark:border-spruce-800 bg-spruce-50/80 dark:bg-spruce-950/60">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-white">Notifications</span>
+              <span className="font-semibold text-sm text-spruce-950 dark:text-white">Notifications</span>
               {unreadCount > 0 && (
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-spruce-100 dark:bg-spruce-800 text-spruce-800 dark:text-spruce-300 border border-spruce-300 dark:border-spruce-700">
                   {unreadCount} unread
                 </span>
               )}
@@ -131,27 +131,27 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
                 size="sm"
                 onClick={() => markAllReadMutation.mutate()}
                 disabled={markAllReadMutation.isPending}
-                className="h-7 px-2 text-[11px] text-slate-400 hover:text-white"
+                className="h-7 px-2 text-[11px] text-spruce-600 dark:text-spruce-400 hover:text-spruce-950 dark:hover:text-white"
               >
                 Mark all read
               </Button>
             )}
           </div>
 
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-800/60">
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-spruce-100 dark:divide-spruce-800/60">
             {notifications.length === 0 ? (
               <div className="p-8 text-center space-y-1.5">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-spruce-600 dark:text-spruce-300">
                   All Caught Up
                 </div>
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-spruce-500 dark:text-spruce-400">
                   No pending notifications in your feed.
                 </div>
                 <div className="pt-2">
                   <Link
                     href="/notifications"
                     onClick={() => setIsOpen(false)}
-                    className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+                    className="text-xs text-spruce-600 dark:text-spruce-300 hover:underline"
                   >
                     View notifications history &rarr;
                   </Link>
@@ -165,8 +165,8 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
                     key={notif.id}
                     type="button"
                     onClick={() => handleNotificationClick(notif)}
-                    className={`w-full text-left p-3.5 flex items-start gap-3 transition-colors hover:bg-slate-800/60 ${
-                      !notif.read ? 'bg-blue-500/5' : ''
+                    className={`w-full text-left p-3.5 flex items-start gap-3 transition-colors hover:bg-spruce-50 dark:hover:bg-spruce-800/60 ${
+                      !notif.read ? 'bg-spruce-100/40 dark:bg-spruce-800/25' : ''
                     }`}
                   >
                     <div
@@ -180,23 +180,23 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
                         <span
                           className={`text-xs truncate ${
                             !notif.read
-                              ? 'font-bold text-white'
-                              : 'font-medium text-slate-300'
+                              ? 'font-bold text-spruce-950 dark:text-white'
+                              : 'font-medium text-spruce-700 dark:text-spruce-300'
                           }`}
                         >
                           {notif.title}
                         </span>
-                        <span className="text-[10px] text-slate-500 shrink-0">
+                        <span className="text-[10px] text-spruce-400 shrink-0">
                           {formatNotificationTime(notif.createdAt)}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-spruce-600 dark:text-spruce-400 line-clamp-2 leading-relaxed">
                         {notif.message}
                       </p>
                     </div>
 
                     {!notif.read && (
-                      <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5 shadow" />
+                      <span className="h-2 w-2 rounded-full bg-spruce-400 shrink-0 mt-1.5 shadow" />
                     )}
                   </button>
                 );
@@ -205,14 +205,14 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
           </div>
 
           {/* Footer linking to full notifications center route */}
-          <div className="p-2.5 border-t border-slate-800 bg-slate-950/80 text-center">
+          <div className="p-2.5 border-t border-spruce-200 dark:border-spruce-800 bg-spruce-50/80 dark:bg-spruce-950/80 text-center">
             <Link
               href="/notifications"
               onClick={() => setIsOpen(false)}
-              className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 px-3 text-xs font-semibold text-blue-400 hover:text-blue-300 hover:bg-slate-800/60 rounded-md transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 px-3 text-xs font-semibold text-spruce-700 dark:text-spruce-300 hover:text-spruce-950 dark:hover:text-white hover:bg-spruce-100 dark:hover:bg-spruce-800/60 rounded-md transition-colors"
             >
               <span>View all notifications</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-spruce-200 dark:bg-spruce-800 text-spruce-800 dark:text-spruce-300 border border-spruce-300 dark:border-spruce-700">
                 {notifications.length}
               </span>
               <span aria-hidden="true">&rarr;</span>

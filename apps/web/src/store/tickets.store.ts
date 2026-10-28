@@ -17,6 +17,7 @@ export interface TicketsState {
   // Accordion & Portal UI state managed in Zustand
   expandedTicketIds: Record<string, boolean>;
   expandedCommentHistories: Record<string, boolean>;
+  viewedTicketIds: Record<string, boolean>;
   highlightedTicketId: string | null;
   hasInitializedExpansion: boolean;
   portalSearchQuery: string;
@@ -37,6 +38,9 @@ export interface TicketsState {
   toggleTicketExpanded: (ticketId: string) => void;
   setTicketExpanded: (ticketId: string, expanded: boolean) => void;
   setAllTicketsExpanded: (tickets: Ticket[], expanded: boolean) => void;
+  markTicketViewed: (ticketId: string) => void;
+  markTicketUnviewed: (ticketId: string) => void;
+  markAllTicketsViewed: (tickets: Ticket[]) => void;
   setHighlightedTicketId: (ticketId: string | null) => void;
   highlightTicket: (ticketId: string) => void;
   toggleCommentHistory: (ticketId: string) => void;
@@ -57,6 +61,7 @@ export const useTicketsStore = create<TicketsState>()(
 
       expandedTicketIds: {},
       expandedCommentHistories: {},
+      viewedTicketIds: {},
       highlightedTicketId: null,
       hasInitializedExpansion: false,
       portalSearchQuery: '',
@@ -101,6 +106,7 @@ export const useTicketsStore = create<TicketsState>()(
           lastUpdatedAt: null,
           expandedTicketIds: {},
           expandedCommentHistories: {},
+          viewedTicketIds: {},
           highlightedTicketId: null,
           hasInitializedExpansion: false,
           portalSearchQuery: '',
@@ -119,24 +125,36 @@ export const useTicketsStore = create<TicketsState>()(
           return;
         }
         const initial: Record<string, boolean> = {};
+        const viewed = { ...get().viewedTicketIds };
         tickets.forEach((ticket, idx) => {
           if (idx === 0 || ticket.status === 'NEEDS_INFO') {
             initial[ticket.id] = true;
+            viewed[ticket.id] = true;
           }
         });
         set({
           expandedTicketIds: initial,
+          viewedTicketIds: viewed,
           hasInitializedExpansion: true,
         });
       },
 
       toggleTicketExpanded: (ticketId: string) => {
         const current = get().expandedTicketIds;
+        const willBeExpanded = !current[ticketId];
         set({
           expandedTicketIds: {
             ...current,
-            [ticketId]: !current[ticketId],
+            [ticketId]: willBeExpanded,
           },
+          ...(willBeExpanded
+            ? {
+                viewedTicketIds: {
+                  ...get().viewedTicketIds,
+                  [ticketId]: true,
+                },
+              }
+            : {}),
         });
       },
 
@@ -146,6 +164,14 @@ export const useTicketsStore = create<TicketsState>()(
             ...get().expandedTicketIds,
             [ticketId]: expanded,
           },
+          ...(expanded
+            ? {
+                viewedTicketIds: {
+                  ...get().viewedTicketIds,
+                  [ticketId]: true,
+                },
+              }
+            : {}),
         });
       },
 
@@ -154,11 +180,39 @@ export const useTicketsStore = create<TicketsState>()(
           set({ expandedTicketIds: {} });
           return;
         }
-        const next: Record<string, boolean> = {};
+        const nextExp: Record<string, boolean> = {};
+        const nextViewed = { ...get().viewedTicketIds };
+        tickets.forEach((t) => {
+          nextExp[t.id] = true;
+          nextViewed[t.id] = true;
+        });
+        set({
+          expandedTicketIds: nextExp,
+          viewedTicketIds: nextViewed,
+        });
+      },
+
+      markTicketViewed: (ticketId: string) => {
+        set({
+          viewedTicketIds: {
+            ...get().viewedTicketIds,
+            [ticketId]: true,
+          },
+        });
+      },
+
+      markTicketUnviewed: (ticketId: string) => {
+        const next = { ...get().viewedTicketIds };
+        delete next[ticketId];
+        set({ viewedTicketIds: next });
+      },
+
+      markAllTicketsViewed: (tickets: Ticket[]) => {
+        const next = { ...get().viewedTicketIds };
         tickets.forEach((t) => {
           next[t.id] = true;
         });
-        set({ expandedTicketIds: next });
+        set({ viewedTicketIds: next });
       },
 
       toggleCommentHistory: (ticketId: string) => {
@@ -180,6 +234,10 @@ export const useTicketsStore = create<TicketsState>()(
         set({
           expandedTicketIds: {
             ...current,
+            [ticketId]: true,
+          },
+          viewedTicketIds: {
+            ...get().viewedTicketIds,
             [ticketId]: true,
           },
           highlightedTicketId: ticketId,
@@ -306,6 +364,7 @@ export const useTicketsStore = create<TicketsState>()(
         hasLoadedTickets: state.hasLoadedTickets,
         lastUpdatedAt: state.lastUpdatedAt,
         expandedTicketIds: state.expandedTicketIds,
+        viewedTicketIds: state.viewedTicketIds,
         hasInitializedExpansion: state.hasInitializedExpansion,
         portalSearchQuery: state.portalSearchQuery,
       }),
