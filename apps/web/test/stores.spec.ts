@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { useTicketsStore } from '../src/store/tickets.store';
 import { useAdminStore } from '../src/store/admin.store';
+import { useAuthStore } from '../src/store/auth.store';
 import type { Ticket } from '../src/components/ticket-list';
 
-// Provide a mock sessionStorage for zustand persist middleware in Node environment
+// Provide a mock sessionStorage & localStorage for zustand persist middleware in Node environment
+const mockSessionStorage: Record<string, string> = {};
+const mockLocalStorage: Record<string, string> = {};
+
 beforeAll(() => {
-  const store: Record<string, string> = {};
-  globalThis.sessionStorage = {
+  const createMockStorage = (store: Record<string, string>) => ({
     getItem: (key: string) => store[key] || null,
     setItem: (key: string, val: string) => {
       store[key] = val;
@@ -19,7 +22,11 @@ beforeAll(() => {
     },
     key: (i: number) => Object.keys(store)[i] || null,
     length: Object.keys(store).length,
-  };
+  });
+
+  globalThis.sessionStorage = createMockStorage(mockSessionStorage);
+  globalThis.localStorage = createMockStorage(mockLocalStorage);
+  (globalThis as any).window = globalThis;
 });
 
 describe('Web State Management Stores (Zustand)', () => {
@@ -233,6 +240,62 @@ describe('Web State Management Stores (Zustand)', () => {
       const store = useAdminStore.getState();
       store.setCommentDraft('ticket-1', 'Initial draft for ticket 1');
       expect(useAdminStore.getState().commentDrafts['ticket-1']).toBe('Initial draft for ticket 1');
+    });
+  });
+
+  describe('AuthStore', () => {
+    beforeEach(() => {
+      useAuthStore.getState().clearSession();
+    });
+
+    it('sets session and retains accessToken strictly in-memory without sessionStorage persistence', () => {
+      const store = useAuthStore.getState();
+      const mockSession = {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_token_value',
+        user: {
+          id: 'admin-1',
+          email: 'admin@ticketsupport.local',
+          fullName: 'Alex Rivera (IT Admin)',
+          role: 'ADMIN' as const,
+        },
+      };
+
+      store.setSession(mockSession);
+
+      const activeState = useAuthStore.getState();
+      expect(activeState.accessToken).toBe(mockSession.accessToken);
+      expect(activeState.user?.email).toBe('admin@ticketsupport.local');
+      expect(activeState.isSessionVerified).toBe(true);
+
+      // Verify that zustand persist partialize NEVER wrote accessToken to sessionStorage
+      const persistedRaw = mockSessionStorage['ts_zustand_auth_store'];
+      if (persistedRaw) {
+        expect(persistedRaw).not.toContain('"accessToken"');
+        expect(persistedRaw).not.toContain(mockSession.accessToken);
+        const parsed = JSON.parse(persistedRaw);
+        expect(parsed.state.accessToken).toBeUndefined();
+        expect(parsed.state.user.id).toBe('admin-1');
+      }
+    });
+
+    it('clears session and scrubs stored credentials', () => {
+      const store = useAuthStore.getState();
+      store.setSession({
+        accessToken: 'temp-token',
+        user: {
+          id: 'user-1',
+          email: 'agent@test.local',
+          fullName: 'Agent Smith',
+          role: 'AGENT' as const,
+        },
+      });
+
+      store.clearSession();
+
+      const cleared = useAuthStore.getState();
+      expect(cleared.user).toBeNull();
+      expect(cleared.accessToken).toBeNull();
+      expect(cleared.isSessionVerified).toBe(false);
     });
   });
 });

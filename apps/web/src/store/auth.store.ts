@@ -9,7 +9,9 @@ import {
   setStoredSession,
   clearStoredSession,
   verifyPassportSession,
+  sanitizeAuthUser,
 } from '@lib/helpers';
+import { registerAuthTokenGetter } from '@lib/api-client';
 
 export interface AuthState {
   user: AuthUser | null;
@@ -24,6 +26,22 @@ export interface AuthState {
 
 let inFlightVerification: Promise<AuthUser | null> | null = null;
 
+// Self-healing: Proactively scrub legacy plaintext tokens from existing sessionStorage
+if (typeof window !== 'undefined') {
+  try {
+    const rawZustandAuth = window.sessionStorage.getItem('ts_zustand_auth_store');
+    if (rawZustandAuth && rawZustandAuth.includes('"accessToken"')) {
+      const parsed = JSON.parse(rawZustandAuth);
+      if (parsed?.state && 'accessToken' in parsed.state) {
+        delete parsed.state.accessToken;
+        window.sessionStorage.setItem('ts_zustand_auth_store', JSON.stringify(parsed));
+      }
+    }
+  } catch {
+    // Ignore storage parse errors
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -33,9 +51,16 @@ export const useAuthStore = create<AuthState>()(
       isVerifyingSession: false,
 
       setSession: (session: AuthSession) => {
-        setStoredSession(session);
+        const sanitizedUser = sanitizeAuthUser(session.user);
+        if (!sanitizedUser) return;
+
+        setStoredSession({
+          accessToken: session.accessToken,
+          user: sanitizedUser,
+        });
+
         set({
-          user: session.user,
+          user: sanitizedUser,
           accessToken: session.accessToken,
           isSessionVerified: true,
           isVerifyingSession: false,
@@ -62,7 +87,7 @@ export const useAuthStore = create<AuthState>()(
 
         const stored = getStoredSession();
         const token = state.accessToken || stored?.accessToken || null;
-        const cachedUser = state.user || stored?.user || null;
+        const cachedUser = state.user || (stored?.user ? sanitizeAuthUser(stored.user) : null);
 
         if (!token) {
           set({
@@ -89,14 +114,15 @@ export const useAuthStore = create<AuthState>()(
         inFlightVerification = verifyPassportSession(token)
           .then((verifiedUser) => {
             if (verifiedUser) {
-              setStoredSession({ accessToken: token, user: verifiedUser });
+              const sanitized = sanitizeAuthUser(verifiedUser)!;
+              setStoredSession({ accessToken: token, user: sanitized });
               set({
-                user: verifiedUser,
+                user: sanitized,
                 accessToken: token,
                 isSessionVerified: true,
                 isVerifyingSession: false,
               });
-              return verifiedUser;
+              return sanitized;
             } else {
               clearStoredSession();
               set({
@@ -119,10 +145,16 @@ export const useAuthStore = create<AuthState>()(
       name: 'ts_zustand_auth_store',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
-        user: state.user,
-        accessToken: state.accessToken,
+        user: state.user ? sanitizeAuthUser(state.user) : null,
+        // SECURITY: accessToken is deliberately omitted so sessionStorage NEVER contains JWT credentials.
+        // The token is held strictly in-memory during active sessions.
         isSessionVerified: state.isSessionVerified,
       }),
     },
   ),
 );
+
+// Register in-memory token getter with the API client
+registerAuthTokenGetter(() => {
+  return useAuthStore.getState().accessToken || getStoredSession()?.accessToken || null;
+});

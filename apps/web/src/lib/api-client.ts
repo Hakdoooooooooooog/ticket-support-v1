@@ -6,22 +6,23 @@ export const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
+let tokenGetter: (() => string | null) | null = null;
+
+/**
+ * Registers a runtime token provider (e.g. from the in-memory auth store)
+ * to avoid storing or reading tokens in plaintext from client web storage.
+ */
+export function registerAuthTokenGetter(getter: () => string | null): void {
+  tokenGetter = getter;
+}
+
 // Request Interceptor: Attaches JWT Bearer token and sanitizes all outbound inputs
 apiClient.interceptors.request.use(
   (config) => {
-    if (typeof window !== 'undefined') {
-      try {
-        const rawSession =
-          window.localStorage.getItem('ts_auth_s') ||
-          window.localStorage.getItem('ticketsupport_auth_session');
-        if (rawSession && !config.headers.Authorization) {
-          const parsed = JSON.parse(rawSession);
-          if (parsed?.accessToken) {
-            config.headers.Authorization = `Bearer ${parsed.accessToken}`;
-          }
-        }
-      } catch {
-        // Ignore storage read errors
+    if (!config.headers.Authorization && tokenGetter) {
+      const activeToken = tokenGetter();
+      if (activeToken) {
+        config.headers.Authorization = `Bearer ${activeToken}`;
       }
     }
 

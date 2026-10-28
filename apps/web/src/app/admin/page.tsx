@@ -631,13 +631,13 @@ export default function AdminDashboardPage() {
         >
           {/* Accordion Summary Header */}
           <CardHeader className="p-0">
-            <button
-              type="button"
-              aria-expanded={isExpanded}
-              onClick={() => toggleTicketExpanded(ticket.id)}
-              className="w-full text-left p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-t-xl"
-            >
-              <div className="space-y-1.5 min-w-0 flex-1">
+            <div className="w-full p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 rounded-t-xl hover:bg-spruce-50/50 dark:hover:bg-spruce-900/40 transition-colors">
+              <button
+                type="button"
+                aria-expanded={isExpanded}
+                onClick={() => toggleTicketExpanded(ticket.id)}
+                className="space-y-1.5 min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-lg group"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`inline-flex items-center justify-center w-5 h-5 rounded text-spruce-400 transition-transform duration-200 ${
@@ -667,7 +667,7 @@ export default function AdminDashboardPage() {
                   )}
 
                   <CardTitle
-                    className={`text-base sm:text-lg truncate ${
+                    className={`text-base sm:text-lg truncate group-hover:text-spruce-600 dark:group-hover:text-spruce-200 transition-colors ${
                       !isViewed
                         ? 'font-bold text-spruce-950 dark:text-white'
                         : 'font-medium text-spruce-800 dark:text-spruce-300'
@@ -740,7 +740,7 @@ export default function AdminDashboardPage() {
                     </>
                   )}
                 </div>
-              </div>
+              </button>
 
               <div className="flex items-center gap-2 pl-7 lg:pl-0 shrink-0">
                 <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
@@ -751,8 +751,7 @@ export default function AdminDashboardPage() {
                 </Badge>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={() => {
                     if (isViewed) {
                       markTicketUnviewed(ticket.id);
                     } else {
@@ -760,7 +759,7 @@ export default function AdminDashboardPage() {
                     }
                   }}
                   title={isViewed ? 'Mark ticket as new / unviewed' : 'Mark ticket as viewed'}
-                  className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1"
+                  className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400"
                   aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
                 >
                   {isViewed ? (
@@ -775,7 +774,7 @@ export default function AdminDashboardPage() {
                   )}
                 </button>
               </div>
-            </button>
+            </div>
           </CardHeader>
 
           {/* Accordion Body */}
@@ -815,7 +814,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor={`priority-${ticket.id}`}
-                        className="text-xs font-medium text-spruce-500"
+                        className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                       >
                         Priority:
                       </label>
@@ -844,7 +843,7 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-1.5">
                         <label
                           htmlFor={`assignee-${ticket.id}`}
-                          className="text-xs font-medium text-spruce-500"
+                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                         >
                           Assignee:
                         </label>
@@ -925,23 +924,23 @@ export default function AdminDashboardPage() {
                 /* Ticket assigned to another agent (read-only for non-admin agents with Take Over option) */
                 <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-spruce-50/90 dark:bg-spruce-900/60 border border-spruce-200/70 dark:border-spruce-800">
                   <div className="flex flex-wrap items-center gap-3 text-xs">
-                    <span className="text-spruce-500">
+                    <span className="text-spruce-600 dark:text-spruce-300">
                       Assigned to:{' '}
-                      <strong className="font-semibold text-spruce-800 dark:text-spruce-200">
+                      <strong className="font-semibold text-spruce-900 dark:text-spruce-100">
                         {ticket.assignee?.fullName || 'Another Agent'}
                       </strong>
                     </span>
-                    <span className="text-spruce-400">•</span>
-                    <span className="text-spruce-500">
+                    <span className="text-spruce-400 dark:text-spruce-600">•</span>
+                    <span className="text-spruce-600 dark:text-spruce-300">
                       Status:{' '}
-                      <strong className="text-spruce-700 dark:text-spruce-200">
+                      <strong className="text-spruce-900 dark:text-spruce-100">
                         {ticket.status.replace('_', ' ')}
                       </strong>
                     </span>
-                    <span className="text-spruce-400">•</span>
-                    <span className="text-spruce-500">
+                    <span className="text-spruce-400 dark:text-spruce-600">•</span>
+                    <span className="text-spruce-600 dark:text-spruce-300">
                       Priority:{' '}
-                      <strong className="text-spruce-700 dark:text-spruce-200">
+                      <strong className="text-spruce-900 dark:text-spruce-100">
                         {ticket.priority}
                       </strong>
                     </span>
@@ -973,7 +972,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor={`status-${ticket.id}`}
-                        className="text-xs font-medium text-spruce-500"
+                        className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                       >
                         Status:
                       </label>
@@ -1001,7 +1000,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <label
                         htmlFor={`priority-${ticket.id}`}
-                        className="text-xs font-medium text-spruce-500"
+                        className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                       >
                         Priority:
                       </label>
@@ -1030,7 +1029,7 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-1.5">
                         <label
                           htmlFor={`assignee-${ticket.id}`}
-                          className="text-xs font-medium text-spruce-500"
+                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
                         >
                           Assignee:
                         </label>
@@ -1062,7 +1061,7 @@ export default function AdminDashboardPage() {
                     ) : (
                       /* Agent is assigned to this ticket: show their name and Unassign option */
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-spruce-500">Assignee:</span>
+                        <span className="font-semibold text-spruce-700 dark:text-spruce-300">Assignee:</span>
                         <span className="font-medium text-spruce-800 dark:text-spruce-200">
                           {ticket.assignee?.fullName || 'Assigned to You'}
                         </span>
@@ -2303,9 +2302,9 @@ export default function AdminDashboardPage() {
 
               {/* Support Team Workload Summary */}
               {agents.length > 0 && (
-                <Card>
+                <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 shadow-sm">
                   <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-spruce-500">
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-spruce-700 dark:text-spruce-200">
                       IT Support Team Workload
                     </CardTitle>
                     <Button
@@ -2316,7 +2315,7 @@ export default function AdminDashboardPage() {
                         setAssignedScope('ALL_ASSIGNED');
                         setActiveSection('ASSIGNED_TICKETS');
                       }}
-                      className="h-7 text-xs"
+                      className="h-7 text-xs text-spruce-700 dark:text-spruce-300 hover:text-spruce-950 dark:hover:text-white"
                     >
                       View All Assigned ({allAssignedTickets.length}) →
                     </Button>
@@ -2336,20 +2335,21 @@ export default function AdminDashboardPage() {
                       return (
                         <div
                           key={agent.id}
-                          className="p-3 rounded-lg border border-spruce-200 dark:border-spruce-800 bg-spruce-50/60 dark:bg-spruce-900/50 flex items-center justify-between gap-2"
+                          className="p-3 rounded-lg border border-spruce-200 dark:border-spruce-700/80 bg-spruce-50/70 dark:bg-spruce-950/70 flex items-center justify-between gap-2 shadow-xs"
                         >
-                          <div className="space-y-0.5 min-w-0">
+                          <div className="space-y-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-bold text-spruce-900 dark:text-white truncate">
+                              <span className="text-xs font-bold text-spruce-950 dark:text-white truncate">
                                 {agent.fullName}
                               </span>
-                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-spruce-200 text-spruce-900 dark:bg-spruce-800 dark:text-spruce-200 border border-spruce-300 dark:border-spruce-700">
                                 {agent.role}
                               </Badge>
                             </div>
-                            <p className="text-[11px] text-spruce-500">
-                              <strong className="text-spruce-700 dark:text-spruce-300">{activeCount} active</strong> ·{' '}
-                              <span className="text-emerald-600 dark:text-emerald-400">{resolvedCount} resolved</span>
+                            <p className="text-[11px] text-spruce-600 dark:text-spruce-300 flex items-center gap-1.5 pt-0.5">
+                              <strong className="text-spruce-900 dark:text-spruce-100 font-semibold">{activeCount} active</strong>
+                              <span className="text-spruce-400 dark:text-spruce-600">•</span>
+                              <span className="text-emerald-600 dark:text-emerald-300 font-medium">{resolvedCount} resolved</span>
                             </p>
                           </div>
                           <Button
@@ -2362,7 +2362,7 @@ export default function AdminDashboardPage() {
                               );
                               setActiveSection('ASSIGNED_TICKETS');
                             }}
-                            className="h-7 text-xs shrink-0"
+                            className="h-7 text-xs shrink-0 border-spruce-300 dark:border-spruce-700 bg-white dark:bg-spruce-800 hover:bg-spruce-100 dark:hover:bg-spruce-700 text-spruce-800 dark:text-spruce-100 shadow-xs"
                           >
                             View Queue
                           </Button>
@@ -2635,24 +2635,24 @@ export default function AdminDashboardPage() {
                         (t) => resolveTicketAssigneeId(t) === agent.id && t.status !== 'CLOSED',
                       ).length;
                       return (
-                        <Card key={agent.id} className="border-spruce-200 dark:border-spruce-800">
+                        <Card key={agent.id} className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 shadow-sm">
                           <CardContent className="p-4 flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-full bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-300 font-bold flex items-center justify-center shrink-0 border border-spruce-300 dark:border-spruce-700 text-xs">
+                              <div className="w-10 h-10 rounded-full bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-200 font-bold flex items-center justify-center shrink-0 border border-spruce-300 dark:border-spruce-700 text-xs shadow-xs">
                                 {agent.fullName.charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
-                                <p className="font-semibold text-sm truncate text-spruce-900 dark:text-white">
+                                <p className="font-bold text-sm truncate text-spruce-950 dark:text-white">
                                   {agent.fullName}
                                 </p>
-                                <p className="text-xs text-spruce-500 truncate">{agent.email}</p>
+                                <p className="text-xs text-spruce-600 dark:text-spruce-300 truncate">{agent.email}</p>
                               </div>
                             </div>
                             <div className="text-right shrink-0 space-y-1">
                               <Badge variant={agent.role === 'ADMIN' ? 'default' : 'secondary'}>
                                 {agent.role}
                               </Badge>
-                              <p className="text-[11px] text-spruce-500 dark:text-spruce-400">
+                              <p className="text-[11px] text-spruce-700 dark:text-spruce-200 font-medium">
                                 {assignedCount} active {assignedCount === 1 ? 'ticket' : 'tickets'}
                               </p>
                             </div>
@@ -2667,12 +2667,12 @@ export default function AdminDashboardPage() {
               {/* SUBTAB 2: GENERATE STAFF INVITATION */}
               {teamManagementSubtab === 'INVITE' && (
                 <div className="space-y-6">
-                  <Card className="border-spruce-200 dark:border-spruce-800">
+                  <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-base font-bold text-spruce-900 dark:text-white">
+                      <CardTitle className="text-base font-bold text-spruce-950 dark:text-white">
                         Issue Staff Invitation Link / Code
                       </CardTitle>
-                      <p className="text-xs text-spruce-500">
+                      <p className="text-xs text-spruce-600 dark:text-spruce-300 leading-relaxed">
                         Generate a secure invitation link for new Support Engineers or Administrators. Public registration only creates customer accounts; staff members must redeem this invitation to activate engineer permissions.
                       </p>
                     </CardHeader>
@@ -2701,7 +2701,7 @@ export default function AdminDashboardPage() {
                         <div className="space-y-1.5">
                           <label
                             htmlFor="invite-email"
-                            className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
+                            className="text-xs font-bold text-spruce-800 dark:text-spruce-200"
                           >
                             Staff Email Address
                           </label>
@@ -2712,14 +2712,14 @@ export default function AdminDashboardPage() {
                             value={inviteEmail}
                             onChange={(e) => setInviteEmail(e.target.value)}
                             required
-                            className="text-xs h-9"
+                            className="text-xs h-9 bg-white dark:bg-spruce-950 text-spruce-950 dark:text-spruce-100 border-spruce-300 dark:border-spruce-700"
                           />
                         </div>
 
                         <div className="space-y-1.5">
                           <label
                             htmlFor="invite-role"
-                            className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
+                            className="text-xs font-bold text-spruce-800 dark:text-spruce-200"
                           >
                             Staff Role
                           </label>
@@ -2749,8 +2749,8 @@ export default function AdminDashboardPage() {
                       </form>
 
                       {generatedInviteCode && (
-                        <div className="p-4 rounded-lg bg-spruce-100/80 border border-spruce-300 dark:bg-spruce-900/60 dark:border-spruce-700 space-y-2">
-                          <span className="text-xs font-bold text-spruce-900 dark:text-spruce-300 uppercase tracking-wider">
+                        <div className="p-4 rounded-lg bg-spruce-50 dark:bg-spruce-950/80 border border-spruce-300 dark:border-spruce-700 space-y-2">
+                          <span className="text-xs font-bold text-spruce-900 dark:text-spruce-200 uppercase tracking-wider">
                             Active Invitation Link Generated
                           </span>
                           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
@@ -2761,19 +2761,19 @@ export default function AdminDashboardPage() {
                                   ? `${window.location.origin}?invite=${generatedInviteCode}`
                                   : generatedInviteCode
                               }
-                              className="text-xs font-mono h-9 bg-white dark:bg-spruce-950 flex-1"
+                              className="text-xs font-mono h-9 bg-white dark:bg-spruce-900 text-spruce-950 dark:text-white border-spruce-300 dark:border-spruce-700 flex-1"
                             />
                             <Button
                               type="button"
                               variant="default"
                               size="sm"
                               onClick={() => handleCopyInviteLink(generatedInviteCode)}
-                              className="text-xs shrink-0"
+                              className="text-xs shrink-0 bg-spruce-800 hover:bg-spruce-900 text-white dark:bg-spruce-300 dark:hover:bg-spruce-200 dark:text-spruce-950 font-semibold"
                             >
                               {copiedLink ? 'Copied to Clipboard!' : 'Copy Invite Link'}
                             </Button>
                           </div>
-                          <p className="text-[11px] text-spruce-700 dark:text-spruce-300/80">
+                          <p className="text-[11px] text-spruce-600 dark:text-spruce-300">
                             The recipient can open this link to register their staff account directly.
                           </p>
                         </div>
@@ -2782,19 +2782,19 @@ export default function AdminDashboardPage() {
                   </Card>
 
                   {/* Pending & Historical Invites List */}
-                  <Card className="border-spruce-200 dark:border-spruce-800">
+                  <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-base font-bold text-spruce-900 dark:text-white">
+                      <CardTitle className="text-base font-bold text-spruce-950 dark:text-white">
                         Staff Invitations ({invites.length})
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                       {invites.length === 0 ? (
-                        <p className="p-6 text-center text-xs text-spruce-500">
+                        <p className="p-6 text-center text-xs text-spruce-600 dark:text-spruce-400">
                           No staff invitations issued yet.
                         </p>
                       ) : (
-                        <div className="divide-y divide-spruce-100 dark:divide-spruce-800 overflow-x-auto">
+                        <div className="divide-y divide-spruce-100 dark:divide-spruce-800/80 overflow-x-auto">
                           {invites.map((invite) => {
                             const isExpired = new Date() > new Date(invite.expiresAt);
                             return (
@@ -2804,7 +2804,7 @@ export default function AdminDashboardPage() {
                               >
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <strong className="text-spruce-900 dark:text-white">
+                                    <strong className="text-sm font-bold text-spruce-950 dark:text-white">
                                       {invite.email}
                                     </strong>
                                     <Badge
@@ -2815,21 +2815,21 @@ export default function AdminDashboardPage() {
                                       {invite.role}
                                     </Badge>
                                     {invite.accepted ? (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-semibold">
                                         Redeemed
                                       </span>
                                     ) : isExpired ? (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/10 text-red-600 dark:text-red-400 font-medium">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20 font-semibold">
                                         Expired
                                       </span>
                                     ) : (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-semibold">
                                         Pending
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-[11px] text-spruce-500 dark:text-spruce-400 font-mono">
-                                    Code: {invite.code} • Expires{' '}
+                                  <p className="text-[11px] text-spruce-600 dark:text-spruce-300 font-mono">
+                                    Code: <span className="font-semibold text-spruce-900 dark:text-spruce-100">{invite.code}</span> • Expires{' '}
                                     {new Date(invite.expiresAt).toLocaleDateString()}
                                   </p>
                                 </div>
@@ -2841,7 +2841,7 @@ export default function AdminDashboardPage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleCopyInviteLink(invite.code)}
-                                      className="h-7 text-[11px]"
+                                      className="h-7 text-[11px] border-spruce-300 dark:border-spruce-700 bg-white dark:bg-spruce-800 hover:bg-spruce-100 dark:hover:bg-spruce-700 text-spruce-800 dark:text-spruce-200 shadow-xs"
                                     >
                                       Copy Link
                                     </Button>
@@ -2851,7 +2851,7 @@ export default function AdminDashboardPage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => revokeInviteMutation.mutate(invite.id)}
-                                    className="h-7 text-[11px] text-red-500 hover:text-red-700"
+                                    className="h-7 text-[11px] text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
                                   >
                                     Revoke
                                   </Button>
@@ -2868,12 +2868,12 @@ export default function AdminDashboardPage() {
 
               {/* SUBTAB 3: DIRECT PROVISIONING */}
               {teamManagementSubtab === 'PROVISION' && (
-                <Card className="border-spruce-200 dark:border-spruce-800 max-w-xl">
+                <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 shadow-sm max-w-xl">
                   <CardHeader>
-                    <CardTitle className="text-base font-bold text-spruce-900 dark:text-white">
+                    <CardTitle className="text-base font-bold text-spruce-950 dark:text-white">
                       Directly Provision Staff Account
                     </CardTitle>
-                    <p className="text-xs text-spruce-500">
+                    <p className="text-xs text-spruce-600 dark:text-spruce-300 leading-relaxed">
                       Create an IT Support Engineer or Administrator account immediately with an initial password.
                     </p>
                   </CardHeader>
@@ -2904,7 +2904,7 @@ export default function AdminDashboardPage() {
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-name"
-                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
+                          className="text-xs font-bold text-spruce-800 dark:text-spruce-200"
                         >
                           Full Name
                         </label>
@@ -2914,14 +2914,14 @@ export default function AdminDashboardPage() {
                           value={provisionFullName}
                           onChange={(e) => setProvisionFullName(e.target.value)}
                           required
-                          className="text-xs h-9"
+                          className="text-xs h-9 bg-white dark:bg-spruce-950 text-spruce-950 dark:text-spruce-100 border-spruce-300 dark:border-spruce-700"
                         />
                       </div>
 
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-email"
-                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
+                          className="text-xs font-bold text-spruce-800 dark:text-spruce-200"
                         >
                           Email Address
                         </label>
@@ -2932,14 +2932,14 @@ export default function AdminDashboardPage() {
                           value={provisionEmail}
                           onChange={(e) => setProvisionEmail(e.target.value)}
                           required
-                          className="text-xs h-9"
+                          className="text-xs h-9 bg-white dark:bg-spruce-950 text-spruce-950 dark:text-spruce-100 border-spruce-300 dark:border-spruce-700"
                         />
                       </div>
 
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-password"
-                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
+                          className="text-xs font-bold text-spruce-800 dark:text-spruce-200"
                         >
                           Initial Password
                         </label>
@@ -2950,14 +2950,14 @@ export default function AdminDashboardPage() {
                           value={provisionPassword}
                           onChange={(e) => setProvisionPassword(e.target.value)}
                           required
-                          className="text-xs h-9"
+                          className="text-xs h-9 bg-white dark:bg-spruce-950 text-spruce-950 dark:text-spruce-100 border-spruce-300 dark:border-spruce-700"
                         />
                       </div>
 
                       <div className="space-y-1.5">
                         <label
                           htmlFor="provision-role"
-                          className="text-xs font-semibold text-spruce-700 dark:text-spruce-300"
+                          className="text-xs font-bold text-spruce-800 dark:text-spruce-200"
                         >
                           Account Role
                         </label>

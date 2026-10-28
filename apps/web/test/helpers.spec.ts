@@ -13,6 +13,10 @@ import {
   getStatusBadgeVariant,
   formatNotificationTime,
   getNotificationBadge,
+  sanitizeAuthUser,
+  getStoredSession,
+  setStoredSession,
+  clearStoredSession,
 } from '../src/lib/helpers';
 import type { Ticket } from '../src/components/ticket-list';
 
@@ -298,6 +302,71 @@ describe('Web Helpers & Domain Functions', () => {
       expect(getNotificationBadge('TICKET_NOTE_POSTED').label).toBe('NOTE');
       expect(getNotificationBadge('TICKET_ASSIGNED').label).toBe('ASSIGNED');
       expect(getNotificationBadge('TICKET_STATUS_CHANGED').label).toBe('STATUS');
+    });
+  });
+
+  describe('Session vault security and sanitization', () => {
+    it('sanitizes auth user object and strips unauthorized keys', () => {
+      const unsafeUser = {
+        id: 'user-xyz',
+        email: 'user@test.local',
+        fullName: 'Test User',
+        role: 'AGENT' as const,
+        accessToken: 'should-not-be-in-user-object',
+        passwordHash: 'secret-hash',
+      };
+      const clean = sanitizeAuthUser(unsafeUser);
+      expect(clean).not.toBeNull();
+      expect(clean?.id).toBe('user-xyz');
+      expect(clean?.email).toBe('user@test.local');
+      expect(clean?.fullName).toBe('Test User');
+      expect(clean?.role).toBe('AGENT');
+      expect((clean as any).accessToken).toBeUndefined();
+      expect((clean as any).passwordHash).toBeUndefined();
+    });
+
+    it('encodes and decodes session in secure vault format without plaintext token', () => {
+      const mockStorage: Record<string, string> = {};
+      (globalThis as any).window = {
+        localStorage: {
+          getItem: (k: string) => mockStorage[k] || null,
+          setItem: (k: string, v: string) => {
+            mockStorage[k] = v;
+          },
+          removeItem: (k: string) => {
+            delete mockStorage[k];
+          },
+        },
+      };
+
+      const session = {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secretpayload.sig',
+        user: {
+          id: 'u-1',
+          email: 'admin@test.local',
+          fullName: 'Admin User',
+          role: 'ADMIN' as const,
+        },
+      };
+
+      setStoredSession(session);
+
+      const storedRaw = mockStorage['ts_auth_s'];
+      expect(storedRaw).toBeDefined();
+      expect(storedRaw.startsWith('sec_v1:')).toBe(true);
+      // Ensure raw JWT does NOT appear in plaintext
+      expect(storedRaw).not.toContain('eyJhbGciOiJIUzI1Ni');
+      expect(storedRaw).not.toContain('"accessToken"');
+
+      // Decodes back accurately
+      const restored = getStoredSession();
+      expect(restored).not.toBeNull();
+      expect(restored?.accessToken).toBe(session.accessToken);
+      expect(restored?.user.email).toBe(session.user.email);
+
+      // Clears cleanly
+      clearStoredSession();
+      expect(mockStorage['ts_auth_s']).toBeUndefined();
     });
   });
 });

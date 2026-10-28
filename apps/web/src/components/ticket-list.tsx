@@ -331,115 +331,112 @@ export function TicketList() {
               }`}
             >
               {/* Accordion Header */}
-              <button
-                type="button"
-                aria-expanded={isExpanded}
-                onClick={() => toggleTicketExpanded(ticket.id)}
-                className="w-full text-left p-4 hover:bg-spruce-50/80 dark:hover:bg-spruce-800/50 transition-colors focus:outline-none"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <span
-                      className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-spruce-200 dark:border-spruce-700 bg-spruce-100 dark:bg-spruce-900 text-[10px] text-spruce-700 dark:text-spruce-300 transition-transform ${
-                        isExpanded ? 'rotate-90' : ''
-                      }`}
-                    >
-                      ▸
-                    </span>
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-mono text-spruce-400">
-                          {formatShortTicketId(ticket.id)}
-                        </span>
+              <div className="w-full p-4 hover:bg-spruce-50/80 dark:hover:bg-spruce-800/50 transition-colors flex items-start justify-between gap-3">
+                <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  onClick={() => toggleTicketExpanded(ticket.id)}
+                  className="flex items-start gap-2.5 min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-lg group"
+                >
+                  <span
+                    className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-spruce-200 dark:border-spruce-700 bg-spruce-100 dark:bg-spruce-900 text-[10px] text-spruce-700 dark:text-spruce-300 transition-transform ${
+                      isExpanded ? 'rotate-90' : ''
+                    }`}
+                  >
+                    ▸
+                  </span>
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-mono text-spruce-400">
+                        {formatShortTicketId(ticket.id)}
+                      </span>
 
-                        {/* New vs Viewed Color Badge Variant */}
-                        {!isViewed ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-spruce-100 text-spruce-800 border border-spruce-300 dark:bg-spruce-300/15 dark:text-spruce-300 dark:border-spruce-400/40 shadow-xs">
-                            <span className="h-1.5 w-1.5 rounded-full bg-spruce-600 dark:bg-spruce-300 animate-pulse" />
-                            New
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-spruce-500 dark:text-spruce-400 bg-spruce-100/50 dark:bg-spruce-900/40 border border-spruce-200/60 dark:border-spruce-800/60">
-                            <svg className="w-3 h-3 text-spruce-400 dark:text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Viewed
-                          </span>
-                        )}
+                      {/* New vs Viewed Color Badge Variant */}
+                      {!isViewed ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-spruce-100 text-spruce-800 border border-spruce-300 dark:bg-spruce-300/15 dark:text-spruce-300 dark:border-spruce-400/40 shadow-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-spruce-600 dark:bg-spruce-300 animate-pulse" />
+                          New
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-spruce-500 dark:text-spruce-400 bg-spruce-100/50 dark:bg-spruce-900/40 border border-spruce-200/60 dark:border-spruce-800/60">
+                          <svg className="w-3 h-3 text-spruce-400 dark:text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Viewed
+                        </span>
+                      )}
 
-                        <CardTitle
-                          className={`text-base leading-snug truncate ${
-                            !isViewed
-                              ? 'font-bold text-spruce-950 dark:text-white'
-                              : 'font-medium text-spruce-800 dark:text-spruce-300'
-                          }`}
-                        >
-                          {ticket.title}
-                        </CardTitle>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-spruce-500 dark:text-spruce-400">
-                        <span>{formatTicketDate(ticket.createdAt)}</span>
-                        <span>
-                          Assigned:{' '}
-                          <strong className="text-spruce-700 dark:text-spruce-300">
-                            {ticket.assignee?.fullName || 'Unassigned'}
-                          </strong>
+                      <CardTitle
+                        className={`text-base leading-snug truncate group-hover:text-spruce-600 dark:group-hover:text-spruce-200 transition-colors ${
+                          !isViewed
+                            ? 'font-bold text-spruce-950 dark:text-white'
+                            : 'font-medium text-spruce-800 dark:text-spruce-300'
+                        }`}
+                      >
+                        {ticket.title}
+                      </CardTitle>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-spruce-500 dark:text-spruce-400">
+                      <span>{formatTicketDate(ticket.createdAt)}</span>
+                      <span>
+                        Assigned:{' '}
+                        <strong className="text-spruce-700 dark:text-spruce-300">
+                          {ticket.assignee?.fullName || 'Unassigned'}
+                        </strong>
+                      </span>
+                      <span>
+                        {commentCount} {commentCount === 1 ? 'message' : 'messages'}
+                      </span>
+                      {attachmentCount > 0 && (
+                        <span className="text-spruce-700 dark:text-spruce-300 font-medium">
+                          {attachmentCount}{' '}
+                          {attachmentCount === 1 ? 'attachment' : 'attachments'}
                         </span>
-                        <span>
-                          {commentCount} {commentCount === 1 ? 'message' : 'messages'}
+                      )}
+                      {typeof ticket.csatRating === 'number' && (
+                        <span className="text-emerald-500 font-medium">
+                          CSAT {ticket.csatRating}.0
                         </span>
-                        {attachmentCount > 0 && (
-                          <span className="text-spruce-700 dark:text-spruce-300 font-medium">
-                            {attachmentCount}{' '}
-                            {attachmentCount === 1 ? 'attachment' : 'attachments'}
-                          </span>
-                        )}
-                        {typeof ticket.csatRating === 'number' && (
-                          <span className="text-emerald-500 font-medium">
-                            CSAT {ticket.csatRating}.0
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
+                </button>
 
-                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                    <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
-                      {ticket.priority}
-                    </Badge>
-                    <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                      {ticket.status === 'NEEDS_INFO'
-                        ? 'NEEDS ADDITIONAL INFO'
-                        : ticket.status}
-                    </Badge>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isViewed) {
-                          markTicketUnviewed(ticket.id);
-                        } else {
-                          markTicketViewed(ticket.id);
-                        }
-                      }}
-                      title={isViewed ? 'Mark as unread / new' : 'Mark as viewed'}
-                      className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1"
-                      aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
-                    >
-                      {isViewed ? (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-spruce-600 dark:text-spruce-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
+                <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                  <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                    {ticket.priority}
+                  </Badge>
+                  <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                    {ticket.status === 'NEEDS_INFO'
+                      ? 'NEEDS ADDITIONAL INFO'
+                      : ticket.status}
+                  </Badge>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isViewed) {
+                        markTicketUnviewed(ticket.id);
+                      } else {
+                        markTicketViewed(ticket.id);
+                      }
+                    }}
+                    title={isViewed ? 'Mark as unread / new' : 'Mark as viewed'}
+                    className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400"
+                    aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
+                  >
+                    {isViewed ? (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-spruce-600 dark:text-spruce-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {/* Accordion Body */}
               {isExpanded && (

@@ -90,14 +90,87 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+export function sanitizeAuthUser(user: Partial<AuthUser> | null | undefined): AuthUser | null {
+  if (!user || !user.id || !user.email) return null;
+  return {
+    id: String(user.id),
+    email: String(user.email),
+    fullName: String(user.fullName || ''),
+    role: (user.role as AuthUser['role']) || 'CUSTOMER',
+    ...(user.createdAt ? { createdAt: String(user.createdAt) } : {}),
+  };
+}
+
 const AUTH_STORAGE_KEY = 'ts_auth_s';
+const VAULT_SALT = 'ts_sec_k9u28_v1';
+
+function encodeSessionVault(session: AuthSession): string {
+  try {
+    const payload = JSON.stringify({
+      t: session.accessToken,
+      u: sanitizeAuthUser(session.user),
+      ts: Date.now(),
+    });
+    let masked = '';
+    for (let i = 0; i < payload.length; i++) {
+      masked += String.fromCharCode(payload.charCodeAt(i) ^ VAULT_SALT.charCodeAt(i % VAULT_SALT.length));
+    }
+    return `sec_v1:${btoa(masked)}`;
+  } catch {
+    return '';
+  }
+}
+
+function decodeSessionVault(vaultStr: string): AuthSession | null {
+  try {
+    if (!vaultStr) return null;
+    let rawStr = vaultStr;
+    if (vaultStr.startsWith('sec_v1:')) {
+      const base64Data = vaultStr.slice(7);
+      const decoded = atob(base64Data);
+      let unmasked = '';
+      for (let i = 0; i < decoded.length; i++) {
+        unmasked += String.fromCharCode(decoded.charCodeAt(i) ^ VAULT_SALT.charCodeAt(i % VAULT_SALT.length));
+      }
+      rawStr = unmasked;
+    }
+    const parsed = JSON.parse(rawStr);
+    if (parsed?.t && parsed?.u) {
+      const sanitized = sanitizeAuthUser(parsed.u);
+      if (!sanitized) return null;
+      return {
+        accessToken: parsed.t,
+        user: sanitized,
+      };
+    }
+    if (parsed?.accessToken && parsed?.user) {
+      const sanitized = sanitizeAuthUser(parsed.user);
+      if (!sanitized) return null;
+      return {
+        accessToken: parsed.accessToken,
+        user: sanitized,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export function getStoredSession(): AuthSession | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as AuthSession;
+    const session = decodeSessionVault(raw);
+    if (session) {
+      // If stored in legacy plaintext JSON, auto-upgrade to encrypted vault format
+      if (raw.startsWith('{')) {
+        setStoredSession(session);
+      }
+      return session;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -105,12 +178,28 @@ export function getStoredSession(): AuthSession | null {
 
 export function setStoredSession(session: AuthSession): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  const sanitizedUser = sanitizeAuthUser(session.user);
+  if (!sanitizedUser) return;
+  const vault = encodeSessionVault({
+    accessToken: session.accessToken,
+    user: sanitizedUser,
+  });
+  if (vault) {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, vault);
+  }
 }
 
 export function clearStoredSession(): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.localStorage.removeItem('ticketsupport_auth_session');
+    window.localStorage.removeItem('ts_zustand_auth_store');
+    window.sessionStorage.removeItem('ts_auth_s');
+    window.sessionStorage.removeItem('ts_zustand_auth_store');
+  } catch {
+    // Ignore storage clear errors
+  }
 }
 
 export async function verifyPassportSession(
@@ -122,7 +211,7 @@ export async function verifyPassportSession(
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    return res.data;
+    return sanitizeAuthUser(res.data);
   } catch {
     return null;
   }
