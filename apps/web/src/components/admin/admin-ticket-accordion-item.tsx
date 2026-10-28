@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@ui/card';
+import { Card, CardContent } from '@ui/card';
 import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { Input } from '@ui/input';
@@ -10,17 +10,14 @@ import type { Ticket } from '@components/ticket-list';
 import {
   AuthUser,
   DecryptedAttachmentResult,
-  getPriorityBadgeVariant,
-  getStatusBadgeVariant,
-  formatShortTicketId,
-  formatTicketDateTime,
-  formatCommentTime,
-  formatByteSize,
   resolveTicketAssigneeId,
-  countTicketAttachments,
   computeTicketSlaStatus,
-  parseTimelineComment,
+  formatByteSize,
+  formatTicketDateTime,
 } from '@lib/helpers';
+import { TicketCardHeader, getTicketCardBorderClasses } from '@components/tickets/ticket-card-header';
+import { TicketAttachmentPreview } from '@components/tickets/ticket-attachment-preview';
+import { TicketCommentThread } from '@components/tickets/ticket-comment-thread';
 
 interface AdminTicketAccordionItemProps {
   ticket: Ticket;
@@ -29,7 +26,7 @@ interface AdminTicketAccordionItemProps {
   isExpanded: boolean;
   onToggleExpanded: (id: string) => void;
   isViewed: boolean;
-  onToggleViewed: (id: string) => void;
+  onToggleViewed?: (id: string) => void;
   highlighted: boolean;
   onUpdateStatus: (id: string, status: Ticket['status']) => void;
   onUpdatePriority: (id: string, priority: Ticket['priority']) => void;
@@ -101,7 +98,6 @@ export function AdminTicketAccordionItem({
   onSetFollowUpAttachment,
   onSendFollowUp,
 }: AdminTicketAccordionItemProps) {
-  const totalAttachments = countTicketAttachments(ticket);
   const commentCount = ticket.comments?.length || 0;
   const sla = computeTicketSlaStatus(ticket);
   const assigneeId = resolveTicketAssigneeId(ticket);
@@ -121,167 +117,20 @@ export function AdminTicketAccordionItem({
     <Card
       key={ticket.id}
       id={`ticket-${ticket.id}`}
-      className={`overflow-hidden transition-all duration-150 ${
-        ticket.status === 'NEEDS_INFO'
-          ? isViewed
-            ? 'border-amber-400/60 dark:border-amber-500/50 border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-amber-500/5'
-            : 'border-amber-400 dark:border-amber-500 border-l-4 border-l-amber-500 dark:border-l-amber-400 bg-amber-500/10 shadow-sm'
-          : !isViewed
-          ? 'border-spruce-300 dark:border-spruce-700/80 border-l-4 border-l-spruce-600 dark:border-l-spruce-300 bg-white dark:bg-spruce-900/85 shadow-sm hover:border-spruce-400 dark:hover:border-spruce-600'
-          : 'border-spruce-200/90 dark:border-spruce-800/80 border-l-4 border-l-spruce-200/70 dark:border-l-spruce-800/80 bg-white/70 dark:bg-spruce-950/50 hover:bg-white dark:hover:bg-spruce-900/60'
-      } ${
-        highlighted
-          ? 'ring-2 ring-spruce-400 shadow-xl shadow-spruce-500/20 dark:ring-spruce-300'
-          : ''
-      }`}
+      className={`overflow-hidden transition-all duration-150 ${getTicketCardBorderClasses({
+        isHighlighted: highlighted,
+        isViewed,
+        status: ticket.status,
+      })}`}
     >
-      {/* Accordion Summary Header */}
-      <CardHeader className="p-0">
-        <div className="w-full p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 rounded-t-xl hover:bg-spruce-50/50 dark:hover:bg-spruce-900/40 transition-colors">
-          <button
-            type="button"
-            aria-expanded={isExpanded}
-            onClick={() => onToggleExpanded(ticket.id)}
-            className="space-y-1.5 min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-lg group"
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center justify-center w-5 h-5 rounded text-spruce-400 transition-transform duration-200 ${
-                  isExpanded ? 'rotate-90 text-spruce-800 dark:text-spruce-200' : ''
-                }`}
-                aria-hidden="true"
-              >
-                ▸
-              </span>
-              <span className="text-xs font-mono text-spruce-400 dark:text-spruce-400">
-                {formatShortTicketId(ticket.id)}
-              </span>
-
-              {/* New vs Viewed Color Badge Variant */}
-              {!isViewed ? (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-spruce-100 text-spruce-800 border border-spruce-300 dark:bg-spruce-300/15 dark:text-spruce-300 dark:border-spruce-400/40 shadow-xs">
-                  <span className="h-1.5 w-1.5 rounded-full bg-spruce-600 dark:bg-spruce-300 animate-pulse" />
-                  New
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-spruce-500 dark:text-spruce-400 bg-spruce-100/50 dark:bg-spruce-900/40 border border-spruce-200/60 dark:border-spruce-800/60">
-                  <svg className="w-3 h-3 text-spruce-400 dark:text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Viewed
-                </span>
-              )}
-
-              <CardTitle
-                className={`text-base sm:text-lg truncate group-hover:text-spruce-600 dark:group-hover:text-spruce-200 transition-colors ${
-                  !isViewed
-                    ? 'font-bold text-spruce-950 dark:text-white'
-                    : 'font-medium text-spruce-800 dark:text-spruce-300'
-                }`}
-              >
-                {ticket.title}
-              </CardTitle>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-7 text-xs text-spruce-500 dark:text-spruce-400">
-              <span>
-                Reported by{' '}
-                <strong className="font-semibold text-spruce-700 dark:text-spruce-300">
-                  {ticket.creator?.fullName || 'Anonymous'}
-                </strong>
-              </span>
-              <span>•</span>
-              <span>{formatTicketDateTime(ticket.createdAt)}</span>
-              <span>•</span>
-              <span>
-                Assignee:{' '}
-                <strong
-                  className={`font-medium ${
-                    isTicketAssigned
-                      ? 'text-spruce-700 dark:text-spruce-300'
-                      : 'text-amber-600 dark:text-amber-400'
-                  }`}
-                >
-                  {ticket.assignee?.fullName || 'Unassigned'}
-                </strong>
-              </span>
-              {commentCount > 0 && (
-                <>
-                  <span>•</span>
-                  <span>
-                    {commentCount} {commentCount === 1 ? 'reply' : 'replies'}
-                  </span>
-                </>
-              )}
-              {totalAttachments > 0 && (
-                <>
-                  <span>•</span>
-                  <span className="text-spruce-700 dark:text-spruce-300 font-medium">
-                    {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
-                  </span>
-                </>
-              )}
-              {sla.label && (
-                <>
-                  <span>•</span>
-                  <span
-                    className={
-                      sla.isBreached
-                        ? 'text-red-500 font-semibold'
-                        : sla.isResolved
-                        ? 'text-emerald-500 font-medium'
-                        : 'text-spruce-500'
-                    }
-                  >
-                    SLA: {sla.label}
-                  </span>
-                </>
-              )}
-              {typeof ticket.csatRating === 'number' && (
-                <>
-                  <span>•</span>
-                  <span className="text-emerald-500 font-medium">
-                    CSAT {ticket.csatRating}.0
-                  </span>
-                </>
-              )}
-            </div>
-          </button>
-
-          <div className="flex items-center gap-2 pl-7 lg:pl-0 shrink-0">
-            <Badge
-              variant="outline"
-              className="text-[11px] font-medium border-spruce-300 dark:border-spruce-700 bg-spruce-50/50 dark:bg-spruce-900/50 text-spruce-700 dark:text-spruce-300"
-            >
-              {ticket.department === 'GENERAL' ? 'General Scope' : 'Tech Support'}
-            </Badge>
-            <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
-              {ticket.priority}
-            </Badge>
-            <Badge variant={getStatusBadgeVariant(ticket.status)}>
-              {ticket.status.replace('_', ' ')}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => onToggleViewed(ticket.id)}
-              title={isViewed ? 'Mark ticket as new / unviewed' : 'Mark ticket as viewed'}
-              className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400"
-              aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
-            >
-              {isViewed ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 text-spruce-600 dark:text-spruce-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-      </CardHeader>
+      <TicketCardHeader
+        ticket={ticket}
+        isExpanded={isExpanded}
+        isViewed={isViewed}
+        onToggleExpand={onToggleExpanded}
+        showAssignee={true}
+        slaInfo={sla}
+      />
 
       {/* Accordion Body */}
       {isExpanded && (
@@ -704,47 +553,15 @@ export function AdminTicketAccordionItem({
               </p>
 
               {ticket.hasAttachment && (
-                <div className="pt-2 border-t border-spruce-200/70 dark:border-spruce-800 space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-spruce-900 dark:text-spruce-200">
-                        {ticket.attachmentName || 'attachment.png'}
-                      </span>
-                      {ticket.attachmentOriginalSize && (
-                        <span className="text-spruce-500 dark:text-spruce-400">
-                          ({formatByteSize(ticket.attachmentOriginalSize)})
-                        </span>
-                      )}
-                    </div>
-                    {decryptedTicketImg ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onToggleAttachmentVisibility(initialAttachmentKey)}
-                        className="h-7 text-xs"
-                      >
-                        {isTicketImgHidden ? 'Show Image' : 'Hide Image'}
-                      </Button>
-                    ) : (
-                      <span className="text-[11px] text-spruce-400">
-                        {isLoadingTicketImg ? 'Loading image...' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  {decryptedTicketImg && !isTicketImgHidden && (
-                    <div className="pt-1">
-                      <img
-                        src={decryptedTicketImg.dataUrl}
-                        alt={decryptedTicketImg.fileName}
-                        onClick={() => onOpenLightbox(decryptedTicketImg)}
-                        title="Click to inspect full-size image"
-                        className="max-h-80 rounded-md border border-spruce-200 dark:border-spruce-700 object-contain bg-spruce-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
-                      />
-                    </div>
-                  )}
-                </div>
+                <TicketAttachmentPreview
+                  attachmentName={ticket.attachmentName}
+                  attachmentOriginalSize={ticket.attachmentOriginalSize}
+                  decryptedImage={decryptedTicketImg}
+                  isLoading={isLoadingTicketImg}
+                  isHidden={isTicketImgHidden}
+                  onToggleVisibility={() => onToggleAttachmentVisibility(initialAttachmentKey)}
+                  onClickPreview={onOpenLightbox}
+                />
               )}
             </div>
           </div>
@@ -756,162 +573,17 @@ export function AdminTicketAccordionItem({
               <span>Chronological Order</span>
             </div>
 
-            {commentCount === 0 ? (
-              <p className="text-xs text-spruce-500 italic py-1">
-                No follow-up requests, customer amendments, or resolution notes yet.
-              </p>
-            ) : (() => {
-              const comments = ticket.comments || [];
-              const hasMultiple = comments.length > 1;
-              const earlierComments = hasMultiple ? comments.slice(0, -1) : [];
-              const latestComment = comments[comments.length - 1];
-
-              const renderAdminComment = (comment: (typeof comments)[0]) => {
-                const parsed = parseTimelineComment(comment.content);
-                const commentAttachmentKey = `comment:${comment.id}`;
-                const decryptedCommentImg = decryptedAttachments[commentAttachmentKey];
-                const isLoadingCommentImg = Boolean(loadingAttachmentKeys[commentAttachmentKey]);
-                const isCommentImgHidden = Boolean(hiddenAttachmentKeys[commentAttachmentKey]);
-                const isFollowUpReq = parsed.kind === 'FOLLOW_UP';
-                const isCustomerAmend = parsed.kind === 'AMENDMENT';
-
-                return (
-                  <div
-                    key={comment.id}
-                    className={`relative p-3 rounded-lg border text-xs space-y-2 ${
-                      isFollowUpReq
-                        ? 'bg-amber-500/10 border-amber-500/30'
-                        : isCustomerAmend
-                        ? 'bg-spruce-100/80 dark:bg-spruce-900/80 border-spruce-300 dark:border-spruce-700'
-                        : 'bg-spruce-50/90 dark:bg-spruce-900/90 border-spruce-200/70 dark:border-spruce-800'
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-spruce-900 dark:text-white">
-                          {comment.author?.fullName || 'Support User'}
-                        </span>
-                        {comment.author?.role && (
-                          <span className="text-[11px] text-spruce-500 dark:text-spruce-400 font-normal">
-                            ({comment.author.role.toLowerCase()})
-                          </span>
-                        )}
-                        {isFollowUpReq ? (
-                          <Badge variant="warning" className="text-[10px] py-0 px-1.5">
-                            Follow-Up
-                          </Badge>
-                        ) : isCustomerAmend ? (
-                          <Badge variant="default" className="text-[10px] py-0 px-1.5">
-                            Amendment
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <span className="text-[11px] text-spruce-500 dark:text-spruce-400">
-                        {formatCommentTime(comment.createdAt)}
-                      </span>
-                    </div>
-
-                    <p className="text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap leading-relaxed">
-                      {parsed.cleanText}
-                    </p>
-
-                    {comment.hasAttachment && (
-                      <div className="pt-2 border-t border-spruce-200/60 dark:border-spruce-800/80 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-spruce-900 dark:text-spruce-200">
-                              {comment.attachmentName || 'attachment.png'}
-                            </span>
-                            {comment.attachmentOriginalSize && (
-                              <span className="text-spruce-500 dark:text-spruce-400">
-                                ({formatByteSize(comment.attachmentOriginalSize)})
-                              </span>
-                            )}
-                          </div>
-                          {decryptedCommentImg ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onToggleAttachmentVisibility(commentAttachmentKey)}
-                              className="h-7 text-xs"
-                            >
-                              {isCommentImgHidden ? 'Show Image' : 'Hide Image'}
-                            </Button>
-                          ) : (
-                            <span className="text-[11px] text-spruce-400">
-                              {isLoadingCommentImg ? 'Loading image...' : ''}
-                            </span>
-                          )}
-                        </div>
-
-                        {decryptedCommentImg && !isCommentImgHidden && (
-                          <div className="pt-1 max-w-full overflow-hidden">
-                            <img
-                              src={decryptedCommentImg.dataUrl}
-                              alt={decryptedCommentImg.fileName}
-                              onClick={() => onOpenLightbox(decryptedCommentImg)}
-                              title="Click to inspect full-size image"
-                              className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-spruce-200 dark:border-spruce-700 object-contain bg-spruce-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              };
-
-              return (
-                <div className="relative pl-4 border-l-2 border-spruce-200 dark:border-spruce-800 space-y-3">
-                  {hasMultiple && (
-                    <div className="pb-1">
-                      <button
-                        type="button"
-                        onClick={() => onToggleHistory(ticket.id)}
-                        className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-spruce-200 dark:border-spruce-800 bg-spruce-100/70 dark:bg-spruce-900/60 hover:bg-spruce-200/60 dark:hover:bg-spruce-800/80 text-xs text-spruce-700 dark:text-spruce-300 font-medium transition-colors"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <svg
-                            className="w-3.5 h-3.5 text-spruce-600 dark:text-spruce-400"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          <span>
-                            {isHistoryExpanded
-                              ? `Showing entire thread (${comments.length} messages)`
-                              : `Show ${earlierComments.length} earlier ${
-                                  earlierComments.length === 1 ? 'reply' : 'replies'
-                                }`}
-                          </span>
-                        </span>
-                        <span className="text-[11px] text-spruce-700 dark:text-spruce-300 font-semibold hover:underline">
-                          {isHistoryExpanded ? 'Collapse thread ↑' : 'Expand thread ↓'}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Earlier comments shown when expanded */}
-                  {hasMultiple && isHistoryExpanded && (
-                    <div className="space-y-3">
-                      {earlierComments.map((c) => renderAdminComment(c))}
-                    </div>
-                  )}
-
-                  {/* Latest comment always visible */}
-                  {latestComment && renderAdminComment(latestComment)}
-                </div>
-              );
-            })()}
+            <TicketCommentThread
+              comments={ticket.comments}
+              ticketId={ticket.id}
+              isHistoryExpanded={isHistoryExpanded}
+              onToggleHistory={onToggleHistory}
+              decryptedAttachments={decryptedAttachments}
+              loadingAttachmentKeys={loadingAttachmentKeys}
+              hiddenAttachmentKeys={hiddenAttachmentKeys}
+              onToggleAttachmentVisibility={onToggleAttachmentVisibility}
+              onInspectImage={onOpenLightbox}
+            />
           </div>
 
           {/* 4. Post IT Resolution Note Composer */}
