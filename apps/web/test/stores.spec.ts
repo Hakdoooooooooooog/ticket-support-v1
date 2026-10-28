@@ -55,6 +55,13 @@ describe('Web State Management Stores (Zustand)', () => {
       expect(updated.hasLoadedTickets).toBe(true);
       expect(updated.tickets).toHaveLength(1);
       expect(updated.tickets[0].id).toBe('ticket-1');
+
+      // Verify tickets array with customer PII is omitted from sessionStorage
+      const storedTicketsRaw = mockSessionStorage['ts_zustand_tickets_store'];
+      if (storedTicketsRaw) {
+        expect(storedTicketsRaw).not.toContain(mockTicket.description);
+        expect(storedTicketsRaw).not.toContain('"tickets"');
+      }
     });
 
     it('toggles expansion state for individual tickets', () => {
@@ -198,6 +205,26 @@ describe('Web State Management Stores (Zustand)', () => {
   });
 
   describe('AdminStore', () => {
+    it('sets agents and keeps staff PII strictly in-memory without persisting to sessionStorage', () => {
+      const store = useAdminStore.getState();
+      store.setAgents([
+        {
+          id: 'agent-1',
+          email: 'sam@ticketsupport.local',
+          fullName: 'Sam Chen (Support Engineer)',
+          role: 'AGENT',
+        },
+      ]);
+      expect(useAdminStore.getState().agents).toHaveLength(1);
+
+      const storedAdminRaw = mockSessionStorage['ts_zustand_admin_store'];
+      if (storedAdminRaw) {
+        expect(storedAdminRaw).not.toContain('sam@ticketsupport.local');
+        expect(storedAdminRaw).not.toContain('Sam Chen');
+        expect(storedAdminRaw).not.toContain('"agents"');
+      }
+    });
+
     it('updates active section navigation', () => {
       const store = useAdminStore.getState();
       store.setActiveSection('ALL_TICKETS');
@@ -267,14 +294,19 @@ describe('Web State Management Stores (Zustand)', () => {
       expect(activeState.user?.email).toBe('admin@ticketsupport.local');
       expect(activeState.isSessionVerified).toBe(true);
 
-      // Verify that zustand persist partialize NEVER wrote accessToken to sessionStorage
+      // Verify that zustand persist partialize NEVER wrote accessToken or PII to sessionStorage
       const persistedRaw = mockSessionStorage['ts_zustand_auth_store'];
       if (persistedRaw) {
         expect(persistedRaw).not.toContain('"accessToken"');
         expect(persistedRaw).not.toContain(mockSession.accessToken);
+        expect(persistedRaw).not.toContain(mockSession.user.email);
+        expect(persistedRaw).not.toContain(mockSession.user.fullName);
         const parsed = JSON.parse(persistedRaw);
         expect(parsed.state.accessToken).toBeUndefined();
+        expect(parsed.state.user.email).toBeUndefined();
+        expect(parsed.state.user.fullName).toBeUndefined();
         expect(parsed.state.user.id).toBe('admin-1');
+        expect(parsed.state.user.role).toBe('ADMIN');
       }
     });
 

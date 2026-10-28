@@ -362,7 +362,8 @@ describe('Web Helpers & Domain Functions', () => {
       const restored = getStoredSession();
       expect(restored).not.toBeNull();
       expect(restored?.accessToken).toBe(session.accessToken);
-      expect(restored?.user.email).toBe(session.user.email);
+      expect(restored?.user.id).toBe('u-1');
+      expect(restored?.user.role).toBe('ADMIN');
 
       // Clears cleanly
       clearStoredSession();

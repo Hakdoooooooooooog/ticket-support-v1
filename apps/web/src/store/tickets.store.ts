@@ -52,6 +52,22 @@ export interface TicketsState {
   setLightboxImage: (image: DecryptedAttachmentResult | null) => void;
 }
 
+// Self-healing: Proactively purge any legacy stored ticket entities (customer PII) from existing sessionStorage
+if (typeof window !== 'undefined') {
+  try {
+    const rawTickets = window.sessionStorage.getItem('ts_zustand_tickets_store');
+    if (rawTickets && rawTickets.includes('"tickets"')) {
+      const parsed = JSON.parse(rawTickets);
+      if (parsed?.state?.tickets) {
+        delete parsed.state.tickets;
+        window.sessionStorage.setItem('ts_zustand_tickets_store', JSON.stringify(parsed));
+      }
+    }
+  } catch {
+    // Ignore storage parse errors
+  }
+}
+
 export const useTicketsStore = create<TicketsState>()(
   persist(
     (set, get) => ({
@@ -360,9 +376,9 @@ export const useTicketsStore = create<TicketsState>()(
       name: 'ts_zustand_tickets_store',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
-        tickets: state.tickets,
-        hasLoadedTickets: state.hasLoadedTickets,
-        lastUpdatedAt: state.lastUpdatedAt,
+        // PRIVACY & SECURITY: Full ticket entities (customer descriptions, names, emails,
+        // comments, attachments) are kept strictly in runtime memory to prevent PII exposure.
+        // Only non-PII UI interaction preferences are persisted.
         expandedTicketIds: state.expandedTicketIds,
         viewedTicketIds: state.viewedTicketIds,
         hasInitializedExpansion: state.hasInitializedExpansion,

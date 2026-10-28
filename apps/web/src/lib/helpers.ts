@@ -108,7 +108,11 @@ function encodeSessionVault(session: AuthSession): string {
   try {
     const payload = JSON.stringify({
       t: session.accessToken,
-      u: sanitizeAuthUser(session.user),
+      // Minimal non-PII identity (id and role only, email and fullName omitted)
+      u: {
+        id: session.user.id,
+        role: session.user.role,
+      },
       ts: Date.now(),
     });
     let masked = '';
@@ -135,12 +139,15 @@ function decodeSessionVault(vaultStr: string): AuthSession | null {
       rawStr = unmasked;
     }
     const parsed = JSON.parse(rawStr);
-    if (parsed?.t && parsed?.u) {
-      const sanitized = sanitizeAuthUser(parsed.u);
-      if (!sanitized) return null;
+    if (parsed?.t && parsed?.u?.id) {
       return {
         accessToken: parsed.t,
-        user: sanitized,
+        user: {
+          id: String(parsed.u.id),
+          email: String(parsed.u.email || ''),
+          fullName: String(parsed.u.fullName || ''),
+          role: parsed.u.role || 'CUSTOMER',
+        },
       };
     }
     if (parsed?.accessToken && parsed?.user) {

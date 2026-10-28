@@ -42,6 +42,23 @@ export interface AdminState {
   resetFilters: () => void;
 }
 
+// Self-healing: Proactively purge legacy staff directory (PII) and drafts from existing sessionStorage
+if (typeof window !== 'undefined') {
+  try {
+    const rawAdmin = window.sessionStorage.getItem('ts_zustand_admin_store');
+    if (rawAdmin && (rawAdmin.includes('"agents"') || rawAdmin.includes('"commentDrafts"'))) {
+      const parsed = JSON.parse(rawAdmin);
+      if (parsed?.state) {
+        delete parsed.state.agents;
+        delete parsed.state.commentDrafts;
+        window.sessionStorage.setItem('ts_zustand_admin_store', JSON.stringify(parsed));
+      }
+    }
+  } catch {
+    // Ignore storage parse errors
+  }
+}
+
 export const useAdminStore = create<AdminState>()(
   persist(
     (set, get) => ({
@@ -114,14 +131,15 @@ export const useAdminStore = create<AdminState>()(
       name: 'ts_zustand_admin_store',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
-        agents: state.agents,
-        hasLoadedAgents: state.hasLoadedAgents,
+        // PRIVACY & SECURITY: Staff directory (names, emails) and internal comment drafts
+        // are strictly kept in runtime memory to prevent PII exposure in browser storage.
+        // Only non-PII dashboard filters and active navigation section are persisted.
         activeSection: state.activeSection,
         assignedScope: state.assignedScope,
         assignmentFilter: state.assignmentFilter,
         statusFilter: state.statusFilter,
         priorityFilter: state.priorityFilter,
-        commentDrafts: state.commentDrafts,
+        searchQuery: state.searchQuery,
       }),
     },
   ),

@@ -26,14 +26,26 @@ export interface AuthState {
 
 let inFlightVerification: Promise<AuthUser | null> | null = null;
 
-// Self-healing: Proactively scrub legacy plaintext tokens from existing sessionStorage
+// Self-healing: Proactively scrub legacy plaintext tokens and PII (email, fullName) from existing sessionStorage
 if (typeof window !== 'undefined') {
   try {
     const rawZustandAuth = window.sessionStorage.getItem('ts_zustand_auth_store');
-    if (rawZustandAuth && rawZustandAuth.includes('"accessToken"')) {
+    if (rawZustandAuth) {
       const parsed = JSON.parse(rawZustandAuth);
-      if (parsed?.state && 'accessToken' in parsed.state) {
+      let changed = false;
+      if (parsed?.state?.accessToken !== undefined) {
         delete parsed.state.accessToken;
+        changed = true;
+      }
+      if (parsed?.state?.user?.email !== undefined) {
+        delete parsed.state.user.email;
+        changed = true;
+      }
+      if (parsed?.state?.user?.fullName !== undefined) {
+        delete parsed.state.user.fullName;
+        changed = true;
+      }
+      if (changed) {
         window.sessionStorage.setItem('ts_zustand_auth_store', JSON.stringify(parsed));
       }
     }
@@ -145,9 +157,15 @@ export const useAuthStore = create<AuthState>()(
       name: 'ts_zustand_auth_store',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
-        user: state.user ? sanitizeAuthUser(state.user) : null,
-        // SECURITY: accessToken is deliberately omitted so sessionStorage NEVER contains JWT credentials.
-        // The token is held strictly in-memory during active sessions.
+        // PRIVACY & SECURITY: PII (email, fullName) and credentials (accessToken)
+        // are omitted from browser storage and maintained strictly in runtime memory.
+        // Only minimal non-PII identity (id, role) is persisted to support page routing.
+        user: state.user
+          ? {
+              id: state.user.id,
+              role: state.user.role,
+            }
+          : null,
         isSessionVerified: state.isSessionVerified,
       }),
     },
