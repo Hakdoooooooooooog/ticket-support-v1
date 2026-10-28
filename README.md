@@ -126,14 +126,27 @@ TicketSupport/
 | Generate staff invitations (AGENT/ADMIN) | No | No | Yes |
 | Receive `TICKET_CREATED` notifications | No | No | Yes |
 | Receive assignment & operational alerts | No | Yes | No |
-| Claim unassigned ticket / assign to self | No | Yes | Yes |
-| Reassign ticket to any engineer | No | No | Yes |
-| Post resolution notes on assigned ticket | No | Yes | Yes |
-| Change status (`OPEN` &rarr; `IN_PROGRESS` &rarr; `RESOLVED` &rarr; `CLOSED`) | No | Yes | Yes |
-| Reopen closed ticket | Yes (Own) | Yes | Yes |
-| Generate staff invitations (AGENT/ADMIN) | No | No | Yes |
-| Receive `TICKET_CREATED` notifications | No | No | Yes |
-| Receive assignment & operational alerts | No | Yes | No |
+
+---
+
+## Design System & 60-30-10 Color Architecture
+
+TicketSupport adopts the **60-30-10 interior color rule** calibrated across both Light and Dark mode variations using the signature Spruce palette:
+
+```
+Midnight Spruce (#092635) · Forest Slate (#1b4242) · Muted Sage (#5c8374) · Seafoam Mint (#9ec8b9)
+```
+
+| Mode | 60% Dominant Canvas | 30% Secondary Structure | 10% Accent Focal Points |
+| :--- | :--- | :--- | :--- |
+| **Dark Mode** | `--color-spruce-950` (`#092635`) deep midnight canvas | `--color-spruce-800` (`#1b4242`) & spruce-900 elevated cards & sidebar | `--color-spruce-300` (`#9ec8b9`) mint buttons, glow & active tabs |
+| **Light Mode** | `--color-spruce-50` (`#eaf1ed`) soft sage-spruce mist canvas | `#ffffff` crisp white cards, spruce-100 panels & sidebar | `--color-spruce-800` (`#1b4242`) forest buttons & spruce-700 left borders |
+
+### Shared Ticket Accordion Architecture
+To prevent fragmentation between Customer Portal and IT Admin Console:
+- **`TicketCardHeader`**: Shared accordion summary header with unified rotate-180 chevron, `#cmv...` font-mono ID, and responsive badges.
+- **Outermost Left Border Only (`border-l-4`)**: Intrusive "New" and "Viewed" badge pills and toggle buttons are eliminated. Unread status is represented cleanly via `border-l-4 border-l-spruce-600 dark:border-l-spruce-400` with bold title text, while needs-info status is represented via `border-l-4 border-l-amber-500`.
+- **`TicketAttachmentPreview` & `TicketCommentThread`**: Shared components handling encrypted attachment inspection, visibility toggling, and chronological timeline threads across all roles.
 
 ---
 
