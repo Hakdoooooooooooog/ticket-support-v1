@@ -50,6 +50,7 @@ model User {
   comments        Comment[]
   createdInvites  Invite[]       @relation("CreatedInvites")
   notifications   Notification[] @relation("UserNotifications")
+  cannedResponses CannedResponse[] @relation("CreatedCannedResponses")
 
   @@index([role, fullName])
   @@map("users")
@@ -158,4 +159,18 @@ model TicketTag {
 
   @@id([ticketId, tagId])
   @@map("ticket_tags")
+}
+
+model CannedResponse {
+  id          String   @id @default(cuid())
+  category    String
+  label       String
+  content     String
+  createdById String?
+  createdBy   User?    @relation("CreatedCannedResponses", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, label])
+  @@map("canned_responses")
 }
