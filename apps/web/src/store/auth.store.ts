@@ -91,9 +91,7 @@ export const useAuthStore = create<AuthState>()(
           return inFlightVerification;
         }
 
-        if (!cachedUser) {
-          set({ isVerifyingSession: true });
-        }
+        set({ isVerifyingSession: true });
 
         inFlightVerification = verifyPassportSession(token)
           .then((verifiedUser) => {

@@ -225,10 +225,13 @@ export function PortalKnowledgeBase() {
                       <h4 className="text-xs font-bold uppercase tracking-wider text-spruce-800 dark:text-spruce-200">
                         Resolution Steps:
                       </h4>
-                      <ol className="list-decimal list-outside ml-4 space-y-2 text-xs sm:text-sm text-spruce-800 dark:text-spruce-200">
+                      <ol className="space-y-2.5 text-xs sm:text-sm text-spruce-800 dark:text-spruce-200">
                         {article.steps.map((step, idx) => (
-                          <li key={idx} className="leading-relaxed pl-1">
-                            {step}
+                          <li key={idx} className="flex items-start gap-2.5 leading-relaxed">
+                            <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold bg-spruce-200 dark:bg-spruce-800 text-spruce-900 dark:text-spruce-100 border border-spruce-300 dark:border-spruce-700">
+                              {idx + 1}
+                            </span>
+                            <span className="flex-1 pt-0.5">{step}</span>
                           </li>
                         ))}
                       </ol>

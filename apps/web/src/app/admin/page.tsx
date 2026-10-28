@@ -205,7 +205,8 @@ export default function AdminDashboardPage() {
       const res = await apiClient.get('/tickets');
       return res.data;
     },
-    staleTime: 10 * 1000,
+    staleTime: 60 * 1000,
+    placeholderData: (previousData) => previousData,
   });
 
   const tickets = queriedTickets ?? storedTickets;
@@ -234,6 +235,7 @@ export default function AdminDashboardPage() {
       }
     },
     staleTime: 60 * 1000,
+    placeholderData: (previousData) => previousData,
   });
 
   const agents = queriedAgents ?? storedAgents;
@@ -597,7 +599,7 @@ export default function AdminDashboardPage() {
     setAllTicketsExpanded(displayedTickets, !allExpanded);
   };
 
-  if (!isMounted || !user || isVerifyingSession) {
+  if (!user?.fullName || isVerifyingSession || !isSessionVerified) {
     return <ContextualLoader context="admin-auth" />;
   }
 

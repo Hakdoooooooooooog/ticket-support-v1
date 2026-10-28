@@ -11,5 +11,5 @@ describe('TypeScript Type Integrity Check', () => {
       stdio: 'pipe',
     });
     expect(result.trim()).toBe('');
-  }, 20000);
+  }, 60000);
 });

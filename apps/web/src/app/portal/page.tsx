@@ -74,7 +74,7 @@ export default function CustomerPortalPage() {
     router.replace('/');
   };
 
-  if (!isMounted || !user || isVerifyingSession) {
+  if (!user?.fullName || isVerifyingSession || !isSessionVerified) {
     return <ContextualLoader context="portal-auth" />;
   }
 

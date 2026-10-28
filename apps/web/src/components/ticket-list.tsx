@@ -69,6 +69,8 @@ export function TicketList() {
       const res = await apiClient.get<Ticket[]>('/tickets');
       return res.data;
     },
+    staleTime: 60 * 1000,
+    placeholderData: (previousData) => previousData,
     refetchInterval: 15000,
   });
 

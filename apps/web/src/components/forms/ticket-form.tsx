@@ -273,10 +273,13 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
                 </button>
 
                 {showSuggestionSteps && (
-                  <ol className="mt-2 ml-4 list-decimal text-xs text-spruce-900 dark:text-spruce-100 space-y-1.5 bg-white/80 dark:bg-spruce-900/80 p-2.5 rounded border border-amber-200 dark:border-amber-800/60 shadow-xs">
+                  <ol className="mt-2.5 space-y-2 text-xs bg-white/90 dark:bg-spruce-900/90 p-3 rounded-lg border border-amber-200 dark:border-amber-800/60 shadow-xs">
                     {suggestedArticle.steps.map((step, idx) => (
-                      <li key={idx} className="leading-snug pl-1">
-                        {step}
+                      <li key={idx} className="flex items-start gap-2.5 text-spruce-900 dark:text-spruce-100 leading-relaxed">
+                        <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-700/80">
+                          {idx + 1}
+                        </span>
+                        <span className="flex-1 pt-0.5">{step}</span>
                       </li>
                     ))}
                   </ol>
