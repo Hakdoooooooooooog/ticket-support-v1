@@ -10,6 +10,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { CannedResponsesModule } from './canned-responses/canned-responses.module.js';
 import { ReportsModule } from './reports/reports.module.js';
+import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ReportsModule } from './reports/reports.module.js';
     AuthModule,
     CannedResponsesModule,
     ReportsModule,
+    KnowledgeBaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -62,6 +62,16 @@ It provides dedicated workspaces for both end-user customers and IT support pers
 - **Jitter-Free Background Polling**: Layout shifts during TanStack Query polling are eliminated with fixed-width action controls (`w-32`) and structural skeleton loaders (`ContextualLoader`).
 - **Prominent Navigation & Dual Sign Out**: System version badge (`v1.0.0`) in the sidebar footer and high-contrast dual sign-out actions in both the profile card and elevated bottom panel.
 
+### 10. Smart Knowledge Base & Ticket Deflection Engine
+- **Proactive Ticket Deflection**: As customers draft a ticket title in `/portal`, the client-side deflection engine instantly matches symptoms against verified troubleshooting articles.
+- **Instant Fix Steps & 1-Click Resolution**: Displays expandable numbered resolution checklists and a "✓ This Solved My Problem" button that increments deflection analytics and safely discards the ticket draft before entering the queue.
+- **Dedicated Self-Service Hub**: Tabbed `/portal` view featuring full-text search, category filtering (`Technical Support` vs `General Scope`), clipboard copy, and helpfulness feedback (`👍 Helpful` / `👎 Not helpful`).
+- **Article Escalation Pre-fill**: Customers unable to resolve issues via self-help can click "Still stuck? Open ticket on this topic" to auto-populate the ticket title and department.
+
+### 11. Customer Portal Dashboard & Overview Metrics
+- **Real-Time KPI Status Header**: 4-card metric summary on `/portal` reporting Active Tickets in queue, Action Needed (awaiting customer reply or CSAT feedback), Resolved inquiries, and Self-Service Deflections.
+- **Modular Tab Architecture**: Seamless navigation between "Tickets & Requests" and "Knowledge Base & FAQs (10 Guides)".
+
 ---
 
 ## Monorepo Architecture
@@ -218,16 +228,16 @@ npm run dev
 
 ## Testing & Verification
 
-Run all test suites across the monorepo (209 passing tests):
+Run all test suites across the monorepo (233 passing tests):
 
 ```bash
-# Run all unit test suites across monorepo (API: 136 tests, Web: 48 tests)
+# Run all unit test suites across monorepo (API: 148 tests, Web: 60 tests)
 npm test
 
-# Run backend unit tests specifically (136 tests across 19 suites)
+# Run backend unit tests specifically (148 tests across 20 suites)
 npm --prefix apps/api test
 
-# Run frontend unit tests specifically (48 tests across 4 suites)
+# Run frontend unit tests specifically (60 tests across 6 suites)
 npm --prefix apps/web test
 
 # Run backend end-to-end integration tests (25 tests)

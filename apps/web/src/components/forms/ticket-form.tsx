@@ -23,6 +23,12 @@ import {
 } from '@lib/helpers';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
+import { usePortalStore } from '@store/portal.store';
+import {
+  KNOWLEDGE_BASE_ARTICLES,
+  searchKnowledgeBaseArticles,
+  KnowledgeArticle,
+} from '@lib/knowledge-base';
 
 const ticketSchema = z.object({
   title: z
@@ -49,11 +55,18 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { upsertTicket } = useTicketsStore();
+  const { prefillDraft, clearPrefillDraft, recordDeflection } = usePortalStore();
+
+  const [dismissedSuggestionId, setDismissedSuggestionId] = React.useState<string | null>(null);
+  const [showSuggestionSteps, setShowSuggestionSteps] = React.useState(false);
+  const [deflectionNotice, setDeflectionNotice] = React.useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
@@ -64,6 +77,50 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
       department: 'TECHNICAL_SUPPORT',
     },
   });
+
+  const watchedTitle = watch('title') || '';
+  const watchedDepartment = watch('department') || 'TECHNICAL_SUPPORT';
+
+  // Handle prefill from Knowledge Base article "Still stuck? Open ticket on this topic"
+  React.useEffect(() => {
+    if (prefillDraft) {
+      setValue('title', prefillDraft.title, { shouldValidate: true });
+      setValue('department', prefillDraft.department, { shouldValidate: true });
+      clearPrefillDraft();
+    }
+  }, [prefillDraft, setValue, clearPrefillDraft]);
+
+  // Real-time deflection suggestion matching
+  const suggestedArticle = React.useMemo(() => {
+    if (watchedTitle.trim().length < 3) return null;
+    const matches = searchKnowledgeBaseArticles(
+      KNOWLEDGE_BASE_ARTICLES,
+      watchedTitle,
+      watchedDepartment,
+    );
+    if (matches.length > 0 && matches[0].score >= 8) {
+      if (matches[0].article.id === dismissedSuggestionId) return null;
+      return matches[0].article;
+    }
+    return null;
+  }, [watchedTitle, watchedDepartment, dismissedSuggestionId]);
+
+  const handleSolveIssue = (article: KnowledgeArticle) => {
+    recordDeflection(article.title);
+    reset();
+    clearAttachment();
+    setDismissedSuggestionId(null);
+    setShowSuggestionSteps(false);
+    setDeflectionNotice(
+      `Resolved via "${article.title}". Ticket draft safely cleared without waiting in the queue!`,
+    );
+    setTimeout(() => setDeflectionNotice(null), 8000);
+  };
+
+  const handleDismissSuggestion = (articleId: string) => {
+    setDismissedSuggestionId(articleId);
+    setShowSuggestionSteps(false);
+  };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -143,6 +200,15 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
             </div>
           )}
 
+          {deflectionNotice && (
+            <div className="p-3 text-xs sm:text-sm rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-100 dark:border-emerald-800 border-l-4 border-l-emerald-600 dark:border-l-emerald-400">
+              <div className="flex items-center gap-2">
+                <span className="font-bold">🎉 Self-Service Resolved:</span>
+                <span>{deflectionNotice}</span>
+              </div>
+            </div>
+          )}
+
           {createTicketMutation.isError && (
             <div className="p-3 text-sm rounded-md bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800">
               {extractApiErrorMessage(
@@ -163,6 +229,81 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               <p className="text-xs text-red-500 font-medium">{errors.title.message}</p>
             )}
           </div>
+
+          {/* Smart Ticket Deflection Engine - Instant Knowledge Base Resolution */}
+          {suggestedArticle && (
+            <div className="rounded-lg border border-amber-300 dark:border-amber-700/80 bg-amber-50/90 dark:bg-amber-950/40 p-3 sm:p-4 space-y-2.5 border-l-4 border-l-amber-600 dark:border-l-amber-400 transition-all">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                      💡 Proactive Solution Available
+                    </span>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-100 font-bold">
+                      Instant Help
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-spruce-950 dark:text-amber-100">
+                    {suggestedArticle.title}
+                  </p>
+                  <p className="text-xs text-amber-800 dark:text-amber-200/90">
+                    {suggestedArticle.summary}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDismissSuggestion(suggestedArticle.id)}
+                  className="text-xs text-amber-700 dark:text-amber-400 hover:text-amber-950 dark:hover:text-white px-1 font-bold"
+                  aria-label="Dismiss suggestion"
+                  title="Dismiss this suggestion"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Collapsible Steps Preview */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowSuggestionSteps((prev) => !prev)}
+                  className="text-xs font-semibold text-spruce-800 dark:text-spruce-200 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>{showSuggestionSteps ? 'Hide resolution steps' : 'View instant fix steps'}</span>
+                  <span className="text-[10px]">{showSuggestionSteps ? '▲' : '▼'}</span>
+                </button>
+
+                {showSuggestionSteps && (
+                  <ol className="mt-2 ml-4 list-decimal text-xs text-spruce-900 dark:text-spruce-100 space-y-1.5 bg-white/80 dark:bg-spruce-900/80 p-2.5 rounded border border-amber-200 dark:border-amber-800/60 shadow-xs">
+                    {suggestedArticle.steps.map((step, idx) => (
+                      <li key={idx} className="leading-snug pl-1">
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+
+              {/* Deflection Action Buttons */}
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-amber-200/70 dark:border-amber-800/60">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="default"
+                  onClick={() => handleSolveIssue(suggestedArticle)}
+                  className="h-8 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shadow-xs"
+                >
+                  ✓ This Solved My Problem
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => handleDismissSuggestion(suggestedArticle.id)}
+                  className="text-[11px] font-medium text-amber-800 dark:text-amber-300 hover:underline cursor-pointer"
+                >
+                  Continue submitting ticket
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
