@@ -42,25 +42,6 @@ export interface AdminState {
   resetFilters: () => void;
 }
 
-// Self-healing: Proactively purge legacy verbose keys and any stored staff PII/drafts
-if (typeof window !== 'undefined') {
-  try {
-    window.sessionStorage.removeItem('ts_zustand_admin_store');
-
-    const rawAdmin = window.sessionStorage.getItem('ts_admin');
-    if (rawAdmin && (rawAdmin.includes('"agents"') || rawAdmin.includes('"commentDrafts"'))) {
-      const parsed = JSON.parse(rawAdmin);
-      if (parsed?.state) {
-        delete parsed.state.agents;
-        delete parsed.state.commentDrafts;
-        window.sessionStorage.setItem('ts_admin', JSON.stringify(parsed));
-      }
-    }
-  } catch {
-    // Ignore storage parse errors
-  }
-}
-
 export const useAdminStore = create<AdminState>()(
   persist(
     (set, get) => ({

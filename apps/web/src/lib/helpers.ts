@@ -200,16 +200,9 @@ export function clearStoredSession(): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    window.localStorage.removeItem('ticketsupport_auth_session');
-    window.localStorage.removeItem('ts_zustand_auth_store');
-    window.localStorage.removeItem('ts_auth');
-    window.sessionStorage.removeItem('ts_auth_s');
     window.sessionStorage.removeItem('ts_auth');
     window.sessionStorage.removeItem('ts_admin');
     window.sessionStorage.removeItem('ts_tickets');
-    window.sessionStorage.removeItem('ts_zustand_auth_store');
-    window.sessionStorage.removeItem('ts_zustand_admin_store');
-    window.sessionStorage.removeItem('ts_zustand_tickets_store');
   } catch {
     // Ignore storage clear errors
   }

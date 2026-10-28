@@ -26,37 +26,6 @@ export interface AuthState {
 
 let inFlightVerification: Promise<AuthUser | null> | null = null;
 
-// Self-healing: Proactively scrub legacy verbose keys and purge any stored credentials/PII
-if (typeof window !== 'undefined') {
-  try {
-    window.sessionStorage.removeItem('ts_zustand_auth_store');
-    window.localStorage.removeItem('ts_zustand_auth_store');
-
-    const rawAuth = window.sessionStorage.getItem('ts_auth');
-    if (rawAuth) {
-      const parsed = JSON.parse(rawAuth);
-      let changed = false;
-      if (parsed?.state?.accessToken !== undefined) {
-        delete parsed.state.accessToken;
-        changed = true;
-      }
-      if (parsed?.state?.user?.email !== undefined) {
-        delete parsed.state.user.email;
-        changed = true;
-      }
-      if (parsed?.state?.user?.fullName !== undefined) {
-        delete parsed.state.user.fullName;
-        changed = true;
-      }
-      if (changed) {
-        window.sessionStorage.setItem('ts_auth', JSON.stringify(parsed));
-      }
-    }
-  } catch {
-    // Ignore storage parse errors
-  }
-}
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({

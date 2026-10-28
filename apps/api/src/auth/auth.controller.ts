@@ -74,8 +74,11 @@ export class AuthController {
   }
 
   @Get('agents')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'List all IT Support Agents and Administrators' })
   @ApiResponse({ status: 200, description: 'List of IT personnel' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   getAgents() {
     return this.authService.findAgents();
   }

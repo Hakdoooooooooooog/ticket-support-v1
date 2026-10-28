@@ -52,24 +52,6 @@ export interface TicketsState {
   setLightboxImage: (image: DecryptedAttachmentResult | null) => void;
 }
 
-// Self-healing: Proactively purge legacy verbose keys and any stored ticket entities (customer PII)
-if (typeof window !== 'undefined') {
-  try {
-    window.sessionStorage.removeItem('ts_zustand_tickets_store');
-
-    const rawTickets = window.sessionStorage.getItem('ts_tickets');
-    if (rawTickets && rawTickets.includes('"tickets"')) {
-      const parsed = JSON.parse(rawTickets);
-      if (parsed?.state?.tickets) {
-        delete parsed.state.tickets;
-        window.sessionStorage.setItem('ts_tickets', JSON.stringify(parsed));
-      }
-    }
-  } catch {
-    // Ignore storage parse errors
-  }
-}
-
 export const useTicketsStore = create<TicketsState>()(
   persist(
     (set, get) => ({
