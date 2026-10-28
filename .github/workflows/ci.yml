@@ -26,14 +26,14 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run Monorepo Linting (Oxlint + ESLint)
         run: npm run lint
@@ -45,14 +45,14 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Generate Prisma 7 Client Types
         run: npm run db:generate --workspace=api
@@ -85,19 +85,20 @@ jobs:
       PORT: "3001"
       NODE_ENV: "test"
       MAX_PAYLOAD_SIZE: "10mb"
+      NEXT_PUBLIC_ATTACHMENT_KEY: "ci_aes_256_gcm_transit_key_for_testing_32chars!"
 
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Generate Prisma 7 Client
         run: npm run db:generate --workspace=api
@@ -127,14 +128,14 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run Frontend Unit Tests (Vitest)
         run: npm --prefix apps/web run test

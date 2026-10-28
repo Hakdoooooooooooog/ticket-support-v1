@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # Base image with libc6-compat and openssl for Prisma engines
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
