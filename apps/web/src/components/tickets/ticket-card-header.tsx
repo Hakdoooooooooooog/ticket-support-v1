@@ -149,8 +149,8 @@ export function TicketCardHeader({
             {typeof ticket.csatRating === 'number' && (
               <>
                 <span>·</span>
-                <span className="text-emerald-500 font-medium">
-                  CSAT {ticket.csatRating}.0
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-300/80 dark:border-emerald-800 text-[11px]">
+                  ★ CSAT {ticket.csatRating}.0
                 </span>
               </>
             )}
@@ -161,7 +161,11 @@ export function TicketCardHeader({
         <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-start sm:self-center">
           <Badge
             variant="outline"
-            className="text-[11px] font-medium border-spruce-300 dark:border-spruce-700 bg-spruce-50/50 dark:bg-spruce-900/50 text-spruce-700 dark:text-spruce-300"
+            className={`text-[11px] font-semibold ${
+              ticket.department === 'GENERAL'
+                ? 'border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/70 text-teal-900 dark:text-teal-200'
+                : 'border-spruce-300 dark:border-spruce-700 bg-spruce-100/90 dark:bg-spruce-800/80 text-spruce-900 dark:text-spruce-200'
+            }`}
           >
             {ticket.department === 'GENERAL' ? 'General Scope' : 'Tech Support'}
           </Badge>

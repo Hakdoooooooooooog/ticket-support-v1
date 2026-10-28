@@ -288,7 +288,7 @@ export type PriorityBadgeVariant =
   | 'secondary'
   | 'outline';
 
-export type StatusBadgeVariant = 'success' | 'warning' | 'default' | 'destructive';
+export type StatusBadgeVariant = 'success' | 'warning' | 'default' | 'destructive' | 'info';
 
 export function getPriorityBadgeVariant(priority: string): PriorityBadgeVariant {
   switch (priority) {
@@ -312,6 +312,8 @@ export function getStatusBadgeVariant(status: string): StatusBadgeVariant {
       return 'warning';
     case 'NEEDS_INFO':
       return 'destructive';
+    case 'OPEN':
+      return 'info';
     default:
       return 'default';
   }

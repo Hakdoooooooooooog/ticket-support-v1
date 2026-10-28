@@ -68,7 +68,7 @@ export function TicketCommentThread({
               {comment.author?.fullName || 'Support'}
             </span>
             {comment.author?.role && (
-              <span className="text-[11px] text-spruce-500 dark:text-spruce-400 font-normal">
+              <span className="text-[11px] text-spruce-600 dark:text-spruce-400 font-normal">
                 ({comment.author.role.toLowerCase()})
               </span>
             )}
@@ -82,7 +82,10 @@ export function TicketCommentThread({
               </Badge>
             ) : null}
             {isLatest && hasMultiple && (
-              <Badge variant="outline" className="text-[9px] py-0 px-1 text-spruce-500">
+              <Badge
+                variant="outline"
+                className="text-[9px] py-0 px-1.5 font-semibold border-spruce-300 dark:border-spruce-700 bg-spruce-100/70 dark:bg-spruce-800/60 text-spruce-800 dark:text-spruce-200"
+              >
                 Latest
               </Badge>
             )}

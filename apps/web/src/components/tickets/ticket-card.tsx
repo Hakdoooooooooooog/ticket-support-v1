@@ -190,16 +190,16 @@ export function TicketCard({
             )}
 
             {/* Initial Ticket Report */}
-            <div className="p-3 rounded-lg bg-spruce-50/80 dark:bg-spruce-900/50 border border-spruce-200/70 dark:border-spruce-800 space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] text-spruce-500 dark:text-spruce-400">
-                <span className="font-semibold uppercase tracking-wider text-spruce-600 dark:text-spruce-400">
+            <div className="p-3 rounded-lg bg-spruce-100/50 dark:bg-spruce-900/50 border border-spruce-200 dark:border-spruce-800 space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] text-spruce-600 dark:text-spruce-400">
+                <span className="font-semibold uppercase tracking-wider text-spruce-700 dark:text-spruce-300">
                   Initial Ticket Report
                 </span>
                 <span>
                   Reported by {ticket.creator?.fullName || 'Customer'} · {formatTicketDate(ticket.createdAt)}
                 </span>
               </div>
-              <p className="text-sm text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap">
+              <p className="text-sm text-spruce-900 dark:text-spruce-100 whitespace-pre-wrap leading-relaxed">
                 {ticket.description}
               </p>
 
@@ -220,7 +220,7 @@ export function TicketCard({
             {/* Activity & Follow-Up History Timeline */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-spruce-500 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-spruce-600 dark:text-spruce-400 uppercase tracking-wider">
                   Activity &amp; Follow-Up History ({commentCount})
                 </p>
                 {ticket.status !== 'CLOSED' && !isAmending && (

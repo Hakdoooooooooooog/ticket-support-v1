@@ -308,7 +308,7 @@ describe('Web Helpers & Domain Functions', () => {
     });
 
     it('maps statuses to correct badge variants', () => {
-      expect(getStatusBadgeVariant('OPEN')).toBe('default');
+      expect(getStatusBadgeVariant('OPEN')).toBe('info');
       expect(getStatusBadgeVariant('IN_PROGRESS')).toBe('warning');
       expect(getStatusBadgeVariant('NEEDS_INFO')).toBe('destructive');
       expect(getStatusBadgeVariant('RESOLVED')).toBe('success');

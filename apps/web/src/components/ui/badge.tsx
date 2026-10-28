@@ -8,16 +8,19 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-spruce-400/40 bg-spruce-100 text-spruce-800 dark:bg-spruce-800/80 dark:text-spruce-200 dark:border-spruce-600/50 shadow-sm",
+          "border-spruce-300 dark:border-spruce-700 bg-spruce-100 dark:bg-spruce-800 text-spruce-900 dark:text-spruce-100 shadow-2xs",
         secondary:
-          "border-transparent bg-spruce-100/80 text-spruce-700 dark:bg-spruce-900/80 dark:text-spruce-300",
+          "border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/60 text-teal-900 dark:text-teal-200 shadow-2xs",
         destructive:
-          "border-rose-500/40 bg-rose-500/15 text-rose-800 dark:text-rose-300 shadow-sm font-bold uppercase tracking-wider text-[11px]",
-        outline: "border-spruce-300 text-spruce-700 dark:border-spruce-600 dark:text-spruce-300",
+          "border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 font-bold uppercase tracking-wider text-[11px] shadow-2xs",
+        outline:
+          "border-spruce-300 dark:border-spruce-700 bg-spruce-50/80 dark:bg-spruce-900/60 text-spruce-700 dark:text-spruce-300",
         success:
-          "border-spruce-500/40 bg-spruce-500/15 text-spruce-800 dark:text-spruce-200 font-semibold shadow-sm",
+          "border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 font-semibold shadow-2xs",
         warning:
-          "border-amber-500/40 bg-amber-500/15 text-amber-800 dark:text-amber-300 font-semibold shadow-sm",
+          "border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 font-semibold shadow-2xs",
+        info:
+          "border-sky-300 dark:border-sky-700/60 bg-sky-50 dark:bg-sky-950/60 text-sky-900 dark:text-sky-200 font-semibold shadow-2xs",
       },
     },
     defaultVariants: {

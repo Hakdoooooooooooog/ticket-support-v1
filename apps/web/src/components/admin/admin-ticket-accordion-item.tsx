@@ -495,10 +495,10 @@ export function AdminTicketAccordionItem({
           {/* Customer Satisfaction Feedback Section */}
           {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
             typeof ticket.csatRating === 'number' ? (
-              <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs space-y-2">
+              <div className="p-3.5 rounded-lg border border-amber-200 dark:border-amber-700/50 bg-amber-50/60 dark:bg-amber-950/30 text-xs space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-amber-500 uppercase tracking-wider text-[11px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                    <span className="font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider text-[11px] px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700/60">
                       CSAT Score {ticket.csatRating}.0 / 5.0
                     </span>
                     <span className="font-semibold text-spruce-800 dark:text-spruce-200">
@@ -512,28 +512,28 @@ export function AdminTicketAccordionItem({
                     </span>
                   </div>
                   {ticket.csatRatedAt && (
-                    <span className="text-[10px] text-spruce-500">
+                    <span className="text-[10px] text-spruce-600 dark:text-spruce-400">
                       Rated on {formatTicketDateTime(ticket.csatRatedAt)}
                     </span>
                   )}
                 </div>
                 {ticket.csatComment && (
-                  <p className="text-spruce-700 dark:text-spruce-300 italic bg-white/60 dark:bg-spruce-900/60 p-2.5 rounded border border-amber-500/10">
+                  <p className="text-spruce-900 dark:text-spruce-100 italic bg-white dark:bg-spruce-900/60 p-2.5 rounded border border-amber-200/80 dark:border-amber-800/40">
                     &ldquo;{ticket.csatComment}&rdquo;
                   </p>
                 )}
               </div>
             ) : (
-              <div className="p-3 rounded-lg border border-dashed border-spruce-300 dark:border-spruce-700/60 bg-spruce-50/50 dark:bg-spruce-900/30 text-xs flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-spruce-500 dark:text-spruce-400">
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <div className="p-3 rounded-lg border border-dashed border-spruce-300 dark:border-spruce-700/60 bg-spruce-50/80 dark:bg-spruce-900/30 text-xs flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-spruce-600 dark:text-spruce-400">
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60">
                     CSAT Pending
                   </span>
-                  <span className="text-spruce-600 dark:text-spruce-400">
+                  <span className="text-spruce-700 dark:text-spruce-300">
                     Awaiting feedback from customer ({ticket.creator?.fullName || 'Customer'})
                   </span>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-spruce-200 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-400">
+                <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-spruce-200 dark:bg-spruce-800 text-spruce-800 dark:text-spruce-300">
                   Pending Rating
                 </span>
               </div>
