@@ -58,6 +58,16 @@ export function sanitizePayload<T>(payload: T, fieldKey?: string): T {
     return payload;
   }
 
+  if (typeof Blob !== 'undefined' && payload instanceof Blob) {
+    return payload;
+  }
+  if (typeof ArrayBuffer !== 'undefined' && (payload instanceof ArrayBuffer || ArrayBuffer.isView(payload))) {
+    return payload;
+  }
+  if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+    return payload;
+  }
+
   if (Array.isArray(payload)) {
     return payload.map((item) => sanitizePayload(item, fieldKey)) as unknown as T;
   }

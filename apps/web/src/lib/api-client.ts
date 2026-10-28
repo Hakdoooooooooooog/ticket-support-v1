@@ -41,6 +41,13 @@ apiClient.interceptors.request.use(
 // Response Interceptor: Sanitizes all inbound data from the backend before UI rendering
 apiClient.interceptors.response.use(
   (response) => {
+    if (
+      response.config.responseType === 'blob' ||
+      response.config.responseType === 'arraybuffer' ||
+      response.config.responseType === 'stream'
+    ) {
+      return response;
+    }
     if (response.data !== undefined && response.data !== null) {
       response.data = sanitizePayload(response.data);
     }

@@ -39,12 +39,17 @@ apps/web/src/
 │   └── use-realtime-events.ts          # Server-Sent Events (SSE) stream listener & cache invalidator
 │
 ├── components/                         # Reusable UI & Domain Components
+│   ├── admin/                          # Service desk console, KPI grid, Reports Studio
+│   │   ├── admin-reports.tsx           # Reports & CSAT Analytics Studio (RFC 4180 CSV exports)
+│   │   ├── admin-ticket-filters.tsx    # Queue search, status, priority, and department filters
+│   │   ├── admin-agent-workload.tsx    # Agent queue workload allocation
+│   │   └── admin-kpi-grid.tsx          # Real-time service desk KPI grid
 │   ├── notification-center.tsx         # In-app popover notification feed with unread badges
 │   ├── csat-rating-widget.tsx          # Interactive 5-star customer satisfaction widget
 │   ├── canned-responses-menu.tsx       # Categorized troubleshooting quick-response menu
 │   ├── ticket-list.tsx                 # Expandable ticket table, timeline, & lightbox
 │   ├── forms/
-│   │   └── ticket-form.tsx             # Ticket creation form with client-side encryption
+│   │   └── ticket-form.tsx             # Ticket creation form with department routing & client encryption
 │   └── ui/                             # Base accessible UI primitives
 │       ├── contextual-loader.tsx       # Structural domain-specific skeleton animations
 │       ├── badge.tsx                   # Calibrated status & priority badge variants
@@ -78,7 +83,7 @@ apps/web/src/
 - **Persistent Sessions**: JWT Bearer token stored in `localStorage` and validated on boot against `/auth/me`.
 
 ### 2. Customer Support Portal (`/portal`)
-- **Ticket Submission**: Create new incident tickets with priority (`LOW`, `MEDIUM`, `HIGH`, `URGENT`), category, and optional diagnostic screenshots.
+- **Ticket Submission with Department Routing**: Create new incident tickets selecting either `Technical Support` or `General Inquiry`, with priority (`LOW`, `MEDIUM`, `HIGH`, `URGENT`) and optional diagnostic screenshots.
 - **Client-Side Attachment Encryption**: Screenshots are compressed on an offscreen HTML Canvas and encrypted in-browser using AES-GCM 256-bit before upload.
 - **Interactive Timeline**: Real-time audit history of status transitions, resolution comments, and follow-up requests.
 - **Customer Amendments**: End users can submit additional diagnostic information and upload supplementary screenshots on open tickets.
@@ -86,14 +91,19 @@ apps/web/src/
 
 ### 3. IT Service Desk Console (`/admin`)
 - **Queue Triage Tab**:
-  - Live incident queue with filters for status, priority, and assigned engineer.
+  - Live incident queue with filters for status, priority, department (`Technical Support` vs `General Scope`), and assigned engineer.
   - One-click ticket claiming ("Assign to Me") and reassignment.
+  - Automated round-robin auto-assignment action ("Auto-assign (Round-Robin)") rotating turns fairly across active support engineers.
   - Status progression workflow (`OPEN` &rarr; `IN_PROGRESS` &rarr; `RESOLVED` &rarr; `CLOSED`).
   - Resolution note composer equipped with canned responses and optional screenshot attachments.
-- **Analytics & Telemetry Tab**:
-  - 4-column KPI overview (Total, Open & In-Progress, Needs Info / Escalated, Urgent / High, Resolved, and Average CSAT).
-  - Engineer workload allocation and resolution velocity tracking.
-  - CSAT breakdown with aggregate score distribution.
+- **Reports & CSAT Studio Tab (`/admin` &rarr; Reports & CSAT)**:
+  - Executive KPI summary cards (Total Volume, Resolution Rate %, Unassigned Backlog, CSAT Average).
+  - Automated department allocation breakdown comparing Technical Support vs General Scope volumes.
+  - CSAT 1–5 star distribution progress telemetry.
+  - Staff round-robin workload & performance leaderboard with assigned volume, resolved counts, average CSAT, and last turn timestamps.
+  - Instant RFC 4180 CSV export download buttons for tickets and CSAT feedback, equipped with department, status, and priority presets.
+- **Canned Responses Tab**:
+  - Dynamic template library with dynamic placeholder interpolation (`{{customer_name}}`, `{{ticket_id}}`, `{{ticket_title}}`, `{{agent_name}}`).
 - **Team & Invites Tab**:
   - Single-use invitation generator for `AGENT` and `ADMIN` roles.
   - Active invite management with token status inspection and revocation.
@@ -177,7 +187,7 @@ npm run dev
 # Run Next.js production build and TypeScript type-check
 npm run build
 
-# Run Vitest unit tests (29 tests across helpers and state stores)
+# Run Vitest unit tests (48 tests across helpers, security, and state stores)
 npm test
 
 # Start production server

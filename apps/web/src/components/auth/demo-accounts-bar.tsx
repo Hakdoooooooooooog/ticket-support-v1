@@ -30,7 +30,7 @@ export function DemoAccountsBar({ onSelectAccount, disabled }: DemoAccountsBarPr
           variant="outline"
           size="sm"
           disabled={disabled}
-          onClick={() => onSelectAccount('admin@ticketsupport.local', 'AdminSecure123!')}
+          onClick={() => onSelectAccount('admin@ticketsupport.local', 'LocalDevAdminPassword123!')}
           className="text-[11px] h-7 px-2.5 bg-spruce-100/50 hover:bg-spruce-100 dark:bg-spruce-900/50 dark:hover:bg-spruce-900"
         >
           Admin
@@ -40,7 +40,7 @@ export function DemoAccountsBar({ onSelectAccount, disabled }: DemoAccountsBarPr
           variant="outline"
           size="sm"
           disabled={disabled}
-          onClick={() => onSelectAccount('sam@ticketsupport.local', 'AgentSecure123!')}
+          onClick={() => onSelectAccount('agent@ticketsupport.local', 'LocalDevAgentPassword123!')}
           className="text-[11px] h-7 px-2.5 bg-spruce-100/50 hover:bg-spruce-100 dark:bg-spruce-900/50 dark:hover:bg-spruce-900"
         >
           Agent
@@ -50,7 +50,7 @@ export function DemoAccountsBar({ onSelectAccount, disabled }: DemoAccountsBarPr
           variant="outline"
           size="sm"
           disabled={disabled}
-          onClick={() => onSelectAccount('jane@ticketsupport.local', 'Customer123!')}
+          onClick={() => onSelectAccount('customer@ticketsupport.local', 'LocalDevCustomerPassword123!')}
           className="text-[11px] h-7 px-2.5 bg-spruce-100/50 hover:bg-spruce-100 dark:bg-spruce-900/50 dark:hover:bg-spruce-900"
         >
           Customer
