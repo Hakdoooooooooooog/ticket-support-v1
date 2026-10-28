@@ -24,8 +24,8 @@
   "overrides": {
     "multer": "2.5.0",
     "nestjs-zod": {
-      "@nestjs/common": "$@nestjs/common",
-      "@nestjs/swagger": "$@nestjs/swagger"
+      "@nestjs/common": "^12.0.1",
+      "@nestjs/swagger": "^12.0.4"
     }
   },
   "packageManager": "npm@10.8.2"
