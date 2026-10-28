@@ -33,6 +33,7 @@ function loadRootPublicEnv(): Record<string, string> {
 const rootPublicEnv = loadRootPublicEnv();
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   /* config options here */
   env: rootPublicEnv,
   cacheComponents: true,

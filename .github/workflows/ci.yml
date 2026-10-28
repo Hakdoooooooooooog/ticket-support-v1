@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Monorepo Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Run Monorepo Linting (Oxlint + ESLint)
+        run: npm run lint
+
+  typecheck:
+    name: TypeScript Strict Type Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Generate Prisma 7 Client Types
+        run: npm run db:generate --workspace=api
+
+      - name: Run Monorepo TypeScript Compiler Validation (tsc)
+        run: npm run typecheck
+
+  test-api:
+    name: Backend API Unit & E2E Integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword123
+          POSTGRES_DB: ticketsupport_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://postgres:testpassword123@localhost:5432/ticketsupport_test?schema=public"
+      JWT_SECRET: "ci_test_super_secret_jwt_key_must_be_over_32_characters_long_for_security"
+      JWT_EXPIRES_IN: "1d"
+      PORT: "3001"
+      NODE_ENV: "test"
+      MAX_PAYLOAD_SIZE: "10mb"
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Generate Prisma 7 Client
+        run: npm run db:generate --workspace=api
+
+      - name: Deploy Prisma Migrations to PostgreSQL Container
+        working-directory: apps/api
+        run: npx prisma migrate deploy --config=prisma.config.ts
+
+      - name: Run Backend Unit Tests (Vitest)
+        run: npm --prefix apps/api run test
+
+      - name: Run Backend E2E Tests (Vitest + Supertest)
+        run: npm --prefix apps/api run test:e2e
+
+      - name: Verify Backend Production Build
+        run: npm --prefix apps/api run build
+
+  test-web:
+    name: Frontend Web Unit Tests & Production Build
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: "http://localhost:3001"
+      NEXT_PUBLIC_ATTACHMENT_KEY: "ci_aes_256_gcm_transit_key_for_testing_32chars!"
+      CI: "true"
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Run Frontend Unit Tests (Vitest)
+        run: npm --prefix apps/web run test
+
+      - name: Compile Next.js 16 Production Standalone Build
+        run: NODE_ENV=production npm --prefix apps/web run build
+
+      - name: Verify Production Standalone Server Entry & Asset Isolation
+        run: |
+          test -f apps/web/.next/standalone/apps/web/server.js || {
+            echo "Error: Next.js standalone server entrypoint not found at apps/web/.next/standalone/apps/web/server.js"
+            exit 1
+          }
+          echo "Verified: Next.js standalone bundle generated successfully."
+
+  ci-gate:
+    name: CI Pipeline Status Gate
+    needs: [lint, typecheck, test-api, test-web]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate Monorepo CI Quality Gates
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" || \
+                "${{ needs.typecheck.result }}" != "success" || \
+                "${{ needs.test-api.result }}" != "success" || \
+                "${{ needs.test-web.result }}" != "success" ]]; then
+            echo "❌ CI Quality Gate Failed!"
+            echo "  - Linting:      ${{ needs.lint.result }}"
+            echo "  - Typecheck:    ${{ needs.typecheck.result }}"
+            echo "  - Backend API:  ${{ needs.test-api.result }}"
+            echo "  - Frontend Web: ${{ needs.test-web.result }}"
+            exit 1
+          fi
+          echo "✅ All CI Quality Gates passed successfully!"
