@@ -57,7 +57,7 @@ describe('Web State Management Stores (Zustand)', () => {
       expect(updated.tickets[0].id).toBe('ticket-1');
 
       // Verify tickets array with customer PII is omitted from sessionStorage
-      const storedTicketsRaw = mockSessionStorage['ts_zustand_tickets_store'];
+      const storedTicketsRaw = mockSessionStorage['ts_tickets'] || mockSessionStorage['ts_zustand_tickets_store'];
       if (storedTicketsRaw) {
         expect(storedTicketsRaw).not.toContain(mockTicket.description);
         expect(storedTicketsRaw).not.toContain('"tickets"');
@@ -217,7 +217,7 @@ describe('Web State Management Stores (Zustand)', () => {
       ]);
       expect(useAdminStore.getState().agents).toHaveLength(1);
 
-      const storedAdminRaw = mockSessionStorage['ts_zustand_admin_store'];
+      const storedAdminRaw = mockSessionStorage['ts_admin'] || mockSessionStorage['ts_zustand_admin_store'];
       if (storedAdminRaw) {
         expect(storedAdminRaw).not.toContain('sam@ticketsupport.local');
         expect(storedAdminRaw).not.toContain('Sam Chen');
@@ -295,7 +295,7 @@ describe('Web State Management Stores (Zustand)', () => {
       expect(activeState.isSessionVerified).toBe(true);
 
       // Verify that zustand persist partialize NEVER wrote accessToken or PII to sessionStorage
-      const persistedRaw = mockSessionStorage['ts_zustand_auth_store'];
+      const persistedRaw = mockSessionStorage['ts_auth'] || mockSessionStorage['ts_zustand_auth_store'];
       if (persistedRaw) {
         expect(persistedRaw).not.toContain('"accessToken"');
         expect(persistedRaw).not.toContain(mockSession.accessToken);

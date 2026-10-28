@@ -52,15 +52,17 @@ export interface TicketsState {
   setLightboxImage: (image: DecryptedAttachmentResult | null) => void;
 }
 
-// Self-healing: Proactively purge any legacy stored ticket entities (customer PII) from existing sessionStorage
+// Self-healing: Proactively purge legacy verbose keys and any stored ticket entities (customer PII)
 if (typeof window !== 'undefined') {
   try {
-    const rawTickets = window.sessionStorage.getItem('ts_zustand_tickets_store');
+    window.sessionStorage.removeItem('ts_zustand_tickets_store');
+
+    const rawTickets = window.sessionStorage.getItem('ts_tickets');
     if (rawTickets && rawTickets.includes('"tickets"')) {
       const parsed = JSON.parse(rawTickets);
       if (parsed?.state?.tickets) {
         delete parsed.state.tickets;
-        window.sessionStorage.setItem('ts_zustand_tickets_store', JSON.stringify(parsed));
+        window.sessionStorage.setItem('ts_tickets', JSON.stringify(parsed));
       }
     }
   } catch {
@@ -373,7 +375,7 @@ export const useTicketsStore = create<TicketsState>()(
       },
     }),
     {
-      name: 'ts_zustand_tickets_store',
+      name: 'ts_tickets',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         // PRIVACY & SECURITY: Full ticket entities (customer descriptions, names, emails,

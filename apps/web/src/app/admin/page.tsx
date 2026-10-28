@@ -1606,11 +1606,11 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-full bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-300 font-bold flex items-center justify-center shrink-0 border border-spruce-300 dark:border-spruce-700 text-xs">
-                  {user.fullName.charAt(0).toUpperCase()}
+                  {(user.fullName || user.email || user.role || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-xs truncate text-spruce-900 dark:text-white">
-                    {user.fullName}
+                    {user.fullName || user.email || 'Staff Member'}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <Badge
@@ -1896,8 +1896,8 @@ export default function AdminDashboardPage() {
 
               {user && (
                 <div className="p-2.5 rounded-lg bg-spruce-100/70 dark:bg-spruce-900 text-xs space-y-1">
-                  <p className="font-semibold">{user.fullName}</p>
-                  <p className="text-spruce-500">{user.email}</p>
+                  <p className="font-semibold">{user.fullName || user.email || 'Staff Member'}</p>
+                  {user.email && <p className="text-spruce-500">{user.email}</p>}
                   <Badge variant="secondary">{user.role}</Badge>
                 </div>
               )}

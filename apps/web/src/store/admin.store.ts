@@ -42,16 +42,18 @@ export interface AdminState {
   resetFilters: () => void;
 }
 
-// Self-healing: Proactively purge legacy staff directory (PII) and drafts from existing sessionStorage
+// Self-healing: Proactively purge legacy verbose keys and any stored staff PII/drafts
 if (typeof window !== 'undefined') {
   try {
-    const rawAdmin = window.sessionStorage.getItem('ts_zustand_admin_store');
+    window.sessionStorage.removeItem('ts_zustand_admin_store');
+
+    const rawAdmin = window.sessionStorage.getItem('ts_admin');
     if (rawAdmin && (rawAdmin.includes('"agents"') || rawAdmin.includes('"commentDrafts"'))) {
       const parsed = JSON.parse(rawAdmin);
       if (parsed?.state) {
         delete parsed.state.agents;
         delete parsed.state.commentDrafts;
-        window.sessionStorage.setItem('ts_zustand_admin_store', JSON.stringify(parsed));
+        window.sessionStorage.setItem('ts_admin', JSON.stringify(parsed));
       }
     }
   } catch {
@@ -128,7 +130,7 @@ export const useAdminStore = create<AdminState>()(
         }),
     }),
     {
-      name: 'ts_zustand_admin_store',
+      name: 'ts_admin',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         // PRIVACY & SECURITY: Staff directory (names, emails) and internal comment drafts

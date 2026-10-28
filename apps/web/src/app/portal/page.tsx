@@ -128,7 +128,7 @@ export default function CustomerPortalPage() {
             )}
             {user && (
               <div className="hidden sm:flex items-center gap-2 text-xs text-spruce-700 dark:text-spruce-300 font-medium">
-                <span>{user.fullName}</span>
+                <span>{user.fullName || user.email || 'User'}</span>
               </div>
             )}
             <Button variant="ghost" size="sm" onClick={handleSignOut}>

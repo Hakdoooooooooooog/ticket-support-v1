@@ -26,12 +26,15 @@ export interface AuthState {
 
 let inFlightVerification: Promise<AuthUser | null> | null = null;
 
-// Self-healing: Proactively scrub legacy plaintext tokens and PII (email, fullName) from existing sessionStorage
+// Self-healing: Proactively scrub legacy verbose keys and purge any stored credentials/PII
 if (typeof window !== 'undefined') {
   try {
-    const rawZustandAuth = window.sessionStorage.getItem('ts_zustand_auth_store');
-    if (rawZustandAuth) {
-      const parsed = JSON.parse(rawZustandAuth);
+    window.sessionStorage.removeItem('ts_zustand_auth_store');
+    window.localStorage.removeItem('ts_zustand_auth_store');
+
+    const rawAuth = window.sessionStorage.getItem('ts_auth');
+    if (rawAuth) {
+      const parsed = JSON.parse(rawAuth);
       let changed = false;
       if (parsed?.state?.accessToken !== undefined) {
         delete parsed.state.accessToken;
@@ -46,7 +49,7 @@ if (typeof window !== 'undefined') {
         changed = true;
       }
       if (changed) {
-        window.sessionStorage.setItem('ts_zustand_auth_store', JSON.stringify(parsed));
+        window.sessionStorage.setItem('ts_auth', JSON.stringify(parsed));
       }
     }
   } catch {
@@ -154,7 +157,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'ts_zustand_auth_store',
+      name: 'ts_auth',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         // PRIVACY & SECURITY: PII (email, fullName) and credentials (accessToken)
