@@ -33,9 +33,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: |
-          npm install
-          npm install --save-optional @oxlint/binding-linux-x64-gnu --workspace=api
+        run: npm install
 
       - name: Run Monorepo Linting (Oxlint + ESLint)
         run: npm run lint
@@ -140,9 +138,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: |
-          npm install
-          npm install --save-optional @tailwindcss/oxide-linux-x64-gnu --workspace=web
+        run: npm install
 
       - name: Run Frontend Unit Tests (Vitest)
         run: npm --prefix apps/web run test
