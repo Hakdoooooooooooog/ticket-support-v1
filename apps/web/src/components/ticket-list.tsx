@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@ui/input';
+import { Button } from '@ui/button';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { apiClient } from '@lib/api-client';
 import {
@@ -235,23 +236,42 @@ export function TicketList() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {filteredTickets.length > 0 && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={toggleExpandAll}
-              className="text-xs text-spruce-600 hover:text-spruce-950 underline dark:text-spruce-400 dark:hover:text-white"
+              className="h-8 px-2.5 text-xs text-spruce-700 dark:text-spruce-300 font-medium"
             >
               {allExpanded ? 'Collapse All' : 'Expand All'}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => refetch()}
-            className="text-xs text-spruce-600 hover:text-spruce-950 underline dark:text-spruce-400 dark:hover:text-white w-16 text-center shrink-0"
+            disabled={isFetching}
+            title={isFetching ? 'Refreshing tickets...' : 'Refresh tickets'}
+            aria-label="Refresh tickets"
+            className="h-8 w-8 p-0 shrink-0 text-spruce-700 dark:text-spruce-300"
           >
-            {isFetching && hasLoadedTickets ? 'Syncing...' : 'Refresh'}
-          </button>
+            <svg
+              className={`w-4 h-4 transition-transform ${isFetching ? 'animate-spin text-spruce-500 dark:text-spruce-300' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </Button>
         </div>
       </div>
 

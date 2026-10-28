@@ -171,10 +171,10 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
                 id="department"
                 defaultValue="TECHNICAL_SUPPORT"
                 {...register('department')}
-                className="flex h-9 w-full rounded-md border border-spruce-300 bg-white dark:bg-spruce-900/80 px-3 py-1 text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-spruce-500 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300"
+                className="flex h-10 w-full rounded-lg border border-spruce-300/90 bg-white dark:bg-spruce-950/70 px-3 py-2 text-xs sm:text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-spruce-500/20 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300/30 dark:focus-visible:border-spruce-300 cursor-pointer"
               >
                 <option value="TECHNICAL_SUPPORT">Technical Support</option>
-                <option value="GENERAL">General Inquiry</option>
+                <option value="GENERAL">General Inquiries</option>
               </select>
               {errors.department && (
                 <p className="text-xs text-red-500 font-medium">{errors.department.message}</p>
@@ -187,12 +187,12 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
                 id="priority"
                 defaultValue="MEDIUM"
                 {...register('priority')}
-                className="flex h-9 w-full rounded-md border border-spruce-300 bg-white dark:bg-spruce-900/80 px-3 py-1 text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-spruce-500 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300"
+                className="flex h-10 w-full rounded-lg border border-spruce-300/90 bg-white dark:bg-spruce-950/70 px-3 py-2 text-xs sm:text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-spruce-500/20 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300/30 dark:focus-visible:border-spruce-300 cursor-pointer"
               >
-                <option value="LOW">Low - General query or enhancement</option>
-                <option value="MEDIUM">Medium - Normal operational issue</option>
-                <option value="HIGH">High - Major feature degraded</option>
-                <option value="URGENT">Urgent - System wide outage or blocker</option>
+                <option value="LOW">Low (Query / Request)</option>
+                <option value="MEDIUM">Medium (Normal)</option>
+                <option value="HIGH">High (Degraded)</option>
+                <option value="URGENT">Urgent (Outage)</option>
               </select>
               {errors.priority && (
                 <p className="text-xs text-red-500 font-medium">{errors.priority.message}</p>

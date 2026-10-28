@@ -80,10 +80,10 @@ export default function CustomerPortalPage() {
         showAdminSwitch={user?.role === 'ADMIN' || user?.role === 'AGENT'}
       />
 
-      <main className="flex-1 py-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-spruce-950 dark:text-white">
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-spruce-950 dark:text-white">
               Customer Support Portal
             </h1>
             <p className="text-sm text-spruce-600 dark:text-spruce-300">
@@ -91,7 +91,7 @@ export default function CustomerPortalPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
             <div className="lg:col-span-5">
               <TicketForm creatorId={user?.id} />
             </div>
@@ -103,7 +103,7 @@ export default function CustomerPortalPage() {
       </main>
 
       <footer className="border-t border-spruce-200 dark:border-spruce-800 py-6 px-4 sm:px-6 lg:px-8 text-xs text-spruce-600 dark:text-spruce-400">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>TicketSupport Helpdesk Platform</p>
           <p className="font-mono text-[11px] text-spruce-500/80 dark:text-spruce-400/70">
             Version {APP_VERSION}

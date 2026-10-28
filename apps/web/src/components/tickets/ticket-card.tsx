@@ -124,59 +124,57 @@ export function TicketCard({
     >
       {/* Accordion Trigger */}
       <div className="p-0">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5">
           <button
             type="button"
             aria-expanded={isExpanded}
             onClick={() => onToggleExpand(ticket.id)}
-            className="w-full text-left flex flex-col lg:flex-row lg:items-center justify-between gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-lg"
+            className="flex-1 min-w-0 text-left space-y-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-lg group cursor-pointer"
           >
-            <div className="space-y-1.5 min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-mono font-bold text-spruce-600 dark:text-spruce-400">
-                  {formatShortTicketId(ticket.id)}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-mono font-bold text-spruce-600 dark:text-spruce-400">
+                {formatShortTicketId(ticket.id)}
+              </span>
+              {!isViewed ? (
+                <Badge
+                  variant="default"
+                  className="text-[10px] py-0 px-1.5 bg-spruce-600 text-white dark:bg-spruce-300 dark:text-spruce-950 font-bold tracking-tight"
+                >
+                  New
+                </Badge>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-spruce-500 dark:text-spruce-400 px-1.5 py-0.2 rounded bg-spruce-100/60 dark:bg-spruce-900/50">
+                  <svg className="w-3 h-3 text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Viewed</span>
                 </span>
-                {!isViewed ? (
-                  <Badge
-                    variant="default"
-                    className="text-[10px] py-0 px-1.5 bg-spruce-600 text-white dark:bg-spruce-300 dark:text-spruce-950 font-bold tracking-tight"
-                  >
-                    New
-                  </Badge>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-spruce-500 dark:text-spruce-400 px-1.5 py-0.2 rounded bg-spruce-100/60 dark:bg-spruce-900/50">
-                    <svg className="w-3 h-3 text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Viewed</span>
-                  </span>
-                )}
-                <h3 className="font-semibold text-base sm:text-lg text-spruce-950 dark:text-white truncate">
-                  {ticket.title}
-                </h3>
-              </div>
+              )}
+              <h3 className="font-semibold text-base text-spruce-950 dark:text-white group-hover:text-spruce-700 dark:group-hover:text-spruce-200 transition-colors truncate">
+                {ticket.title}
+              </h3>
+            </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-spruce-500 dark:text-spruce-400">
-                <span>Reported by {ticket.creator?.fullName || 'Customer'}</span>
-                <span>·</span>
-                <span>{formatTicketDate(ticket.createdAt)}</span>
-                <span>·</span>
-                <span>
-                  {commentCount} {commentCount === 1 ? 'reply' : 'replies'}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-spruce-500 dark:text-spruce-400">
+              <span>Reported by {ticket.creator?.fullName || 'Customer'}</span>
+              <span>·</span>
+              <span>{formatTicketDate(ticket.createdAt)}</span>
+              <span>·</span>
+              <span>
+                {commentCount} {commentCount === 1 ? 'reply' : 'replies'}
+              </span>
+              {attachmentCount > 0 && (
+                <span className="text-spruce-700 dark:text-spruce-300 font-medium">
+                  {attachmentCount} {attachmentCount === 1 ? 'attachment' : 'attachments'}
                 </span>
-                {attachmentCount > 0 && (
-                  <span className="text-spruce-700 dark:text-spruce-300 font-medium">
-                    {attachmentCount} {attachmentCount === 1 ? 'attachment' : 'attachments'}
-                  </span>
-                )}
-                {typeof ticket.csatRating === 'number' && (
-                  <span className="text-emerald-500 font-medium">CSAT {ticket.csatRating}.0</span>
-                )}
-              </div>
+              )}
+              {typeof ticket.csatRating === 'number' && (
+                <span className="text-emerald-500 font-medium">CSAT {ticket.csatRating}.0</span>
+              )}
             </div>
           </button>
 
-          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-start sm:self-center">
             <Badge
               variant="outline"
               className="text-[11px] font-medium border-spruce-300 dark:border-spruce-700 bg-spruce-50/50 dark:bg-spruce-900/50 text-spruce-700 dark:text-spruce-300"
@@ -189,9 +187,12 @@ export function TicketCard({
             </Badge>
             <button
               type="button"
-              onClick={() => onToggleViewed(ticket.id, isViewed)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleViewed(ticket.id, isViewed);
+              }}
               title={isViewed ? 'Mark as unread / new' : 'Mark as viewed'}
-              className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400"
+              className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 cursor-pointer"
               aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
             >
               {isViewed ? (
@@ -204,6 +205,21 @@ export function TicketCard({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                 </svg>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleExpand(ticket.id)}
+              className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 transition-transform cursor-pointer"
+              aria-label={isExpanded ? 'Collapse ticket' : 'Expand ticket'}
+            >
+              <svg
+                className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
           </div>
         </div>
