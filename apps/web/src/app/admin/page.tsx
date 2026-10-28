@@ -2405,7 +2405,7 @@ export default function AdminDashboardPage() {
              =================================================================== */}
           {activeSection === 'ALL_TICKETS' && (
             <div className="space-y-4">
-              <Card>
+              <Card className="border-spruce-200 dark:border-spruce-800 bg-spruce-100/50 dark:bg-spruce-950/70 shadow-xs">
                 <CardContent className="p-4 flex flex-col gap-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
@@ -2491,7 +2491,7 @@ export default function AdminDashboardPage() {
              =================================================================== */}
           {activeSection === 'ASSIGNED_TICKETS' && (
             <div className="space-y-4">
-              <Card>
+              <Card className="border-spruce-200 dark:border-spruce-800 bg-spruce-100/50 dark:bg-spruce-950/70 shadow-xs">
                 <CardContent className="p-4 flex flex-col gap-3">
                   {/* Scope Switcher: Assigned to Me vs All Assigned vs Specific Engineer */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-spruce-100 dark:border-spruce-800">
