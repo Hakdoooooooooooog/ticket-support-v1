@@ -8,7 +8,6 @@ import {
   filterTickets,
   formatByteSize,
   formatShortTicketId,
-  countTicketAttachments,
   getPriorityBadgeVariant,
   getStatusBadgeVariant,
   formatNotificationTime,

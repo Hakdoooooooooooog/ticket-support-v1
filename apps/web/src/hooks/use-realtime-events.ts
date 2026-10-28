@@ -41,11 +41,12 @@ export function useRealtimeEvents(options: UseRealtimeEventsOptions = {}) {
   const [lastEvent, setLastEvent] = React.useState<RealtimeMessage | null>(null);
 
   const optionsRef = React.useRef(options);
-  optionsRef.current = options;
+  React.useEffect(() => {
+    optionsRef.current = options;
+  });
 
   React.useEffect(() => {
     if (!accessToken || typeof window === 'undefined') {
-      setStatus('disconnected');
       return;
     }
 

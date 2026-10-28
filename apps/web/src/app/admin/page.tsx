@@ -83,7 +83,6 @@ export default function AdminDashboardPage() {
 
   const {
     agents: storedAgents,
-    hasLoadedAgents,
     activeSection,
     assignedScope,
     assignmentFilter,
@@ -472,7 +471,7 @@ export default function AdminDashboardPage() {
       user?.id
         ? tickets.filter((t) => resolveTicketAssigneeId(t) === user.id)
         : [],
-    [tickets, user?.id],
+    [tickets, user],
   );
 
   // Compute displayed tickets for active section
@@ -526,7 +525,7 @@ export default function AdminDashboardPage() {
     statusFilter,
     priorityFilter,
     searchQuery,
-    user?.id,
+    user,
   ]);
 
   // Auto-load attachments when expanded

@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { firstValueFrom, take, toArray } from 'rxjs';
 import { RealtimeService } from '../../../src/realtime/realtime.service.js';
 
 describe('RealtimeService', () => {
