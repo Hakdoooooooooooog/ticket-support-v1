@@ -10,7 +10,7 @@ import { ThemeToggle } from '@components/theme-toggle';
 import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
-import { getStoredSession, cn } from '@lib/helpers';
+import { getStoredSession, getUserDisplayName, cn } from '@lib/helpers';
 import { APP_VERSION } from '@lib/constants';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
@@ -128,7 +128,7 @@ export default function CustomerPortalPage() {
             )}
             {user && (
               <div className="hidden sm:flex items-center gap-2 text-xs text-spruce-700 dark:text-spruce-300 font-medium">
-                <span>{user.fullName || user.email || 'User'}</span>
+                <span>{getUserDisplayName(user, 'User')}</span>
               </div>
             )}
             <Button variant="ghost" size="sm" onClick={handleSignOut}>

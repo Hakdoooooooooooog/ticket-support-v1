@@ -101,6 +101,28 @@ export function sanitizeAuthUser(user: Partial<AuthUser> | null | undefined): Au
   };
 }
 
+/**
+ * Safely extracts user initial (single uppercase character) with full null/undefined safety.
+ * Handles missing fullName, missing email, missing role, or completely empty/undefined user objects.
+ */
+export function getUserInitial(user?: Partial<AuthUser> | null, defaultChar: string = 'U'): string {
+  if (!user) return defaultChar.toUpperCase();
+  const candidate = (user.fullName || user.email || user.role || defaultChar).trim();
+  return candidate.length > 0 ? candidate.charAt(0).toUpperCase() : defaultChar.toUpperCase();
+}
+
+/**
+ * Safely extracts user display name with full null/undefined safety.
+ */
+export function getUserDisplayName(user?: Partial<AuthUser> | null, fallback: string = 'Staff Member'): string {
+  if (!user) return fallback;
+  return (user.fullName && user.fullName.trim().length > 0)
+    ? user.fullName.trim()
+    : (user.email && user.email.trim().length > 0)
+      ? user.email.trim()
+      : fallback;
+}
+
 const AUTH_STORAGE_KEY = 'ts_auth_s';
 const VAULT_SALT = 'ts_sec_k9u28_v1';
 
@@ -415,7 +437,8 @@ export function formatShortTicketId(id?: string): string {
   return `#${id?.slice(0, 8) || 'new'}`;
 }
 
-export function resolveTicketAssigneeId(ticket: Ticket): string {
+export function resolveTicketAssigneeId(ticket?: Partial<Ticket> | null): string {
+  if (!ticket) return '';
   return ticket.assigneeId || ticket.assignee?.id || '';
 }
 

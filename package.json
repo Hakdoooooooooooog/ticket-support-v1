@@ -10,6 +10,7 @@
     "dev:stream": "turbo dev --ui=stream --color",
     "build": "turbo build --color",
     "lint": "turbo lint --color",
+    "typecheck": "turbo typecheck --color",
     "test": "turbo test --color",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

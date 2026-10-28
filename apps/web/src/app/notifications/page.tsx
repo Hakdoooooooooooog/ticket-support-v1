@@ -11,6 +11,7 @@ import {
   formatNotificationTime,
   getNotificationBadge,
   getStoredSession,
+  getUserDisplayName,
   cn,
 } from '@lib/helpers';
 import { APP_VERSION } from '@lib/constants';
@@ -191,7 +192,7 @@ export default function NotificationsPage() {
 
             {user && (
               <div className="hidden sm:flex items-center gap-2 text-xs text-spruce-700 dark:text-spruce-300 font-medium">
-                <span>{user.fullName || user.email || 'User'}</span>
+                <span>{getUserDisplayName(user, 'User')}</span>
               </div>
             )}
 
