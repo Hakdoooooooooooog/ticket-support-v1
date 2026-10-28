@@ -17,6 +17,7 @@ RUN npm install
 
 # Build stage
 FROM deps AS builder
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/placeholder"
 COPY apps/api ./apps/api
 
 # Generate Prisma Client & compile NestJS application
