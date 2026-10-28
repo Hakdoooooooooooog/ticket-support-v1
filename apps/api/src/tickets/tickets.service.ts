@@ -239,6 +239,7 @@ export class TicketsService implements OnModuleInit {
         recipientRoles: ['ADMIN', 'AGENT'],
         payload: {
           id: record.id,
+          ticketId: record.id,
           title: record.title,
           priority: record.priority,
           status: record.status,
@@ -355,6 +356,7 @@ export class TicketsService implements OnModuleInit {
           type: 'COMMENT_ADDED',
           recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
           payload: {
+            id: ticketId,
             ticketId,
             commentId: newComment.id,
             authorId: author.id,
@@ -633,6 +635,7 @@ export class TicketsService implements OnModuleInit {
           type: 'TICKET_UPDATED',
           recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
           payload: {
+            id,
             ticketId: id,
             status: updated.status,
             priority: updated.priority,
@@ -717,6 +720,7 @@ export class TicketsService implements OnModuleInit {
           type: 'CSAT_SUBMITTED',
           recipientRoles: ['ADMIN', 'AGENT'],
           payload: {
+            id,
             ticketId: id,
             rating: dto.rating,
             comment: dto.comment,
@@ -859,6 +863,7 @@ export class TicketsService implements OnModuleInit {
           type: 'TICKET_DELETED',
           recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
           payload: {
+            id,
             ticketId: id,
             deletedBy: actor?.id,
           },

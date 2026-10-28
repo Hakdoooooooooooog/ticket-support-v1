@@ -80,45 +80,59 @@ export function useRealtimeEvents(options: UseRealtimeEventsOptions = {}) {
 
           // Trigger reactive query cache invalidations
           switch (envelope.type) {
-            case 'TICKET_CREATED':
+            case 'TICKET_CREATED': {
               queryClient.invalidateQueries({ queryKey: ['tickets'] });
               optionsRef.current.onTicketCreated?.(envelope.payload);
               break;
+            }
 
-            case 'TICKET_UPDATED':
+            case 'TICKET_UPDATED': {
               queryClient.invalidateQueries({ queryKey: ['tickets'] });
-              if (envelope.payload?.ticketId) {
+              const targetTicketId = envelope.payload?.ticketId || envelope.payload?.id;
+              if (targetTicketId) {
                 queryClient.invalidateQueries({
-                  queryKey: ['ticket', envelope.payload.ticketId],
+                  queryKey: ['ticket', targetTicketId],
                 });
               }
               optionsRef.current.onTicketUpdated?.(envelope.payload);
               break;
+            }
 
-            case 'COMMENT_ADDED':
+            case 'COMMENT_ADDED': {
               queryClient.invalidateQueries({ queryKey: ['tickets'] });
-              if (envelope.payload?.ticketId) {
+              const targetTicketId = envelope.payload?.ticketId || envelope.payload?.id;
+              if (targetTicketId) {
                 queryClient.invalidateQueries({
-                  queryKey: ['ticket', envelope.payload.ticketId],
+                  queryKey: ['ticket', targetTicketId],
                 });
               }
               optionsRef.current.onCommentAdded?.(envelope.payload);
               break;
+            }
 
-            case 'CSAT_SUBMITTED':
+            case 'CSAT_SUBMITTED': {
               queryClient.invalidateQueries({ queryKey: ['tickets'] });
               optionsRef.current.onCsatSubmitted?.(envelope.payload);
               break;
+            }
 
-            case 'TICKET_DELETED':
+            case 'TICKET_DELETED': {
               queryClient.invalidateQueries({ queryKey: ['tickets'] });
+              const targetTicketId = envelope.payload?.ticketId || envelope.payload?.id;
+              if (targetTicketId) {
+                queryClient.invalidateQueries({
+                  queryKey: ['ticket', targetTicketId],
+                });
+              }
               optionsRef.current.onTicketDeleted?.(envelope.payload);
               break;
+            }
 
-            case 'NOTIFICATION':
+            case 'NOTIFICATION': {
               queryClient.invalidateQueries({ queryKey: ['notifications'] });
               optionsRef.current.onNotification?.(envelope.payload);
               break;
+            }
           }
         } catch (err) {
           console.warn('Failed to parse SSE event payload:', err);

@@ -122,6 +122,11 @@ describe('Web State Management Stores (Zustand)', () => {
       store.upsertTicket(newTicket);
       expect(useTicketsStore.getState().tickets).toHaveLength(2);
       expect(useTicketsStore.getState().tickets[0].id).toBe('ticket-2'); // newly inserted at top
+
+      // Safely ignores invalid/undefined tickets
+      store.upsertTicket(undefined as unknown as Ticket);
+      store.upsertTicket({} as unknown as Ticket);
+      expect(useTicketsStore.getState().tickets).toHaveLength(2);
     });
 
     it('optimistically removes tickets by ID', () => {
@@ -142,6 +147,12 @@ describe('Web State Management Stores (Zustand)', () => {
 
       store.toggleAttachmentVisibility('ticket-1-root');
       expect(useTicketsStore.getState().hiddenAttachmentKeys['ticket-1-root']).toBe(false);
+    });
+
+    it('safely handles ensureTicketAttachmentsLoaded with missing or undefined ticket', async () => {
+      const store = useTicketsStore.getState();
+      await expect(store.ensureTicketAttachmentsLoaded(undefined as unknown as Ticket)).resolves.toBeUndefined();
+      await expect(store.ensureTicketAttachmentsLoaded({} as unknown as Ticket)).resolves.toBeUndefined();
     });
 
     it('toggles comment history expansion state', () => {

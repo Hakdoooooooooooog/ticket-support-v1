@@ -80,10 +80,11 @@ export const useTicketsStore = create<TicketsState>()(
       },
 
       upsertTicket: (ticket: Ticket) => {
+        if (!ticket || !ticket.id) return;
         const current = get().tickets;
         const exists = current.some((t) => t.id === ticket.id);
         const next = exists
-          ? current.map((t) => (t.id === ticket.id ? ticket : t))
+          ? current.map((t) => (t.id === ticket.id ? { ...t, ...ticket } : t))
           : [ticket, ...current];
         set({
           tickets: next,
@@ -326,6 +327,7 @@ export const useTicketsStore = create<TicketsState>()(
       },
 
       ensureTicketAttachmentsLoaded: async (ticket: Ticket) => {
+        if (!ticket || !ticket.id) return;
         const tasks: Promise<void>[] = [];
         if (ticket.hasAttachment) {
           tasks.push(get().loadTicketAttachment(ticket.id));

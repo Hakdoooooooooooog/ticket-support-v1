@@ -129,18 +129,39 @@ export default function AdminDashboardPage() {
 
   // Real-time events subscription
   const { status: realtimeStatus } = useRealtimeEvents({
-    onTicketCreated: (newTicket) => {
-      upsertTicket(newTicket);
-      setRealtimeAlert(`New incident reported: "${newTicket.title}"`);
+    onTicketCreated: (payload) => {
+      const ticketId = payload?.id || payload?.ticketId;
+      if (!ticketId) return;
+      if (payload.title && payload.creatorId) {
+        upsertTicket(payload as Ticket);
+      }
+      setRealtimeAlert(
+        payload.title
+          ? `New incident reported: "${payload.title}"`
+          : `New incident #${ticketId.slice(0, 8)} reported`,
+      );
     },
-    onTicketUpdated: (updatedTicket) => {
-      upsertTicket(updatedTicket);
-      void ensureTicketAttachmentsLoaded(updatedTicket);
-      setRealtimeAlert(`Ticket #${updatedTicket.id.slice(0, 8)} updated`);
+    onTicketUpdated: (payload) => {
+      const ticketId = payload?.id || payload?.ticketId;
+      if (!ticketId) return;
+
+      const existing = tickets.find((t) => t.id === ticketId);
+      if (existing) {
+        const merged: Ticket = {
+          ...existing,
+          ...payload,
+          id: ticketId,
+        };
+        upsertTicket(merged);
+        void ensureTicketAttachmentsLoaded(merged);
+      }
+      setRealtimeAlert(`Ticket #${ticketId.slice(0, 8)} updated`);
     },
-    onTicketDeleted: ({ id }) => {
-      removeTicket(id);
-      setRealtimeAlert(`Ticket #${id.slice(0, 8)} deleted`);
+    onTicketDeleted: (payload) => {
+      const ticketId = payload?.id || payload?.ticketId;
+      if (!ticketId) return;
+      removeTicket(ticketId);
+      setRealtimeAlert(`Ticket #${ticketId.slice(0, 8)} deleted`);
     },
   });
 

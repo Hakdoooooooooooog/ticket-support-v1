@@ -56,11 +56,13 @@ export function NotificationItem({
           <p className="text-xs text-spruce-600 dark:text-spruce-400 leading-relaxed">
             {notification.message}
           </p>
-          <div className="pt-0.5">
-            <span className="font-mono text-[10px] text-spruce-500 dark:text-spruce-400">
-              Ticket #{notification.ticketId.slice(0, 8)}
-            </span>
-          </div>
+          {notification.ticketId && (
+            <div className="pt-0.5">
+              <span className="font-mono text-[10px] text-spruce-500 dark:text-spruce-400">
+                Ticket #{notification.ticketId.slice(0, 8)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
