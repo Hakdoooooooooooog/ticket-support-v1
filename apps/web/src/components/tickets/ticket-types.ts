@@ -14,12 +14,15 @@ export interface TicketComment {
   } | null;
 }
 
+export type Department = 'TECHNICAL_SUPPORT' | 'GENERAL';
+
 export interface Ticket {
   id: string;
   title: string;
   description: string;
   status: 'OPEN' | 'IN_PROGRESS' | 'NEEDS_INFO' | 'RESOLVED' | 'CLOSED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  department?: Department;
   createdAt: string;
   creatorId?: string;
   creator?: {

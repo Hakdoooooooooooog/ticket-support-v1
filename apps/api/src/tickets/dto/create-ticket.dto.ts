@@ -4,6 +4,14 @@ import { createZodDto } from 'nestjs-zod';
 export const ticketPriorityEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']);
 export type TicketPriorityType = z.infer<typeof ticketPriorityEnum>;
 
+export const departmentEnum = z.enum(['TECHNICAL_SUPPORT', 'GENERAL']);
+export type DepartmentType = z.infer<typeof departmentEnum>;
+
+export enum Department {
+  TECHNICAL_SUPPORT = 'TECHNICAL_SUPPORT',
+  GENERAL = 'GENERAL',
+}
+
 export enum TicketPriority {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
@@ -35,6 +43,9 @@ export const createTicketSchema = z.object({
   priority: ticketPriorityEnum
     .default('MEDIUM')
     .describe('Priority level: LOW, MEDIUM, HIGH, URGENT'),
+  department: departmentEnum
+    .default('TECHNICAL_SUPPORT')
+    .describe('Department handling the issue: TECHNICAL_SUPPORT, GENERAL'),
   creatorId: z
     .string()
     .optional()

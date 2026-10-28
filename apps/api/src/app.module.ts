@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { CannedResponsesModule } from './canned-responses/canned-responses.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CannedResponsesModule } from './canned-responses/canned-responses.modul
     TicketsModule,
     AuthModule,
     CannedResponsesModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

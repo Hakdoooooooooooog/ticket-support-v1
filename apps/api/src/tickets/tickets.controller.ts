@@ -49,20 +49,25 @@ export class TicketsController {
   @ApiOperation({ summary: 'List tickets with role-scoped visibility and optional filters' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by ticket status' })
   @ApiQuery({ name: 'priority', required: false, description: 'Filter by ticket priority' })
+  @ApiQuery({ name: 'department', required: false, description: 'Filter by ticket department' })
   @ApiQuery({ name: 'search', required: false, description: 'Search by ID, title, description, or customer' })
   @ApiResponse({ status: 200, description: 'Tickets retrieved successfully' })
   findAll(
     @Query('status') status?: string,
     @Query('priority') priority?: string,
     @Query('search') search?: string,
-    @Req() req?: AuthenticatedRequest,
+    @Query('department') departmentOrReq?: string | AuthenticatedRequest,
+    @Req() maybeReq?: AuthenticatedRequest,
   ) {
+    const req = typeof departmentOrReq === 'object' && departmentOrReq !== null ? departmentOrReq : maybeReq;
+    const department = typeof departmentOrReq === 'string' ? departmentOrReq : undefined;
     const actor = req?.user ?? undefined;
-    if (!priority && !search && !actor) {
+    if (!priority && !department && !search && !actor) {
       return this.ticketsService.findAll(status);
     }
     return this.ticketsService.findAll(status, {
       priority,
+      department,
       search,
       actor,
     });
@@ -144,6 +149,20 @@ export class TicketsController {
     return actor
       ? this.ticketsService.update(id, updateTicketDto, actor)
       : this.ticketsService.update(id, updateTicketDto);
+  }
+
+  @Post(':id/auto-assign')
+  @Serialize(ticketResponseSchema)
+  @ApiOperation({ summary: 'Automatically assign ticket via round-robin distribution' })
+  @ApiResponse({ status: 200, description: 'Ticket automatically assigned' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Ticket not found' })
+  autoAssign(
+    @Param('id') id: string,
+    @Req() req?: AuthenticatedRequest,
+  ) {
+    const actor = req?.user ?? undefined;
+    return this.ticketsService.autoAssignTicket(id, actor);
   }
 
   @Post(':id/comments')

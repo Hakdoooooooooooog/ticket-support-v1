@@ -244,6 +244,42 @@ describe('Web Helpers & Domain Functions', () => {
       expect(results[0].id).toBe('t-102');
     });
 
+    it('filters tickets by department (TECHNICAL_SUPPORT vs GENERAL)', () => {
+      const ticketsWithDepts: Ticket[] = [
+        {
+          id: 't-101',
+          title: 'Printer offline',
+          description: "Second floor printer won't turn on",
+          status: 'OPEN',
+          priority: 'LOW',
+          department: 'TECHNICAL_SUPPORT',
+          createdAt: '2026-10-27T10:00:00Z',
+          updatedAt: '2026-10-27T10:00:00Z',
+        },
+        {
+          id: 't-102',
+          title: 'General inquiry about hours',
+          description: 'What time is support open?',
+          status: 'OPEN',
+          priority: 'LOW',
+          department: 'GENERAL',
+          createdAt: '2026-10-27T10:00:00Z',
+          updatedAt: '2026-10-27T10:00:00Z',
+        },
+      ];
+
+      const techOnly = filterTickets(ticketsWithDepts, 'ALL', 'ALL', '', 'TECHNICAL_SUPPORT');
+      expect(techOnly).toHaveLength(1);
+      expect(techOnly[0].id).toBe('t-101');
+
+      const genOnly = filterTickets(ticketsWithDepts, 'ALL', 'ALL', '', 'GENERAL');
+      expect(genOnly).toHaveLength(1);
+      expect(genOnly[0].id).toBe('t-102');
+
+      const allDepts = filterTickets(ticketsWithDepts, 'ALL', 'ALL', '', 'ALL');
+      expect(allDepts).toHaveLength(2);
+    });
+
     it('filters tickets with default parameters', () => {
       const results = filterTickets(sampleTickets);
       expect(results).toHaveLength(2);

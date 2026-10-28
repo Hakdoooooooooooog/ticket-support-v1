@@ -21,6 +21,7 @@ export class TicketMapper {
       title: validated.title,
       description: validated.description,
       priority: validated.priority,
+      department: validated.department,
       creatorId,
       ...(compressedAttachment ? compressedAttachment : {}),
     };
@@ -51,6 +52,7 @@ export class TicketMapper {
       ...(validated.description ? { description: validated.description } : {}),
       ...(validated.priority ? { priority: validated.priority } : {}),
       ...(validated.status ? { status: validated.status } : {}),
+      ...(validated.department ? { department: validated.department } : {}),
       ...(validated.assigneeId !== undefined ? { assigneeId: validated.assigneeId } : {}),
       ...attachmentPatch,
     };

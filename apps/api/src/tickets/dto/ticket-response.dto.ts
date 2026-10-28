@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
 import { dateToIsoString } from '../../common/schemas/common.schema.js';
-import { ticketPriorityEnum } from './create-ticket.dto.js';
+import { ticketPriorityEnum, departmentEnum } from './create-ticket.dto.js';
 import { ticketStatusEnum } from './update-ticket.dto.js';
 
 export const userSummarySchema = z.object({
@@ -28,6 +28,7 @@ export const ticketResponseSchema = z.object({
   description: z.string().default('No description provided'),
   status: ticketStatusEnum.default('OPEN'),
   priority: ticketPriorityEnum.default('MEDIUM'),
+  department: departmentEnum.default('TECHNICAL_SUPPORT'),
   createdAt: dateToIsoString.default(() => new Date().toISOString()),
   updatedAt: dateToIsoString.default(() => new Date().toISOString()),
   creatorId: z.string().optional().default(''),

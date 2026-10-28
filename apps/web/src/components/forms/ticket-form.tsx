@@ -33,6 +33,7 @@ const ticketSchema = z.object({
     .string()
     .min(10, { message: 'Please provide a detailed description (at least 10 characters)' }),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
+  department: z.enum(['TECHNICAL_SUPPORT', 'GENERAL']),
 });
 
 type TicketFormValues = z.infer<typeof ticketSchema>;
@@ -60,6 +61,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
       title: '',
       description: '',
       priority: 'MEDIUM',
+      department: 'TECHNICAL_SUPPORT',
     },
   });
 
@@ -162,22 +164,40 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="priority">Priority Level</Label>
-            <select
-              id="priority"
-              defaultValue="MEDIUM"
-              {...register('priority')}
-              className="flex h-9 w-full rounded-md border border-spruce-300 bg-white dark:bg-spruce-900/80 px-3 py-1 text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-spruce-500 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300"
-            >
-              <option value="LOW">Low - General query or enhancement</option>
-              <option value="MEDIUM">Medium - Normal operational issue</option>
-              <option value="HIGH">High - Major feature degraded</option>
-              <option value="URGENT">Urgent - System wide outage or blocker</option>
-            </select>
-            {errors.priority && (
-              <p className="text-xs text-red-500 font-medium">{errors.priority.message}</p>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="department">Support Department</Label>
+              <select
+                id="department"
+                defaultValue="TECHNICAL_SUPPORT"
+                {...register('department')}
+                className="flex h-9 w-full rounded-md border border-spruce-300 bg-white dark:bg-spruce-900/80 px-3 py-1 text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-spruce-500 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300"
+              >
+                <option value="TECHNICAL_SUPPORT">Technical Support</option>
+                <option value="GENERAL">General Inquiry</option>
+              </select>
+              {errors.department && (
+                <p className="text-xs text-red-500 font-medium">{errors.department.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="priority">Priority Level</Label>
+              <select
+                id="priority"
+                defaultValue="MEDIUM"
+                {...register('priority')}
+                className="flex h-9 w-full rounded-md border border-spruce-300 bg-white dark:bg-spruce-900/80 px-3 py-1 text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-spruce-500 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300"
+              >
+                <option value="LOW">Low - General query or enhancement</option>
+                <option value="MEDIUM">Medium - Normal operational issue</option>
+                <option value="HIGH">High - Major feature degraded</option>
+                <option value="URGENT">Urgent - System wide outage or blocker</option>
+              </select>
+              {errors.priority && (
+                <p className="text-xs text-red-500 font-medium">{errors.priority.message}</p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1.5">

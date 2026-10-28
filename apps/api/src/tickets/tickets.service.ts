@@ -31,6 +31,7 @@ export interface TicketActorContext {
 
 export interface TicketQueryFilters {
   priority?: string;
+  department?: string;
   search?: string;
   actor?: TicketActorContext;
 }
@@ -147,6 +148,10 @@ export class TicketsService implements OnModuleInit {
       where.priority = filters.priority;
     }
 
+    if (filters?.department && filters.department !== 'ALL') {
+      where.department = filters.department;
+    }
+
     if (filters?.actor?.role === 'CUSTOMER') {
       where.creatorId = filters.actor.id;
     }
@@ -189,12 +194,61 @@ export class TicketsService implements OnModuleInit {
     return TicketMapper.toResponseDto(ticket);
   }
 
+  /**
+   * Selects an eligible agent for a department using fair round-robin rotation.
+   * Priority:
+   * 1. Active AGENTs belonging specifically to the target department (ordered by least recently assigned: lastAssignedAt ASC, createdAt ASC).
+   * 2. If no department-specific agent exists, any active AGENT (general pool).
+   * 3. Fallback: If no agents exist in the system, select an ADMIN so tickets are never left untriaged.
+   */
+  async selectNextRoundRobinAgent(
+    department: 'TECHNICAL_SUPPORT' | 'GENERAL',
+    tx: any,
+  ): Promise<{ id: string; fullName: string; email: string } | null> {
+    if (!tx?.user?.findFirst) {
+      return null;
+    }
+
+    try {
+      // 1. Try finding an agent assigned specifically to this department
+      let nextAgent = await tx.user.findFirst({
+        where: {
+          role: 'AGENT',
+          department,
+        },
+        orderBy: [
+          { lastAssignedAt: 'asc' },
+          { createdAt: 'asc' },
+        ],
+        select: { id: true, fullName: true, email: true },
+      });
+
+      // 2. If no department-specific agent, find any active AGENT (general pool)
+      if (!nextAgent) {
+        nextAgent = await tx.user.findFirst({
+          where: {
+            role: 'AGENT',
+          },
+          orderBy: [
+            { lastAssignedAt: 'asc' },
+            { createdAt: 'asc' },
+          ],
+          select: { id: true, fullName: true, email: true },
+        });
+      }
+
+      return nextAgent;
+    } catch {
+      return null;
+    }
+  }
+
   async create(
     dto: CreateTicketDto,
     creatorId?: string,
     actor?: TicketActorContext,
   ): Promise<TicketResponseDto> {
-    const { record, user } = await this.runTransaction(async (tx) => {
+    const { record, user, assignedAgent } = await this.runTransaction(async (tx) => {
       const effectiveCreatorId = actor?.id || creatorId || dto.creatorId;
       const user = await this.resolveCreatorUser(effectiveCreatorId, tx);
       const createData = TicketMapper.toCreateInput(dto, user.id);
@@ -216,12 +270,30 @@ export class TicketsService implements OnModuleInit {
         }
       }
 
+      // Automated round-robin assignment if assigneeId is not manually provided
+      let assignedAgent: { id: string; fullName: string; email: string } | null = null;
+      if (!(createData as any).assigneeId) {
+        assignedAgent = await this.selectNextRoundRobinAgent(
+          (createData as any).department || 'TECHNICAL_SUPPORT',
+          tx,
+        );
+        if (assignedAgent) {
+          (createData as any).assigneeId = assignedAgent.id;
+          if (typeof tx.user.update === 'function') {
+            await tx.user.update({
+              where: { id: assignedAgent.id },
+              data: { lastAssignedAt: new Date() },
+            });
+          }
+        }
+      }
+
       const record = await tx.ticket.create({
         data: createData,
         include: this.standardTicketInclude,
       });
 
-      return { record, user };
+      return { record, user, assignedAgent };
     });
 
     if (this.notificationsService) {
@@ -229,8 +301,18 @@ export class TicketsService implements OnModuleInit {
       await this.notificationsService.notifyAdmins({
         ticketId: record.id,
         title: `New Ticket: ${record.title.slice(0, 40)}`,
-        message: `A new ticket #${record.id.slice(-6)} was submitted by ${creatorName} and is pending triage.`,
+        message: `A new ticket #${record.id.slice(-6)} was submitted by ${creatorName} in ${record.department}.`,
       });
+
+      if (assignedAgent) {
+        await this.notificationsService.createNotification({
+          userId: assignedAgent.id,
+          ticketId: record.id,
+          type: 'TICKET_ASSIGNED',
+          title: `Ticket Assigned: ${record.title.slice(0, 40)}`,
+          message: `Ticket #${record.id.slice(-6)} in ${record.department} was automatically assigned to you via round-robin.`,
+        });
+      }
     }
 
     if (this.realtimeService) {
@@ -243,14 +325,88 @@ export class TicketsService implements OnModuleInit {
           title: record.title,
           priority: record.priority,
           status: record.status,
+          department: record.department,
           creatorId: record.creatorId,
           creatorName: user.fullName || user.email || 'Customer',
+          assigneeId: record.assigneeId,
+          assigneeName: record.assignee?.fullName || null,
           createdAt: record.createdAt.toISOString(),
         },
       });
     }
 
     return TicketMapper.toResponseDto(record);
+  }
+
+  async autoAssignTicket(
+    id: string,
+    actor?: TicketActorContext,
+  ): Promise<TicketResponseDto> {
+    if (actor?.role === 'CUSTOMER') {
+      throw new ForbiddenException('Customers cannot assign tickets');
+    }
+
+    const { updatedTicket, assignedAgent } = await this.runTransaction(async (tx) => {
+      const existing = await tx.ticket.findUnique({
+        where: { id },
+        include: this.standardTicketInclude,
+      });
+
+      if (!existing) {
+        throw new NotFoundException(`Ticket with ID "${id}" not found`);
+      }
+
+      const assignedAgent = await this.selectNextRoundRobinAgent(
+        (existing as any).department || 'TECHNICAL_SUPPORT',
+        tx,
+      );
+
+      if (!assignedAgent) {
+        throw new BadRequestException('No eligible agents available for round-robin assignment');
+      }
+
+      if (typeof tx.user.update === 'function') {
+        await tx.user.update({
+          where: { id: assignedAgent.id },
+          data: { lastAssignedAt: new Date() },
+        });
+      }
+
+      const updatedTicket = await tx.ticket.update({
+        where: { id },
+        data: { assigneeId: assignedAgent.id },
+        include: this.standardTicketInclude,
+      });
+
+      return { updatedTicket, assignedAgent };
+    });
+
+    if (this.notificationsService) {
+      await this.notificationsService.createNotification({
+        userId: assignedAgent.id,
+        ticketId: updatedTicket.id,
+        type: 'TICKET_ASSIGNED',
+        title: `Ticket Assigned: ${updatedTicket.title.slice(0, 40)}`,
+        message: `Ticket #${updatedTicket.id.slice(-6)} in ${updatedTicket.department} was assigned to you via round-robin.`,
+      });
+    }
+
+    if (this.realtimeService) {
+      this.realtimeService.emit({
+        type: 'TICKET_UPDATED',
+        recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
+        payload: {
+          id: updatedTicket.id,
+          ticketId: updatedTicket.id,
+          assigneeId: updatedTicket.assigneeId,
+          assigneeName: assignedAgent.fullName,
+          department: updatedTicket.department,
+          updatedAt: updatedTicket.updatedAt.toISOString(),
+        },
+      });
+    }
+
+    return TicketMapper.toResponseDto(updatedTicket);
   }
 
   async addComment(

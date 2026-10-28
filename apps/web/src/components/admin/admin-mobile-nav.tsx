@@ -192,6 +192,24 @@ export function AdminMobileNav({
                   </span>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectSection('REPORTS');
+                    onClose();
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
+                    activeSection === 'REPORTS'
+                      ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950'
+                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                  }`}
+                >
+                  <span>Reports &amp; CSAT</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300">
+                    Export
+                  </span>
+                </button>
+
                 {user?.role === 'ADMIN' && (
                   <button
                     type="button"

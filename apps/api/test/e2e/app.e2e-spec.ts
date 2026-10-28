@@ -13,6 +13,7 @@ describe('TicketSupport API (e2e)', () => {
   let prisma: PrismaService;
   let createdTicketId: string;
   let customerToken: string;
+  let adminToken: string;
   const testEmail = `e2e.user.${Date.now()}@example.com`;
 
   beforeAll(async () => {
@@ -178,7 +179,13 @@ describe('TicketSupport API (e2e)', () => {
     });
 
     it('PATCH /tickets/:id -> should require assignment before changing status or commenting, then update status and priority once assigned', async () => {
-      // 1. Unassigned status change or comment is rejected with 400 Bad Request
+      // 1. Ensure ticket is unassigned to verify unassigned guard
+      await prisma.ticket.update({
+        where: { id: createdTicketId },
+        data: { assigneeId: null },
+      });
+
+      // Unassigned status change or comment is rejected with 400 Bad Request
       await request(app.getHttpServer())
         .patch(`/tickets/${createdTicketId}`)
         .send({ status: 'IN_PROGRESS' })
@@ -418,7 +425,6 @@ describe('TicketSupport API (e2e)', () => {
   });
 
   describe('Staff Invitation Lifecycle (e2e)', () => {
-    let adminToken: string;
     let inviteCode: string;
     let inviteId: string;
     const inviteEmail = `invitee.${Date.now()}@ticketsupport.local`;
@@ -490,6 +496,45 @@ describe('TicketSupport API (e2e)', () => {
         .expect(200);
 
       expect(res.body.success).toBe(true);
+    });
+  });
+
+  describe('Reports & Export Flow (/reports)', () => {
+    it('GET /reports/summary -> should return operational metrics, departments, and CSAT breakdown for staff', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/summary')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.kpis).toBeDefined();
+      expect(typeof res.body.kpis.totalTickets).toBe('number');
+      expect(res.body.departments).toBeDefined();
+      expect(typeof res.body.departments.technicalSupport).toBe('number');
+      expect(typeof res.body.departments.general).toBe('number');
+      expect(res.body.csat).toBeDefined();
+      expect(Array.isArray(res.body.agents)).toBe(true);
+    });
+
+    it('GET /reports/tickets/csv -> should download tickets as RFC 4180 CSV with Content-Disposition header', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/tickets/csv?department=TECHNICAL_SUPPORT')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.headers['content-type']).toContain('text/csv');
+      expect(res.headers['content-disposition']).toContain('attachment; filename="tickets-export-');
+      expect(res.text).toContain('"Ticket ID","Title","Department","Priority"');
+    });
+
+    it('GET /reports/csat/csv -> should export CSAT ratings as CSV', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/csat/csv')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.headers['content-type']).toContain('text/csv');
+      expect(res.headers['content-disposition']).toContain('attachment; filename="csat-ratings-');
+      expect(res.text).toContain('"Ticket ID","Title","Department","CSAT Rating"');
     });
   });
 });

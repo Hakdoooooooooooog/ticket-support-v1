@@ -38,6 +38,7 @@ import {
   AdminCannedResponses,
   AdminTeamManagement,
   AdminTicketAccordionItem,
+  AdminReports,
   type StaffInviteRecord,
 } from '@components/admin';
 
@@ -122,6 +123,7 @@ export default function AdminDashboardPage() {
   const [inviteSuccessMessage, setInviteSuccessMessage] = React.useState<string | null>(null);
   const [inviteError, setInviteError] = React.useState<string | null>(null);
   const [copiedLink, setCopiedLink] = React.useState(false);
+  const [departmentFilter, setDepartmentFilter] = React.useState<string>('ALL');
 
   // Direct provisioning local state
   const [provisionSuccessMessage, setProvisionSuccessMessage] = React.useState<string | null>(null);
@@ -269,6 +271,29 @@ export default function AdminDashboardPage() {
     onError: (err: unknown, variables) => {
       const message = extractApiErrorMessage(err, 'Failed to update ticket');
       setActionErrors((prev) => ({ ...prev, [variables.id]: message }));
+    },
+  });
+
+  const autoAssignMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      const res = await apiClient.post(`/tickets/${ticketId}/auto-assign`);
+      return res.data as Ticket;
+    },
+    onSuccess: (updatedTicket) => {
+      if (updatedTicket?.id) {
+        upsertTicket(updatedTicket);
+        void ensureTicketAttachmentsLoaded(updatedTicket);
+        setRealtimeAlert(
+          `Ticket #${updatedTicket.id.slice(0, 8)} automatically assigned to ${updatedTicket.assignee?.fullName || 'Agent'}`,
+        );
+        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: '' }));
+      }
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+    },
+    onError: (err: unknown, ticketId) => {
+      const message = extractApiErrorMessage(err, 'Failed to auto-assign ticket');
+      setActionErrors((prev) => ({ ...prev, [ticketId]: message }));
     },
   });
 
@@ -509,6 +534,7 @@ export default function AdminDashboardPage() {
         'ALL',
         'ALL',
         searchQuery,
+        departmentFilter,
       );
     }
 
@@ -523,7 +549,7 @@ export default function AdminDashboardPage() {
         }
         return assigneeId === assignedScope;
       });
-      return filterTickets(scoped, statusFilter, priorityFilter, searchQuery);
+      return filterTickets(scoped, statusFilter, priorityFilter, searchQuery, departmentFilter);
     }
 
     if (activeSection === 'ALL_TICKETS') {
@@ -533,7 +559,7 @@ export default function AdminDashboardPage() {
         if (assignmentFilter === 'ASSIGNED') return hasAssignee;
         return true;
       });
-      return filterTickets(assignmentScoped, statusFilter, priorityFilter, searchQuery);
+      return filterTickets(assignmentScoped, statusFilter, priorityFilter, searchQuery, departmentFilter);
     }
 
     return [];
@@ -545,6 +571,7 @@ export default function AdminDashboardPage() {
     assignmentFilter,
     statusFilter,
     priorityFilter,
+    departmentFilter,
     searchQuery,
     user,
   ]);
@@ -621,6 +648,7 @@ export default function AdminDashboardPage() {
             },
           });
         }}
+        onAutoAssignTicket={(id) => autoAssignMutation.mutate(id)}
         onClaimTicket={(id) => {
           if (user?.id) {
             updateTicketMutation.mutate({
@@ -713,6 +741,7 @@ export default function AdminDashboardPage() {
                 {activeSection === 'ASSIGNED_TICKETS' && 'Assigned Incidents Queue'}
                 {activeSection === 'CANNED_RESPONSES' && 'Canned Responses & Templates'}
                 {activeSection === 'TEAM_MANAGEMENT' && 'IT Support Team & Staff Invitations'}
+                {activeSection === 'REPORTS' && 'Reports & CSAT Analytics Studio'}
               </h1>
               <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-400 mt-1 max-w-xl leading-relaxed">
                 {activeSection === 'DASHBOARD' &&
@@ -725,6 +754,8 @@ export default function AdminDashboardPage() {
                   'Create, manage, and interpolate dynamic quick reply templates with variable placeholders.'}
                 {activeSection === 'TEAM_MANAGEMENT' &&
                   'Invite-only access: invite support engineers, generate secure claim links, and manage staff accounts.'}
+                {activeSection === 'REPORTS' &&
+                  'Executive service desk metrics, technical support vs general department volumes, customer satisfaction (CSAT), and RFC 4180 CSV exports.'}
               </p>
             </div>
 
@@ -900,6 +931,8 @@ export default function AdminDashboardPage() {
                 onSelectStatus={setStatusFilter}
                 priorityFilter={priorityFilter}
                 onSelectPriority={setPriorityFilter}
+                departmentFilter={departmentFilter}
+                onSelectDepartment={setDepartmentFilter}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 assignmentFilter={assignmentFilter}
@@ -924,6 +957,8 @@ export default function AdminDashboardPage() {
                 onSelectStatus={setStatusFilter}
                 priorityFilter={priorityFilter}
                 onSelectPriority={setPriorityFilter}
+                departmentFilter={departmentFilter}
+                onSelectDepartment={setDepartmentFilter}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 assignedScope={assignedScope}
@@ -971,6 +1006,11 @@ export default function AdminDashboardPage() {
               provisionSuccessMessage={provisionSuccessMessage}
               provisionError={provisionError}
             />
+          )}
+
+          {/* SECTION 6: REPORTS & CSAT ANALYTICS STUDIO */}
+          {activeSection === 'REPORTS' && (
+            <AdminReports />
           )}
         </main>
       </div>

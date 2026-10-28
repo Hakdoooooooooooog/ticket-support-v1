@@ -159,6 +159,22 @@ export function AdminSidebar({
           </span>
         </button>
 
+        {/* Reports & CSAT Studio */}
+        <button
+          type="button"
+          onClick={() => onSelectSection('REPORTS')}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
+            activeSection === 'REPORTS'
+              ? 'bg-spruce-800 text-white dark:bg-spruce-300 dark:text-spruce-950 shadow-sm'
+              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900'
+          }`}
+        >
+          <span>Reports &amp; CSAT</span>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300">
+            Export
+          </span>
+        </button>
+
         {/* Admin Exclusive: IT Support Team & Staff Invites */}
         {user?.role === 'ADMIN' && (
           <button

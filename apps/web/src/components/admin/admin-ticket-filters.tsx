@@ -13,6 +13,8 @@ interface AdminTicketFiltersProps {
   onSelectStatus: (status: string) => void;
   priorityFilter: string;
   onSelectPriority: (priority: string) => void;
+  departmentFilter?: string;
+  onSelectDepartment?: (dept: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 
@@ -38,6 +40,8 @@ export function AdminTicketFilters({
   onSelectStatus,
   priorityFilter,
   onSelectPriority,
+  departmentFilter = 'ALL',
+  onSelectDepartment,
   searchQuery,
   onSearchChange,
   assignmentFilter = 'ALL',
@@ -143,20 +147,33 @@ export function AdminTicketFilters({
           )}
         </div>
 
-        {/* Priority Filter + Search Input */}
+        {/* Department + Priority Filter + Search Input */}
         <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between pt-2 border-t border-spruce-100 dark:border-spruce-800">
-          <select
-            aria-label="Filter by Priority"
-            value={priorityFilter}
-            onChange={(e) => onSelectPriority(e.target.value)}
-            className="h-9 rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
-          >
-            <option value="ALL">All Priorities</option>
-            <option value="URGENT">Urgent Only</option>
-            <option value="HIGH">High Only</option>
-            <option value="MEDIUM">Medium Only</option>
-            <option value="LOW">Low Only</option>
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Filter by Department"
+              value={departmentFilter}
+              onChange={(e) => onSelectDepartment?.(e.target.value)}
+              className="h-9 rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
+            >
+              <option value="ALL">All Departments</option>
+              <option value="TECHNICAL_SUPPORT">Tech Support</option>
+              <option value="GENERAL">General Scope</option>
+            </select>
+
+            <select
+              aria-label="Filter by Priority"
+              value={priorityFilter}
+              onChange={(e) => onSelectPriority(e.target.value)}
+              className="h-9 rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
+            >
+              <option value="ALL">All Priorities</option>
+              <option value="URGENT">Urgent Only</option>
+              <option value="HIGH">High Only</option>
+              <option value="MEDIUM">Medium Only</option>
+              <option value="LOW">Low Only</option>
+            </select>
+          </div>
 
           <Input
             placeholder={

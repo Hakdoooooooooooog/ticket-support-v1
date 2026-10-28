@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
-import { ticketPriorityEnum, encryptedAttachmentSchema } from './create-ticket.dto.js';
+import { ticketPriorityEnum, departmentEnum, encryptedAttachmentSchema } from './create-ticket.dto.js';
 
 export const ticketStatusEnum = z.enum([
   'OPEN',
@@ -40,6 +40,9 @@ export const updateTicketSchema = z.object({
   status: ticketStatusEnum
     .optional()
     .describe('Updated ticket status: OPEN, IN_PROGRESS, NEEDS_INFO, RESOLVED, CLOSED'),
+  department: departmentEnum
+    .optional()
+    .describe('Updated ticket department: TECHNICAL_SUPPORT, GENERAL'),
   assigneeId: z
     .string()
     .nullable()

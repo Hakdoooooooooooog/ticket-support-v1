@@ -149,6 +149,7 @@ describe('TicketsService', () => {
           title: 'New Support Incident',
           description: 'Detailed description of the issue encountered',
           priority: 'HIGH',
+          department: 'TECHNICAL_SUPPORT',
           creatorId: 'user-1',
         },
         include: expect.any(Object),
@@ -183,6 +184,82 @@ describe('TicketsService', () => {
       expect(prisma.ticket.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ creatorId: 'demo-user-id' }),
         include: expect.any(Object),
+      });
+    });
+
+    it('should automatically assign incoming ticket via round-robin to eligible department agent', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'creator@example.com',
+        fullName: 'Alice Walker',
+        role: 'CUSTOMER',
+      });
+      const mockAgent = {
+        id: 'agent-101',
+        fullName: 'Support Specialist One',
+        email: 'specialist1@example.com',
+      };
+      (prisma.user as any).findFirst = vi.fn().mockResolvedValue(mockAgent);
+      (prisma.user as any).update = vi.fn().mockResolvedValue({ id: 'agent-101' });
+
+      prisma.ticket.create.mockResolvedValue({
+        ...mockDbTicket,
+        assigneeId: 'agent-101',
+        assignee: { ...mockAgent, role: 'AGENT' },
+        department: 'TECHNICAL_SUPPORT',
+      });
+
+      const dto = {
+        title: 'Network latency spike',
+        description: 'Experiencing packet drop on primary gateway',
+        priority: 'HIGH' as const,
+        department: 'TECHNICAL_SUPPORT' as const,
+      };
+
+      const result = await service.create(dto as any, 'user-1');
+
+      expect((prisma.user as any).findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { role: 'AGENT', department: 'TECHNICAL_SUPPORT' },
+          orderBy: [{ lastAssignedAt: 'asc' }, { createdAt: 'asc' }],
+        }),
+      );
+      expect((prisma.user as any).update).toHaveBeenCalledWith({
+        where: { id: 'agent-101' },
+        data: expect.objectContaining({ lastAssignedAt: expect.any(Date) }),
+      });
+      expect(result.assigneeId).toBe('agent-101');
+    });
+
+    it('should allow staff to auto-assign unassigned ticket via autoAssignTicket', async () => {
+      const mockAgent = {
+        id: 'agent-202',
+        fullName: 'Support Specialist Two',
+        email: 'specialist2@example.com',
+      };
+      (prisma.user as any).findFirst = vi.fn().mockResolvedValue(mockAgent);
+      (prisma.user as any).update = vi.fn().mockResolvedValue({ id: 'agent-202' });
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        assigneeId: null,
+        department: 'GENERAL',
+      });
+      prisma.ticket.update.mockResolvedValue({
+        ...mockDbTicket,
+        assigneeId: 'agent-202',
+        assignee: { ...mockAgent, role: 'AGENT' },
+        department: 'GENERAL',
+      });
+
+      const result = await service.autoAssignTicket('ticket-1', {
+        id: 'admin-1',
+        role: 'ADMIN',
+      });
+
+      expect(result.assigneeId).toBe('agent-202');
+      expect((prisma.user as any).update).toHaveBeenCalledWith({
+        where: { id: 'agent-202' },
+        data: expect.objectContaining({ lastAssignedAt: expect.any(Date) }),
       });
     });
   });

@@ -36,12 +36,19 @@ enum TicketPriority {
   URGENT
 }
 
+enum Department {
+  TECHNICAL_SUPPORT
+  GENERAL
+}
+
 model User {
   id              String         @id @default(cuid())
   email           String         @unique
   passwordHash    String
   fullName        String
   role            Role           @default(CUSTOMER)
+  department      Department?    @default(TECHNICAL_SUPPORT)
+  lastAssignedAt  DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -78,6 +85,7 @@ model Ticket {
   description String
   status      TicketStatus   @default(OPEN)
   priority    TicketPriority @default(MEDIUM)
+  department  Department     @default(TECHNICAL_SUPPORT)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -102,6 +110,7 @@ model Ticket {
   csatRatedAt   DateTime?
 
   @@index([creatorId, status, title])
+  @@index([department, status, createdAt])
   @@map("tickets")
 }
 

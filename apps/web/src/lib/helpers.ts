@@ -385,6 +385,7 @@ export function filterTickets(
   statusFilter = 'ALL',
   priorityFilter = 'ALL',
   searchQuery = '',
+  departmentFilter = 'ALL',
 ): Ticket[] {
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const idQuery = normalizedQuery.replace(/^#/, '');
@@ -392,6 +393,9 @@ export function filterTickets(
   return tickets.filter((ticket) => {
     if (statusFilter !== 'ALL' && ticket.status !== statusFilter) return false;
     if (priorityFilter !== 'ALL' && ticket.priority !== priorityFilter) return false;
+    if (departmentFilter !== 'ALL' && (ticket.department || 'TECHNICAL_SUPPORT') !== departmentFilter) {
+      return false;
+    }
     if (normalizedQuery) {
       const matchId =
         idQuery.length > 0 && ticket.id.toLowerCase().includes(idQuery);

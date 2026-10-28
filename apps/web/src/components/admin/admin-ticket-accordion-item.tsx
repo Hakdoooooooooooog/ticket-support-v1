@@ -34,6 +34,7 @@ interface AdminTicketAccordionItemProps {
   onUpdateStatus: (id: string, status: Ticket['status']) => void;
   onUpdatePriority: (id: string, priority: Ticket['priority']) => void;
   onUpdateAssignee: (id: string, assigneeId: string | null) => void;
+  onAutoAssignTicket?: (id: string) => void;
   onClaimTicket: (id: string) => void;
   onDeleteTicket: (id: string) => void;
   isUpdating: boolean;
@@ -73,6 +74,7 @@ export function AdminTicketAccordionItem({
   onUpdateStatus,
   onUpdatePriority,
   onUpdateAssignee,
+  onAutoAssignTicket,
   onClaimTicket,
   onDeleteTicket,
   isUpdating,
@@ -247,6 +249,12 @@ export function AdminTicketAccordionItem({
           </button>
 
           <div className="flex items-center gap-2 pl-7 lg:pl-0 shrink-0">
+            <Badge
+              variant="outline"
+              className="text-[11px] font-medium border-spruce-300 dark:border-spruce-700 bg-spruce-50/50 dark:bg-spruce-900/50 text-spruce-700 dark:text-spruce-300"
+            >
+              {ticket.department === 'GENERAL' ? 'General Scope' : 'Tech Support'}
+            </Badge>
             <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
               {ticket.priority}
             </Badge>
@@ -363,6 +371,18 @@ export function AdminTicketAccordionItem({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {onAutoAssignTicket && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAutoAssignTicket(ticket.id)}
+                    className="h-8 text-xs font-medium border-spruce-300 dark:border-spruce-700 bg-white dark:bg-spruce-900"
+                    title="Automatically assigns to the next eligible agent via round-robin distribution"
+                  >
+                    Auto-assign (Round-Robin)
+                  </Button>
+                )}
                 {user && (
                   <Button
                     type="button"

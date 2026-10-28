@@ -177,6 +177,12 @@ export function TicketCard({
           </button>
 
           <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            <Badge
+              variant="outline"
+              className="text-[11px] font-medium border-spruce-300 dark:border-spruce-700 bg-spruce-50/50 dark:bg-spruce-900/50 text-spruce-700 dark:text-spruce-300"
+            >
+              {ticket.department === 'GENERAL' ? 'General Scope' : 'Tech Support'}
+            </Badge>
             <Badge variant={getPriorityBadgeVariant(ticket.priority)}>{ticket.priority}</Badge>
             <Badge variant={getStatusBadgeVariant(ticket.status)}>
               {ticket.status === 'NEEDS_INFO' ? 'NEEDS ADDITIONAL INFO' : ticket.status}
