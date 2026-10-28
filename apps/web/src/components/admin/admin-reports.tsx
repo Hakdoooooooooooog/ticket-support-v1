@@ -150,23 +150,23 @@ export function AdminReports() {
   return (
     <div className="space-y-6">
       {/* 1. Export Action Banner */}
-      <Card className="border-spruce-200 dark:border-spruce-800 bg-gradient-to-r from-spruce-900 to-spruce-950 text-white shadow-md">
+      <Card className="border-spruce-200/90 dark:border-spruce-800 bg-white dark:bg-spruce-900/90 text-spruce-950 dark:text-white shadow-sm border-l-4 border-l-spruce-700 dark:border-l-spruce-300">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+              <CardTitle className="text-lg font-bold text-spruce-950 dark:text-white flex items-center gap-2">
                 <span>Data Export &amp; Reporting Studio</span>
-                <Badge className="bg-spruce-700 text-spruce-200 border-none text-[10px]">
+                <Badge className="bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-200 border border-spruce-300/80 dark:border-spruce-700 text-[10px] font-semibold">
                   RFC 4180 CSV
                 </Badge>
               </CardTitle>
-              <CardDescription className="text-spruce-300 text-xs mt-1">
+              <CardDescription className="text-spruce-600 dark:text-spruce-300 text-xs mt-1">
                 Download raw audit logs, customer survey feedback, and operational KPI extracts.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
-                variant="secondary"
+                variant="default"
                 size="sm"
                 onClick={handleDownloadTicketsCsv}
                 disabled={isExportingTickets}
@@ -179,7 +179,7 @@ export function AdminReports() {
                 size="sm"
                 onClick={handleDownloadCsatCsv}
                 disabled={isExportingCsat}
-                className="text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border-white/20"
+                className="text-xs font-semibold"
               >
                 {isExportingCsat ? 'Generating CSV...' : 'Download CSAT Feedback CSV'}
               </Button>
@@ -187,12 +187,12 @@ export function AdminReports() {
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="flex flex-wrap items-center gap-3 text-xs bg-white/5 p-3 rounded-lg border border-white/10">
-            <span className="text-spruce-300 font-medium">Export Filter Presets:</span>
+          <div className="flex flex-wrap items-center gap-3 text-xs bg-spruce-50/90 dark:bg-spruce-950/60 p-3 rounded-lg border border-spruce-200/90 dark:border-spruce-800">
+            <span className="text-spruce-700 dark:text-spruce-300 font-semibold">Export Filter Presets:</span>
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="h-8 rounded bg-spruce-900 border border-spruce-700 text-white px-2 text-xs focus:ring-1 focus:ring-spruce-400"
+              className="h-8 rounded-md bg-white dark:bg-spruce-900 border border-spruce-300 dark:border-spruce-700 text-spruce-900 dark:text-white px-2.5 text-xs focus:ring-1 focus:ring-spruce-500 shadow-2xs"
             >
               <option value="ALL">All Departments</option>
               <option value="TECHNICAL_SUPPORT">Tech Support</option>
@@ -201,7 +201,7 @@ export function AdminReports() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 rounded bg-spruce-900 border border-spruce-700 text-white px-2 text-xs focus:ring-1 focus:ring-spruce-400"
+              className="h-8 rounded-md bg-white dark:bg-spruce-900 border border-spruce-300 dark:border-spruce-700 text-spruce-900 dark:text-white px-2.5 text-xs focus:ring-1 focus:ring-spruce-500 shadow-2xs"
             >
               <option value="ALL">All Statuses</option>
               <option value="OPEN">Open</option>
@@ -213,7 +213,7 @@ export function AdminReports() {
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="h-8 rounded bg-spruce-900 border border-spruce-700 text-white px-2 text-xs focus:ring-1 focus:ring-spruce-400"
+              className="h-8 rounded-md bg-white dark:bg-spruce-900 border border-spruce-300 dark:border-spruce-700 text-spruce-900 dark:text-white px-2.5 text-xs focus:ring-1 focus:ring-spruce-500 shadow-2xs"
             >
               <option value="ALL">All Priorities</option>
               <option value="URGENT">Urgent</option>
@@ -223,7 +223,7 @@ export function AdminReports() {
             </select>
           </div>
           {exportError && (
-            <p className="text-xs text-red-400 mt-2 font-medium">{exportError}</p>
+            <p className="text-xs text-rose-500 mt-2 font-medium">{exportError}</p>
           )}
         </CardContent>
       </Card>

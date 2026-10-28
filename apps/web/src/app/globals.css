@@ -21,29 +21,29 @@
   --color-spruce-400: #7da697; /* Intermediate Sage */
   --color-spruce-300: #9ec8b9; /* Seafoam Mint - Primary interactive highlights & glow */
   --color-spruce-200: #c4e0d6; /* Light mode card borders & subtle accents */
-  --color-spruce-100: #e6f3ee; /* Light mode elevated container & active pill fill */
-  --color-spruce-50:  #f4f9f7; /* Light mode canvas background */
+  --color-spruce-100: #dcebe4; /* Light mode elevated container & active pill fill */
+  --color-spruce-50:  #eaf1ed; /* Light mode canvas background (60% dominant base) */
 }
 
 :root {
-  --background: #f4f9f7;
+  --background: #eaf1ed;
   --foreground: #092635;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --background: #092635;
-    --foreground: #f4f9f7;
+    --foreground: #eaf1ed;
   }
 }
 
 .dark {
   --background: #092635;
-  --foreground: #f4f9f7;
+  --foreground: #eaf1ed;
 }
 
 .light {
-  --background: #f4f9f7;
+  --background: #eaf1ed;
   --foreground: #092635;
 }
 
