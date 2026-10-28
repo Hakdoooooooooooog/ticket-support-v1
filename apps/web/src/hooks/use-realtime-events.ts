@@ -23,6 +23,7 @@ export interface RealtimeMessage {
 export interface UseRealtimeEventsOptions {
   onTicketCreated?: (payload: any) => void;
   onTicketUpdated?: (payload: any) => void;
+  onTicketDeleted?: (payload: any) => void;
   onCommentAdded?: (payload: any) => void;
   onCsatSubmitted?: (payload: any) => void;
   onNotification?: (payload: any) => void;
@@ -110,6 +111,7 @@ export function useRealtimeEvents(options: UseRealtimeEventsOptions = {}) {
 
             case 'TICKET_DELETED':
               queryClient.invalidateQueries({ queryKey: ['tickets'] });
+              optionsRef.current.onTicketDeleted?.(envelope.payload);
               break;
 
             case 'NOTIFICATION':

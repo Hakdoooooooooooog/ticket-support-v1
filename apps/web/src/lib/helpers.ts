@@ -312,15 +312,17 @@ export function getStatusBadgeVariant(status: string): StatusBadgeVariant {
 // ============================================================================
 
 export function formatLastUpdatedTimestamp(
-  dataUpdatedAt?: number,
+  dataUpdatedAt?: number | string | null,
   lastUpdatedAt?: string | null,
 ): string | null {
-  const rawTimestamp =
-    dataUpdatedAt && dataUpdatedAt > 0
-      ? new Date(dataUpdatedAt)
-      : lastUpdatedAt
-        ? new Date(lastUpdatedAt)
-        : null;
+  let rawTimestamp: Date | null = null;
+  if (typeof dataUpdatedAt === 'number' && dataUpdatedAt > 0) {
+    rawTimestamp = new Date(dataUpdatedAt);
+  } else if (typeof dataUpdatedAt === 'string' && dataUpdatedAt) {
+    rawTimestamp = new Date(dataUpdatedAt);
+  } else if (lastUpdatedAt) {
+    rawTimestamp = new Date(lastUpdatedAt);
+  }
 
   if (!rawTimestamp || Number.isNaN(rawTimestamp.getTime())) {
     return null;
@@ -832,9 +834,49 @@ export function getNotificationBadge(type: AppNotification['type']): {
 
 export interface CannedResponseTemplate {
   id: string;
-  category: 'Troubleshooting' | 'Information Request' | 'Status & Escalation' | 'Resolution';
+  category: string;
   label: string;
   content: string;
+  isSystem?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CannedResponseInterpolationContext {
+  customerName?: string | null;
+  ticketId?: string | null;
+  ticketTitle?: string | null;
+  agentName?: string | null;
+}
+
+/**
+ * Replaces dynamic variables in canned response templates:
+ * - {{customer_name}}: Ticket author or customer name
+ * - {{ticket_id}}: Formatted ticket ID
+ * - {{ticket_title}}: Ticket title
+ * - {{agent_name}}: Current staff member's name
+ */
+export function interpolateCannedResponse(
+  content: string,
+  context?: CannedResponseInterpolationContext,
+): string {
+  if (!content) return '';
+  if (!context) return content;
+
+  const customerName = context.customerName?.trim() || 'Customer';
+  const ticketId = context.ticketId
+    ? context.ticketId.startsWith('#')
+      ? context.ticketId
+      : `#${context.ticketId.slice(0, 8)}`
+    : '#TICKET';
+  const ticketTitle = context.ticketTitle?.trim() || 'your support request';
+  const agentName = context.agentName?.trim() || 'IT Support Team';
+
+  return content
+    .replace(/\{\{\s*customer_name\s*\}\}/gi, customerName)
+    .replace(/\{\{\s*ticket_id\s*\}\}/gi, ticketId)
+    .replace(/\{\{\s*ticket_title\s*\}\}/gi, ticketTitle)
+    .replace(/\{\{\s*agent_name\s*\}\}/gi, agentName);
 }
 
 export const CANNED_RESPONSES: CannedResponseTemplate[] = [
@@ -843,62 +885,71 @@ export const CANNED_RESPONSES: CannedResponseTemplate[] = [
     category: 'Troubleshooting',
     label: 'Hardware Power Cycle',
     content:
-      'Please perform a full power cycle on your device: shut down the system, disconnect the power cable for 30 seconds, reconnect, and restart. Please confirm if the issue persists after reboot.',
+      'Hello {{customer_name}},\n\nPlease perform a full power cycle on your device: shut down the system, disconnect the power cable for 30 seconds, reconnect, and restart. Please confirm if ticket {{ticket_id}} persists after reboot.',
+    isSystem: true,
   },
   {
     id: 'vpn-dns',
     category: 'Troubleshooting',
     label: 'VPN & DNS Cache Flush',
     content:
-      'Please disconnect from the corporate VPN, open Command Prompt or Terminal, execute "ipconfig /flushdns" (or "sudo dscacheutil -flushcache" on macOS), and reconnect. Let us know if internal services are accessible.',
+      'Hello {{customer_name}},\n\nPlease disconnect from the corporate VPN, open Command Prompt or Terminal, execute "ipconfig /flushdns" (or "sudo dscacheutil -flushcache" on macOS), and reconnect. Let us know if internal services are accessible.',
+    isSystem: true,
   },
   {
     id: 'browser-cache',
     category: 'Troubleshooting',
     label: 'Clear Browser Cache & Cookies',
     content:
-      'Please clear your browser cookies and cached images/files (or try in a private/incognito browsing window). Afterwards, refresh the page to see if the error clears.',
+      'Please clear your browser cookies and cached images/files (or try in a private/incognito browsing window). Afterwards, refresh the page to see if the issue with "{{ticket_title}}" clears.',
+    isSystem: true,
   },
   {
     id: 'req-screenshot',
     category: 'Information Request',
     label: 'Request Screenshot / Error Log',
     content:
-      'Could you please attach a full-screen screenshot showing the exact error message or dialogue, along with the browser console log (F12 > Console tab) if applicable?',
+      'Hello {{customer_name}},\n\nCould you please attach a full-screen screenshot showing the exact error message or dialogue for ticket {{ticket_id}}, along with the browser console log (F12 > Console tab) if applicable?',
+    isSystem: true,
   },
   {
     id: 'req-reproduction',
     category: 'Information Request',
     label: 'Request Step-by-Step Reproduction',
     content:
-      'To help us isolate the root cause, could you share the exact steps to reproduce this behavior (e.g., URL visited, buttons clicked, expected vs actual outcome)?',
+      'To help us isolate the root cause of "{{ticket_title}}", could you share the exact steps to reproduce this behavior (e.g., URL visited, buttons clicked, expected vs actual outcome)?',
+    isSystem: true,
   },
   {
     id: 'escalate-tier2',
     category: 'Status & Escalation',
     label: 'Escalate to Tier 2 Engineering',
     content:
-      'This issue has been escalated to Tier 2 Infrastructure & Backend Engineering for detailed telemetry and log analysis. We will follow up with an update within 4 hours.',
+      'Hello {{customer_name}},\n\nTicket {{ticket_id}} has been escalated to Tier 2 Infrastructure & Backend Engineering for detailed telemetry and log analysis. We will follow up with an update within 4 hours.\n\nBest regards,\n{{agent_name}}',
+    isSystem: true,
   },
   {
     id: 'vendor-ticket',
     category: 'Status & Escalation',
     label: 'Upstream Vendor / Provider Escalation',
     content:
-      'We have opened an urgent upstream support incident with the service provider. We are monitoring the vendor SLA and will update this ticket as soon as new status is reported.',
+      'We have opened an urgent upstream support incident with the service provider regarding ticket {{ticket_id}}. We are monitoring the vendor SLA and will update you as soon as new status is reported.',
+    isSystem: true,
   },
   {
     id: 'resolution-applied',
     category: 'Resolution',
     label: 'Resolution Applied / Verification',
     content:
-      'We have applied the configuration fix to your account/system. Please verify normal operation and let us know if everything is functioning as expected.',
+      'Hello {{customer_name}},\n\nWe have applied the configuration fix for "{{ticket_title}}". Please verify normal operation and let us know if everything is functioning as expected!\n\nBest regards,\n{{agent_name}}',
+    isSystem: true,
   },
   {
     id: 'resolution-closing',
     category: 'Resolution',
     label: 'Issue Resolved / Ready to Close',
     content:
-      'The reported issue has been diagnosed and resolved. If no further issues occur, you may confirm resolution in the portal. Feel free to reply if you need any further assistance!',
+      'The reported issue on ticket {{ticket_id}} has been diagnosed and resolved. If no further issues occur, you may confirm resolution in the customer portal. Feel free to reply if you need any further assistance!\n\nThank you,\n{{agent_name}}',
+    isSystem: true,
   },
 ];

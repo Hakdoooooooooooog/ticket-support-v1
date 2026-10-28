@@ -17,6 +17,7 @@ import {
   getStoredSession,
   setStoredSession,
   clearStoredSession,
+  interpolateCannedResponse,
 } from '../src/lib/helpers';
 import type { Ticket } from '../src/components/ticket-list';
 
@@ -368,6 +369,42 @@ describe('Web Helpers & Domain Functions', () => {
       // Clears cleanly
       clearStoredSession();
       expect(mockStorage['ts_auth_s']).toBeUndefined();
+    });
+  });
+
+  describe('interpolateCannedResponse', () => {
+    it('interpolates all dynamic placeholder tokens correctly', () => {
+      const template =
+        'Hello {{customer_name}},\n\nRegarding ticket {{ticket_id}} ("{{ticket_title}}"), we are investigating.\n\nBest regards,\n{{agent_name}}';
+
+      const interpolated = interpolateCannedResponse(template, {
+        customerName: 'Sarah Connor',
+        ticketId: '12345678-abcd',
+        ticketTitle: 'Network latency spike',
+        agentName: 'Alex Mercer',
+      });
+
+      expect(interpolated).toContain('Hello Sarah Connor,');
+      expect(interpolated).toContain('Regarding ticket #12345678 ("Network latency spike")');
+      expect(interpolated).toContain('Best regards,\nAlex Mercer');
+    });
+
+    it('falls back to sensible defaults when context fields are missing or empty', () => {
+      const template =
+        'Hello {{customer_name}}, regarding {{ticket_id}} ("{{ticket_title}}") from {{agent_name}}.';
+
+      const interpolated = interpolateCannedResponse(template, {});
+
+      expect(interpolated).toBe('Hello Customer, regarding #TICKET ("your support request") from IT Support Team.');
+    });
+
+    it('returns original template if no context is provided', () => {
+      const template = 'Generic response text without parameters.';
+      expect(interpolateCannedResponse(template)).toBe(template);
+    });
+
+    it('handles empty template string gracefully', () => {
+      expect(interpolateCannedResponse('')).toBe('');
     });
   });
 });

@@ -8,6 +8,7 @@ import { TicketsModule } from './tickets/tickets.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
+import { CannedResponsesModule } from './canned-responses/canned-responses.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RealtimeModule } from './realtime/realtime.module.js';
     NotificationsModule,
     TicketsModule,
     AuthModule,
+    CannedResponsesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,7 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { CANNED_RESPONSES, CannedResponseTemplate } from '@lib/helpers';
+import { useQuery } from '@tanstack/react-query';
+import {
+  CANNED_RESPONSES,
+  CannedResponseTemplate,
+  CannedResponseInterpolationContext,
+  interpolateCannedResponse,
+} from '@lib/helpers';
+import { apiClient } from '@lib/api-client';
 
 interface CannedResponsesMenuProps {
   onSelect: (content: string) => void;
@@ -9,6 +16,8 @@ interface CannedResponsesMenuProps {
   buttonLabel?: string;
   align?: 'left' | 'right';
   direction?: 'up' | 'down' | 'auto';
+  context?: CannedResponseInterpolationContext;
+  templates?: CannedResponseTemplate[];
 }
 
 export function CannedResponsesMenu({
@@ -17,10 +26,29 @@ export function CannedResponsesMenu({
   buttonLabel = 'Canned Responses',
   align = 'right',
   direction = 'auto',
+  context,
+  templates: providedTemplates,
 }: CannedResponsesMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [computedDirection, setComputedDirection] = React.useState<'up' | 'down'>('down');
   const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch organization canned responses from API when not provided via props
+  const { data: fetchedTemplates } = useQuery<CannedResponseTemplate[]>({
+    queryKey: ['canned-responses'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<CannedResponseTemplate[]>('/canned-responses');
+        return res.data;
+      } catch {
+        return CANNED_RESPONSES;
+      }
+    },
+    enabled: !providedTemplates,
+    staleTime: 60 * 1000,
+  });
+
+  const activeTemplates = providedTemplates || fetchedTemplates || CANNED_RESPONSES;
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -38,13 +66,13 @@ export function CannedResponsesMenu({
 
   const categories = React.useMemo(() => {
     const map = new Map<string, CannedResponseTemplate[]>();
-    for (const item of CANNED_RESPONSES) {
+    for (const item of activeTemplates) {
       const list = map.get(item.category) || [];
       list.push(item);
       map.set(item.category, list);
     }
     return Array.from(map.entries());
-  }, []);
+  }, [activeTemplates]);
 
   const handleToggle = () => {
     if (!isOpen && menuRef.current) {
@@ -62,8 +90,9 @@ export function CannedResponsesMenu({
     setIsOpen((prev) => !prev);
   };
 
-  const handlePick = (content: string) => {
-    onSelect(content);
+  const handlePick = (rawContent: string) => {
+    const interpolated = interpolateCannedResponse(rawContent, context);
+    onSelect(interpolated);
     setIsOpen(false);
   };
 

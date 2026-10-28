@@ -8,7 +8,8 @@ export type AdminSection =
   | 'DASHBOARD'
   | 'ALL_TICKETS'
   | 'ASSIGNED_TICKETS'
-  | 'TEAM_MANAGEMENT';
+  | 'TEAM_MANAGEMENT'
+  | 'CANNED_RESPONSES';
 
 export interface AdminState {
   agents: AuthUser[];
