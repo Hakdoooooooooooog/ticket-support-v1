@@ -360,7 +360,16 @@ export const useTicketsStore = create<TicketsState>()(
     }),
     {
       name: 'ts_tickets',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') {
+          return window.sessionStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: (state) => ({
         // PRIVACY & SECURITY: Full ticket entities (customer descriptions, names, emails,
         // comments, attachments) are kept strictly in runtime memory to prevent PII exposure.

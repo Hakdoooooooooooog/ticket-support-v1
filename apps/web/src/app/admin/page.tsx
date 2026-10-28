@@ -25,6 +25,7 @@ import {
 } from '@lib/helpers';
 import type { Ticket } from '@components/ticket-list';
 import { useRealtimeEvents } from '@hooks/use-realtime-events';
+import { useMounted } from '@hooks/use-mounted';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
 import { useAdminStore } from '@store/admin.store';
@@ -45,6 +46,7 @@ import {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const isMounted = useMounted();
 
   const {
     user,
@@ -595,7 +597,7 @@ export default function AdminDashboardPage() {
     setAllTicketsExpanded(displayedTickets, !allExpanded);
   };
 
-  if (!user && isVerifyingSession) {
+  if (!isMounted || !user || isVerifyingSession) {
     return <ContextualLoader context="admin-auth" />;
   }
 
@@ -779,7 +781,10 @@ export default function AdminDashboardPage() {
                   </span>
                   <span>
                     <span className="hidden sm:inline text-spruce-400">Updated: </span>
-                    <strong className="font-semibold text-spruce-900 dark:text-spruce-200">
+                    <strong
+                      suppressHydrationWarning
+                      className="font-semibold text-spruce-900 dark:text-spruce-200"
+                    >
                       {formattedLastUpdated}
                     </strong>
                   </span>

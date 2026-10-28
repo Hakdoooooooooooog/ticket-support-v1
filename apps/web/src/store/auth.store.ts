@@ -127,7 +127,16 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'ts_auth',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') {
+          return window.sessionStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: (state) => ({
         // PRIVACY & SECURITY: PII (email, fullName) and credentials (accessToken)
         // are omitted from browser storage and maintained strictly in runtime memory.

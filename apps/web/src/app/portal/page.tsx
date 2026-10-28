@@ -12,11 +12,13 @@ import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
 import { usePortalStore } from '@store/portal.store';
 import { useRealtimeEvents } from '@hooks/use-realtime-events';
+import { useMounted } from '@hooks/use-mounted';
 import { PortalQuickStats } from '@components/portal/portal-quick-stats';
 import { PortalKnowledgeBase } from '@components/portal/portal-knowledge-base';
 
 export default function CustomerPortalPage() {
   const router = useRouter();
+  const isMounted = useMounted();
   const { status: realtimeStatus } = useRealtimeEvents();
   const {
     user,
@@ -72,7 +74,7 @@ export default function CustomerPortalPage() {
     router.replace('/');
   };
 
-  if (!user && isVerifyingSession) {
+  if (!isMounted || !user || isVerifyingSession) {
     return <ContextualLoader context="portal-auth" />;
   }
 
@@ -100,7 +102,11 @@ export default function CustomerPortalPage() {
                 Customer Support Portal
               </h1>
               <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-300">
-                Welcome back, <span className="font-semibold">{user?.fullName || 'Customer'}</span>. Submit helpdesk requests, track status in real-time, or resolve common issues instantly.
+                Welcome back,{' '}
+                <span className="font-semibold" suppressHydrationWarning>
+                  {user?.fullName || 'Customer'}
+                </span>
+                . Submit helpdesk requests, track status in real-time, or resolve common issues instantly.
               </p>
             </div>
 
@@ -143,7 +149,10 @@ export default function CustomerPortalPage() {
               >
                 <span>Tickets & Requests</span>
                 {activeTicketsCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-spruce-200 text-spruce-900 dark:bg-spruce-800 dark:text-spruce-200">
+                  <span
+                    suppressHydrationWarning
+                    className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-spruce-200 text-spruce-900 dark:bg-spruce-800 dark:text-spruce-200"
+                  >
                     {activeTicketsCount} Active
                   </span>
                 )}

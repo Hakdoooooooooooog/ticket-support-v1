@@ -39,11 +39,17 @@ export function PortalQuickStats() {
           </span>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white">
+          <span
+            suppressHydrationWarning
+            className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white"
+          >
             {metrics.active}
           </span>
         </div>
-        <p className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate">
+        <p
+          suppressHydrationWarning
+          className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate"
+        >
           {metrics.active === 1 ? '1 request in progress' : `${metrics.active} requests in progress`}
         </p>
       </div>
@@ -67,11 +73,17 @@ export function PortalQuickStats() {
           )}
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white">
+          <span
+            suppressHydrationWarning
+            className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white"
+          >
             {metrics.actionNeeded}
           </span>
         </div>
-        <p className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate">
+        <p
+          suppressHydrationWarning
+          className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate"
+        >
           {metrics.actionNeeded > 0 ? 'Feedback / info requested' : 'Queue clear and current'}
         </p>
       </div>
@@ -87,7 +99,10 @@ export function PortalQuickStats() {
           </span>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white">
+          <span
+            suppressHydrationWarning
+            className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white"
+          >
             {metrics.resolved}
           </span>
         </div>
@@ -111,11 +126,17 @@ export function PortalQuickStats() {
           </button>
         </div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white">
+          <span
+            suppressHydrationWarning
+            className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white"
+          >
             {deflectionCount > 0 ? `${deflectionCount} Solved` : '10 Guides'}
           </span>
         </div>
-        <p className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate">
+        <p
+          suppressHydrationWarning
+          className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate"
+        >
           {deflectionCount > 0
             ? 'Saved from ticket queue'
             : 'Instant self-service answers'}

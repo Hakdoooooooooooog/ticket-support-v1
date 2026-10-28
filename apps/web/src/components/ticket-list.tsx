@@ -225,6 +225,7 @@ export function TicketList() {
           {formattedLastUpdated && (
             <p
               data-testid="portal-last-updated"
+              suppressHydrationWarning
               className="text-[11px] text-spruce-600 dark:text-spruce-400 flex items-center gap-1.5"
             >
               <span
@@ -232,7 +233,9 @@ export function TicketList() {
                   isFetching ? 'bg-spruce-400 animate-ping' : 'bg-emerald-500'
                 }`}
               />
-              <span>Last updated: {formattedLastUpdated} (15s auto-poll)</span>
+              <span suppressHydrationWarning>
+                Last updated: {formattedLastUpdated} (15s auto-poll)
+              </span>
             </p>
           )}
         </div>

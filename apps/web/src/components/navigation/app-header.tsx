@@ -77,7 +77,10 @@ export function AppHeader({
                 )}
               />
             </span>
-            <span className="hidden sm:inline text-[11px] font-medium text-spruce-500 dark:text-spruce-400">
+            <span
+              suppressHydrationWarning
+              className="hidden sm:inline text-[11px] font-medium text-spruce-500 dark:text-spruce-400"
+            >
               {realtimeStatus === 'connected'
                 ? 'Live Connected'
                 : realtimeStatus === 'connecting'
@@ -98,8 +101,11 @@ export function AppHeader({
             </Link>
           )}
           {user && (
-            <div className="hidden sm:flex items-center gap-2 text-xs text-spruce-700 dark:text-spruce-300 font-medium">
-              <span>{getUserDisplayName(user, 'User')}</span>
+            <div
+              suppressHydrationWarning
+              className="hidden sm:flex items-center gap-2 text-xs text-spruce-700 dark:text-spruce-300 font-medium"
+            >
+              <span suppressHydrationWarning>{getUserDisplayName(user, 'User')}</span>
             </div>
           )}
           <Button variant="ghost" size="sm" onClick={onSignOut} className="text-xs">

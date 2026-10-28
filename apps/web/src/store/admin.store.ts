@@ -114,7 +114,16 @@ export const useAdminStore = create<AdminState>()(
     }),
     {
       name: 'ts_admin',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') {
+          return window.sessionStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: (state) => ({
         // PRIVACY & SECURITY: Staff directory (names, emails) and internal comment drafts
         // are strictly kept in runtime memory to prevent PII exposure in browser storage.
