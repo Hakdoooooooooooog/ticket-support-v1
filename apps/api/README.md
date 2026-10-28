@@ -127,10 +127,10 @@ apps/api/src/
 # Start backend in watch mode
 npm run start:dev
 
-# Run full Vitest unit test suite (79 tests)
+# Run full Vitest unit test suite (112 tests across 15 suites)
 npm test
 
-# Run full Supertest E2E integration test suite (16 tests)
+# Run full Supertest E2E integration test suite (22 tests)
 npm run test:e2e
 
 # Run linter

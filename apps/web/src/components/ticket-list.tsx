@@ -74,6 +74,7 @@ export interface Ticket {
   csatRating?: number | null;
   csatComment?: string | null;
   csatRatedAt?: string | null;
+  updatedAt?: string;
 }
 
 export function TicketList() {

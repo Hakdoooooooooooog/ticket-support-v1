@@ -177,13 +177,19 @@ npm run dev
 
 ## Testing & Verification
 
-Run all test suites across the monorepo:
+Run all test suites across the monorepo (163 passing tests):
 
 ```bash
-# Run backend unit tests (79 tests)
+# Run all unit test suites across monorepo (API: 112 tests, Web: 29 tests)
+npm test
+
+# Run backend unit tests specifically (112 tests across 15 suites)
 npm --prefix apps/api test
 
-# Run backend end-to-end integration tests (16 tests)
+# Run frontend unit tests specifically (29 tests across 2 suites)
+npm --prefix apps/web test
+
+# Run backend end-to-end integration tests (22 tests)
 npm --prefix apps/api run test:e2e
 
 # Run frontend production build (Turbopack + TypeScript checks)

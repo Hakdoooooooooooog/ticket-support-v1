@@ -177,6 +177,9 @@ npm run dev
 # Run Next.js production build and TypeScript type-check
 npm run build
 
+# Run Vitest unit tests (29 tests across helpers and state stores)
+npm test
+
 # Start production server
 npm run start
 

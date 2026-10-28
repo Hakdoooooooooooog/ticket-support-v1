@@ -263,11 +263,11 @@ export interface TicketKpiSummary {
  */
 export function filterTickets(
   tickets: Ticket[],
-  statusFilter: string,
-  priorityFilter: string,
-  searchQuery: string,
+  statusFilter = 'ALL',
+  priorityFilter = 'ALL',
+  searchQuery = '',
 ): Ticket[] {
-  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const idQuery = normalizedQuery.replace(/^#/, '');
 
   return tickets.filter((ticket) => {

@@ -468,4 +468,93 @@ describe('TicketsService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe('CSAT Anti-Tampering & Status Rules', () => {
+    it('should throw ForbiddenException if an AGENT or ADMIN attempts to submit CSAT', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'RESOLVED',
+        creatorId: 'user-1',
+      });
+
+      await expect(
+        service.submitCsat(
+          'ticket-1',
+          { rating: 5, comment: 'Staff self-rating' },
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException if a non-creator customer attempts to rate a ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'RESOLVED',
+        creatorId: 'user-1',
+      });
+
+      await expect(
+        service.submitCsat(
+          'ticket-1',
+          { rating: 5 },
+          { id: 'other-user', role: 'CUSTOMER' },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException if submitting CSAT on an OPEN ticket', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'OPEN',
+        creatorId: 'user-1',
+      });
+
+      await expect(
+        service.submitCsat(
+          'ticket-1',
+          { rating: 5 },
+          { id: 'user-1', role: 'CUSTOMER' },
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('Closed Ticket Lifecycle & Reopening', () => {
+    it('should reject status changes on a CLOSED ticket unless explicitly reopening to OPEN', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'CLOSED',
+        assigneeId: 'agent-1',
+      });
+
+      await expect(
+        service.update(
+          'ticket-1',
+          { status: 'RESOLVED' as any },
+          { id: 'agent-1', role: 'AGENT' },
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow customer or staff to reopen a CLOSED ticket back to OPEN', async () => {
+      prisma.ticket.findUnique.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'CLOSED',
+        creatorId: 'user-1',
+      });
+
+      prisma.ticket.update.mockResolvedValue({
+        ...mockDbTicket,
+        status: 'OPEN',
+      });
+
+      const result = await service.update(
+        'ticket-1',
+        { status: 'OPEN' as any },
+        { id: 'user-1', role: 'CUSTOMER' },
+      );
+
+      expect(result.status).toBe('OPEN');
+    });
+  });
 });

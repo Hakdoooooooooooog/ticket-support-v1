@@ -384,6 +384,26 @@ describe('TicketSupport API (e2e)', () => {
       }
     });
 
+    it('PATCH /notifications/mark-all-read -> should mark all notifications as read', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/notifications/mark-all-read')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(typeof res.body.count).toBe('number');
+    });
+
+    it('GET /realtime/stream -> should reject unauthenticated requests with 401', async () => {
+      await request(app.getHttpServer())
+        .get('/realtime/stream')
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .get('/realtime/stream?token=invalid.jwt.token')
+        .expect(401);
+    });
+
     it('DELETE /tickets/:id -> should delete the ticket and return 204', async () => {
       await request(app.getHttpServer())
         .delete(`/tickets/${createdTicketId}`)
@@ -394,6 +414,82 @@ describe('TicketSupport API (e2e)', () => {
         .expect(404);
 
       createdTicketId = '';
+    });
+  });
+
+  describe('Staff Invitation Lifecycle (e2e)', () => {
+    let adminToken: string;
+    let inviteCode: string;
+    let inviteId: string;
+    const inviteEmail = `invitee.${Date.now()}@ticketsupport.local`;
+
+    beforeAll(async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'admin@ticketsupport.local',
+          password: 'AdminPassword123!',
+        });
+
+      if (loginRes.status === 200) {
+        adminToken = loginRes.body.accessToken;
+      }
+    });
+
+    it('POST /auth/admin/invites -> should allow ADMIN to generate staff invitation code', async () => {
+      if (!adminToken) return;
+
+      const res = await request(app.getHttpServer())
+        .post('/auth/admin/invites')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: inviteEmail,
+          role: 'AGENT',
+        })
+        .expect(201);
+
+      expect(res.body.email).toBe(inviteEmail);
+      expect(res.body.role).toBe('AGENT');
+      expect(res.body.code).toBeDefined();
+
+      inviteCode = res.body.code;
+      inviteId = res.body.id;
+    });
+
+    it('GET /auth/invites/verify/:code -> should verify pending invitation code validity', async () => {
+      if (!inviteCode) return;
+
+      const res = await request(app.getHttpServer())
+        .get(`/auth/invites/verify/${inviteCode}`)
+        .expect(200);
+
+      expect(res.body.valid).toBe(true);
+      expect(res.body.email).toBe(inviteEmail);
+      expect(res.body.role).toBe('AGENT');
+    });
+
+    it('GET /auth/admin/invites -> should list pending staff invitations', async () => {
+      if (!adminToken) return;
+
+      const res = await request(app.getHttpServer())
+        .get('/auth/admin/invites')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      const found = res.body.find((inv: { email: string }) => inv.email === inviteEmail);
+      expect(found).toBeDefined();
+    });
+
+    it('DELETE /auth/admin/invites/:id -> should allow admin to revoke invitation', async () => {
+      if (!adminToken || !inviteId) return;
+
+      const res = await request(app.getHttpServer())
+        .delete(`/auth/admin/invites/${inviteId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
     });
   });
 });

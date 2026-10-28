@@ -311,4 +311,84 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
   });
+
+  describe('Invite Verification & Revocation Lifecycles', () => {
+    it('should return valid: false if invite code does not exist', async () => {
+      prisma.invite.findUnique.mockResolvedValue(null);
+
+      const res = await service.verifyInviteCode('NONEXISTENT-CODE');
+      expect(res.valid).toBe(false);
+      expect(res.message).toBe('Invalid invitation code');
+    });
+
+    it('should return valid: false if invite code is already claimed', async () => {
+      prisma.invite.findUnique.mockResolvedValue({
+        id: 'inv-1',
+        code: 'CLAIMED-CODE',
+        email: 'claimed@example.com',
+        role: 'AGENT',
+        accepted: true,
+        expiresAt: new Date(Date.now() + 86400000),
+      });
+
+      const res = await service.verifyInviteCode('CLAIMED-CODE');
+      expect(res.valid).toBe(false);
+      expect(res.message).toBe('This invitation has already been redeemed');
+    });
+
+    it('should return valid: false if invite code has expired', async () => {
+      prisma.invite.findUnique.mockResolvedValue({
+        id: 'inv-1',
+        code: 'EXPIRED-CODE',
+        email: 'expired@example.com',
+        role: 'AGENT',
+        accepted: false,
+        expiresAt: new Date(Date.now() - 3600000), // 1 hour ago
+      });
+
+      const res = await service.verifyInviteCode('EXPIRED-CODE');
+      expect(res.valid).toBe(false);
+      expect(res.message).toBe('This invitation has expired');
+    });
+
+    it('should return valid invite details when code is active and unclaimed', async () => {
+      prisma.invite.findUnique.mockResolvedValue({
+        id: 'inv-1',
+        code: 'VALID-CODE',
+        email: 'agent@example.com',
+        role: 'AGENT',
+        accepted: false,
+        expiresAt: new Date(Date.now() + 86400000),
+      });
+
+      const res = await service.verifyInviteCode('VALID-CODE');
+      expect(res.valid).toBe(true);
+      expect(res.email).toBe('agent@example.com');
+      expect(res.role).toBe('AGENT');
+    });
+
+    it('should throw ForbiddenException when non-admin lists invites', async () => {
+      await expect(
+        service.listInvites({ id: 'agent-1', role: 'AGENT' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException when non-admin revokes an invite', async () => {
+      await expect(
+        service.revokeInvite('inv-1', { id: 'agent-1', role: 'AGENT' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow admin to revoke an existing invite', async () => {
+      prisma.invite.findUnique.mockResolvedValue({
+        id: 'inv-1',
+        email: 'pending@example.com',
+      });
+      prisma.invite.delete.mockResolvedValue({ id: 'inv-1' });
+
+      const res = await service.revokeInvite('inv-1', { id: 'admin-1', role: 'ADMIN' });
+      expect(res.message).toBe('Invitation revoked successfully');
+      expect(prisma.invite.delete).toHaveBeenCalledWith({ where: { id: 'inv-1' } });
+    });
+  });
 });
