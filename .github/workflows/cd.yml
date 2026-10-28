@@ -1,10 +1,11 @@
 name: CD
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+# Automated CD on push to main is paused until production environment/hosting is configured
+# push:
+#   branches:
+#     - main
 
 concurrency:
   group: cd-production
