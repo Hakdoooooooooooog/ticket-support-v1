@@ -2,80 +2,23 @@
 
 import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardTitle, CardContent } from '@ui/card';
-import { Badge } from '@ui/badge';
-import { Button } from '@ui/button';
 import { Input } from '@ui/input';
-import { Textarea } from '@ui/textarea';
-import { Label } from '@ui/label';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { apiClient } from '@lib/api-client';
 import {
-  getPriorityBadgeVariant,
-  getStatusBadgeVariant,
   formatLastUpdatedTimestamp,
-  formatTicketDate,
-  formatCommentTime,
-  formatShortTicketId,
   filterTickets,
   compressAndEncryptImageFile,
-  parseTimelineComment,
-  countTicketAttachments,
-  formatByteSize,
   extractApiErrorMessage,
   EncryptedAttachmentPayload,
 } from '@lib/helpers';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
-import { CsatRatingWidget } from '@components/csat-rating-widget';
+import { Ticket, TicketComment } from './tickets/ticket-types';
+import { TicketCard } from './tickets/ticket-card';
+import { TicketLightbox } from './tickets/ticket-lightbox';
 
-export interface TicketComment {
-  id: string;
-  content: string;
-  createdAt: string;
-  hasAttachment?: boolean;
-  attachmentName?: string | null;
-  attachmentMimeType?: string | null;
-  attachmentOriginalSize?: number | null;
-  author?: {
-    id: string;
-    fullName: string;
-    email: string;
-    role?: 'ADMIN' | 'AGENT' | 'CUSTOMER';
-  } | null;
-}
-
-export interface Ticket {
-  id: string;
-  title: string;
-  description: string;
-  status: 'OPEN' | 'IN_PROGRESS' | 'NEEDS_INFO' | 'RESOLVED' | 'CLOSED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  createdAt: string;
-  creatorId?: string;
-  creator?: {
-    id?: string;
-    fullName: string;
-    email: string;
-    role?: 'ADMIN' | 'AGENT' | 'CUSTOMER';
-  } | null;
-  assigneeId?: string | null;
-  assignee?: {
-    id: string;
-    fullName: string;
-    email: string;
-    role?: 'ADMIN' | 'AGENT' | 'CUSTOMER';
-  } | null;
-  hasAttachment?: boolean;
-  attachmentName?: string | null;
-  attachmentMimeType?: string | null;
-  attachmentOriginalSize?: number | null;
-  comments?: TicketComment[];
-  csatRating?: number | null;
-  csatComment?: string | null;
-  csatRatedAt?: string | null;
-  updatedAt?: string;
-}
+export type { Ticket, TicketComment };
 
 export function TicketList() {
   const queryClient = useQueryClient();
@@ -119,64 +62,50 @@ export function TicketList() {
   const [isPreparingAmendImage, setIsPreparingAmendImage] = React.useState(false);
   const [amendError, setAmendError] = React.useState<string | null>(null);
 
-  const {
-    data: queriedTickets,
-    isLoading,
-    isFetching,
-    isError,
-    dataUpdatedAt,
-    refetch,
-  } = useQuery<Ticket[]>({
+  const { data, isLoading, isError, refetch, isFetching, dataUpdatedAt } = useQuery<Ticket[]>({
     queryKey: ['tickets'],
-    initialData: hasLoadedTickets ? storedTickets : undefined,
-    refetchOnWindowFocus: 'always',
-    refetchInterval: 60 * 1000,
     queryFn: async () => {
-      try {
-        const res = await apiClient.get('/tickets');
-        setTickets(res.data);
-        return res.data;
-      } catch {
-        return storedTickets;
-      }
+      const res = await apiClient.get<Ticket[]>('/tickets');
+      return res.data;
     },
+    refetchInterval: 15000,
   });
 
-  const tickets = queriedTickets ?? storedTickets;
-  const filteredTickets = React.useMemo(
-    () => filterTickets(tickets || [], 'ALL', 'ALL', portalSearchQuery),
-    [tickets, portalSearchQuery],
-  );
-
-  // Auto-expand NEEDS_INFO tickets or the first ticket on initial load via Zustand
   React.useEffect(() => {
-    if (filteredTickets.length > 0) {
-      initializeDefaultExpansion(filteredTickets);
-    }
-  }, [filteredTickets, initializeDefaultExpansion]);
-
-  // Automatically load attachments once whenever a ticket accordion is expanded (viewed)
-  React.useEffect(() => {
-    filteredTickets.forEach((ticket) => {
-      if (expandedTicketIds[ticket.id]) {
-        void ensureTicketAttachmentsLoaded(ticket);
+    if (data) {
+      setTickets(data);
+      initializeDefaultExpansion(data);
+      for (const t of data) {
+        if (expandedTicketIds[t.id]) {
+          void ensureTicketAttachmentsLoaded(t);
+        }
       }
-    });
-  }, [filteredTickets, expandedTicketIds, ensureTicketAttachmentsLoaded]);
+    }
+  }, [data, dataUpdatedAt, setTickets, initializeDefaultExpansion, expandedTicketIds, ensureTicketAttachmentsLoaded]);
 
+  const tickets = data || (hasLoadedTickets ? storedTickets : []);
   const showInitialSkeleton = isLoading && !hasLoadedTickets;
-  const formattedLastUpdated = React.useMemo(
-    () => formatLastUpdatedTimestamp(dataUpdatedAt, lastUpdatedAt),
-    [dataUpdatedAt, lastUpdatedAt],
-  );
+  const filteredTickets = React.useMemo(() => {
+    return filterTickets(tickets, 'ALL', 'ALL', portalSearchQuery);
+  }, [tickets, portalSearchQuery]);
 
   const allExpanded =
     filteredTickets.length > 0 &&
     filteredTickets.every((t) => Boolean(expandedTicketIds[t.id]));
 
   const toggleExpandAll = () => {
-    setAllTicketsExpanded(filteredTickets, !allExpanded);
+    const next = !allExpanded;
+    setAllTicketsExpanded(filteredTickets, next);
+    if (next) {
+      for (const t of filteredTickets) {
+        void ensureTicketAttachmentsLoaded(t);
+      }
+    }
   };
+
+  const formattedLastUpdated = React.useMemo(() => {
+    return formatLastUpdatedTimestamp(dataUpdatedAt, lastUpdatedAt);
+  }, [dataUpdatedAt, lastUpdatedAt]);
 
   const amendTicketMutation = useMutation({
     mutationFn: async ({
@@ -184,19 +113,26 @@ export function TicketList() {
       payload,
     }: {
       id: string;
-      payload: Record<string, unknown>;
+      payload: {
+        title?: string;
+        description?: string;
+        priority?: Ticket['priority'];
+        status?: Ticket['status'];
+        amendmentNote?: string;
+        actorId?: string;
+        encryptedAttachment?: EncryptedAttachmentPayload;
+      };
     }) => {
-      const res = await apiClient.patch(`/tickets/${id}`, payload);
-      return res.data as Ticket;
+      const res = await apiClient.patch<Ticket>(`/tickets/${id}`, payload);
+      return res.data;
     },
     onSuccess: (updated) => {
       upsertTicket(updated);
       setAmendingTicketId(null);
-      setShowFieldEdit(false);
       setAmendAttachment(null);
       setAmendNote('');
+      setShowFieldEdit(false);
       setAmendError(null);
-      setTicketExpanded(updated.id, true);
       void ensureTicketAttachmentsLoaded(updated);
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
     },
@@ -233,6 +169,51 @@ export function TicketList() {
     } finally {
       setIsPreparingAmendImage(false);
     }
+  };
+
+  const handleToggleExpand = (id: string) => {
+    const willExpand = !expandedTicketIds[id];
+    toggleTicketExpanded(id);
+    if (willExpand) {
+      const ticket = tickets.find((t) => t.id === id);
+      if (ticket) {
+        void ensureTicketAttachmentsLoaded(ticket);
+      }
+    }
+  };
+
+  const handleToggleViewed = (id: string, currentViewed: boolean) => {
+    if (currentViewed) {
+      markTicketUnviewed(id);
+    } else {
+      markTicketViewed(id);
+    }
+  };
+
+  const handleSubmitAmend = (e: React.FormEvent, ticket: Ticket) => {
+    e.preventDefault();
+    const trimmedNote = amendNote.trim();
+    const formattedNote = trimmedNote
+      ? `[CUSTOMER AMENDMENT] ${trimmedNote}`
+      : amendAttachment
+        ? `[CUSTOMER AMENDMENT] Attached ${amendAttachment.fileName}`
+        : '[CUSTOMER AMENDMENT] Updated ticket details.';
+
+    amendTicketMutation.mutate({
+      id: ticket.id,
+      payload: {
+        ...(showFieldEdit
+          ? {
+              title: amendTitle.trim(),
+              description: amendDescription.trim(),
+              priority: amendPriority,
+            }
+          : {}),
+        amendmentNote: formattedNote,
+        actorId: user?.id,
+        ...(amendAttachment ? { encryptedAttachment: amendAttachment } : {}),
+      },
+    });
   };
 
   return (
@@ -274,7 +255,6 @@ export function TicketList() {
         </div>
       </div>
 
-      {/* Customer Ticket Search (Includes #ID, Title, Description) */}
       <Input
         placeholder="Search tickets by #ID, title, or description..."
         value={portalSearchQuery}
@@ -290,724 +270,92 @@ export function TicketList() {
         </div>
       )}
 
-      {!showInitialSkeleton && filteredTickets.length === 0 && (
-        <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/40">
-          <CardContent className="p-8 text-center text-sm text-spruce-500">
-            {portalSearchQuery.trim()
-              ? 'No tickets match your search query.'
-              : 'No tickets found. Submit your first ticket using the form!'}
-          </CardContent>
-        </Card>
-      )}
-
-      {!showInitialSkeleton &&
-        filteredTickets.map((ticket) => {
-          const isExpanded = Boolean(expandedTicketIds[ticket.id]);
-          const isViewed = Boolean(viewedTicketIds[ticket.id]);
-          const isAmending = amendingTicketId === ticket.id;
-          const ticketAttachmentKey = `ticket:${ticket.id}`;
-          const decryptedTicketImg = decryptedAttachments[ticketAttachmentKey];
-          const isLoadingTicketImg = Boolean(loadingAttachmentKeys[ticketAttachmentKey]);
-          const isTicketImgHidden = Boolean(hiddenAttachmentKeys[ticketAttachmentKey]);
-          const commentCount = ticket.comments?.length || 0;
-          const attachmentCount = countTicketAttachments(ticket);
-
-          return (
-            <Card
-              key={ticket.id}
-              id={`ticket-${ticket.id}`}
-              className={`overflow-hidden transition-all duration-150 ${
-                ticket.status === 'NEEDS_INFO'
-                  ? isViewed
-                    ? 'border-amber-400/60 dark:border-amber-500/50 border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-amber-500/5'
-                    : 'border-amber-400 dark:border-amber-500 border-l-4 border-l-amber-500 dark:border-l-amber-400 bg-amber-500/10 shadow-sm'
-                  : !isViewed
-                  ? 'border-spruce-300 dark:border-spruce-700/80 border-l-4 border-l-spruce-600 dark:border-l-spruce-300 bg-white dark:bg-spruce-900/85 shadow-sm hover:border-spruce-400 dark:hover:border-spruce-600'
-                  : 'border-spruce-200/90 dark:border-spruce-800/80 border-l-4 border-l-spruce-200/70 dark:border-l-spruce-800/80 bg-white/70 dark:bg-spruce-950/50 hover:bg-white dark:hover:bg-spruce-900/60'
-              } ${
-                highlightedTicketId === ticket.id
-                  ? 'ring-2 ring-spruce-400 shadow-xl shadow-spruce-400/20 dark:ring-spruce-300'
-                  : ''
-              }`}
-            >
-              {/* Accordion Header */}
-              <div className="w-full p-4 hover:bg-spruce-50/80 dark:hover:bg-spruce-800/50 transition-colors flex items-start justify-between gap-3">
-                <button
-                  type="button"
-                  aria-expanded={isExpanded}
-                  onClick={() => toggleTicketExpanded(ticket.id)}
-                  className="flex items-start gap-2.5 min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 rounded-lg group"
-                >
-                  <span
-                    className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-spruce-200 dark:border-spruce-700 bg-spruce-100 dark:bg-spruce-900 text-[10px] text-spruce-700 dark:text-spruce-300 transition-transform ${
-                      isExpanded ? 'rotate-90' : ''
-                    }`}
-                  >
-                    ▸
-                  </span>
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-mono text-spruce-400">
-                        {formatShortTicketId(ticket.id)}
-                      </span>
-
-                      {/* New vs Viewed Color Badge Variant */}
-                      {!isViewed ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-spruce-100 text-spruce-800 border border-spruce-300 dark:bg-spruce-300/15 dark:text-spruce-300 dark:border-spruce-400/40 shadow-xs">
-                          <span className="h-1.5 w-1.5 rounded-full bg-spruce-600 dark:bg-spruce-300 animate-pulse" />
-                          New
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-spruce-500 dark:text-spruce-400 bg-spruce-100/50 dark:bg-spruce-900/40 border border-spruce-200/60 dark:border-spruce-800/60">
-                          <svg className="w-3 h-3 text-spruce-400 dark:text-spruce-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Viewed
-                        </span>
-                      )}
-
-                      <CardTitle
-                        className={`text-base leading-snug truncate group-hover:text-spruce-600 dark:group-hover:text-spruce-200 transition-colors ${
-                          !isViewed
-                            ? 'font-bold text-spruce-950 dark:text-white'
-                            : 'font-medium text-spruce-800 dark:text-spruce-300'
-                        }`}
-                      >
-                        {ticket.title}
-                      </CardTitle>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-spruce-500 dark:text-spruce-400">
-                      <span>{formatTicketDate(ticket.createdAt)}</span>
-                      <span>
-                        Assigned:{' '}
-                        <strong className="text-spruce-700 dark:text-spruce-300">
-                          {ticket.assignee?.fullName || 'Unassigned'}
-                        </strong>
-                      </span>
-                      <span>
-                        {commentCount} {commentCount === 1 ? 'message' : 'messages'}
-                      </span>
-                      {attachmentCount > 0 && (
-                        <span className="text-spruce-700 dark:text-spruce-300 font-medium">
-                          {attachmentCount}{' '}
-                          {attachmentCount === 1 ? 'attachment' : 'attachments'}
-                        </span>
-                      )}
-                      {typeof ticket.csatRating === 'number' && (
-                        <span className="text-emerald-500 font-medium">
-                          CSAT {ticket.csatRating}.0
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-
-                <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                  <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
-                    {ticket.priority}
-                  </Badge>
-                  <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                    {ticket.status === 'NEEDS_INFO'
-                      ? 'NEEDS ADDITIONAL INFO'
-                      : ticket.status}
-                  </Badge>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isViewed) {
-                        markTicketUnviewed(ticket.id);
-                      } else {
-                        markTicketViewed(ticket.id);
-                      }
-                    }}
-                    title={isViewed ? 'Mark as unread / new' : 'Mark as viewed'}
-                    className="p-1 rounded text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400"
-                    aria-label={isViewed ? 'Mark ticket as unviewed' : 'Mark ticket as viewed'}
-                  >
-                    {isViewed ? (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4 text-spruce-600 dark:text-spruce-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Accordion Body */}
-              {isExpanded && (
-                <CardContent className="p-4 pt-3 border-t border-spruce-100 dark:border-spruce-800/80 space-y-4">
-                  {/* Follow-Up Required Callout */}
-                  {ticket.status === 'NEEDS_INFO' && (
-                    <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-2">
-                      <span>
-                        <strong>Follow-Up Requested:</strong> Support requested
-                        additional details or a screenshot on this ticket.
-                      </span>
-                      {!isAmending && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openAmendPanel(ticket, false)}
-                          className="h-7 text-xs shrink-0"
-                        >
-                          Reply &amp; Attach Info
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Customer Resolution Confirmation / Re-Open Callout */}
-                  {ticket.status === 'RESOLVED' && (
-                    <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 flex flex-wrap items-center justify-between gap-2">
-                      <span>
-                        <strong>Marked Resolved:</strong> Please confirm if your issue is
-                        fixed or re-open the ticket if you still need assistance.
-                      </span>
-                      <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={amendTicketMutation.isPending}
-                          onClick={() =>
-                            amendTicketMutation.mutate({
-                              id: ticket.id,
-                              payload: {
-                                status: 'CLOSED',
-                                amendmentNote:
-                                  '[CUSTOMER AMENDMENT] Confirmed issue is resolved and closed the ticket.',
-                                actorId: user?.id,
-                              },
-                            })
-                          }
-                          className="h-7 text-xs"
-                        >
-                          Confirm Resolved &amp; Close
-                        </Button>
-                        {!isAmending && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openAmendPanel(ticket, false)}
-                            className="h-7 text-xs"
-                          >
-                            Still Having Issues (Re-Open)
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Customer Closed Ticket Callout & Re-Open */}
-                  {ticket.status === 'CLOSED' && (
-                    <div className="p-3 rounded-md bg-spruce-100/70 dark:bg-spruce-900/60 border border-spruce-200 dark:border-spruce-800 text-xs text-spruce-800 dark:text-spruce-300 flex flex-wrap items-center justify-between gap-2">
-                      <span>
-                        <strong>Ticket Closed:</strong> This support request has been completed and closed.
-                      </span>
-                      {!isAmending && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openAmendPanel(ticket, false)}
-                          className="h-7 text-xs"
-                        >
-                          Re-Open Ticket
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Customer Satisfaction Feedback Widget */}
-                  {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
-                    <CsatRatingWidget
-                      ticketId={ticket.id}
-                      creatorId={ticket.creatorId}
-                      creatorName={ticket.creator?.fullName}
-                      currentUserId={user?.id}
-                      currentUserRole={user?.role}
-                      initialRating={ticket.csatRating}
-                      initialComment={ticket.csatComment}
-                      ratedAt={ticket.csatRatedAt}
-                    />
-                  )}
-
-                  {/* 1. Original Ticket Report */}
-                  <div className="p-3 rounded-lg bg-spruce-50/80 dark:bg-spruce-900/50 border border-spruce-200/70 dark:border-spruce-800 space-y-2.5">
-                    <div className="flex items-center justify-between text-[11px] text-spruce-500 dark:text-spruce-400">
-                      <span className="font-semibold uppercase tracking-wider text-spruce-600 dark:text-spruce-400">
-                        Initial Ticket Report
-                      </span>
-                      <span>
-                        Reported by {ticket.creator?.fullName || 'Customer'} ·{' '}
-                        {formatTicketDate(ticket.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap">
-                      {ticket.description}
-                    </p>
-
-                    {/* Initial Ticket Attachment (auto-loaded once when viewed) */}
-                    {ticket.hasAttachment && (
-                      <div className="pt-2 border-t border-spruce-200/70 dark:border-spruce-800 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-spruce-800 dark:text-spruce-200">
-                              {ticket.attachmentName || 'attachment.webp'}
-                            </span>
-                            {ticket.attachmentOriginalSize && (
-                              <span className="text-spruce-500 dark:text-spruce-400">
-                                ({formatByteSize(ticket.attachmentOriginalSize)})
-                              </span>
-                            )}
-                          </div>
-                          {decryptedTicketImg ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                toggleAttachmentVisibility(ticketAttachmentKey)
-                              }
-                              className="h-7 text-xs"
-                            >
-                              {isTicketImgHidden ? 'Show Image' : 'Hide Image'}
-                            </Button>
-                          ) : (
-                            <span className="text-[11px] text-spruce-400">
-                              {isLoadingTicketImg ? 'Loading image...' : ''}
-                            </span>
-                          )}
-                        </div>
-
-                        {decryptedTicketImg && !isTicketImgHidden && (
-                          <div className="pt-1">
-                            <img
-                              src={decryptedTicketImg.dataUrl}
-                              alt={decryptedTicketImg.fileName}
-                              onClick={() => setLightboxImage(decryptedTicketImg)}
-                              title="Click to inspect full-size image"
-                              className="max-h-64 rounded-md border border-spruce-200 dark:border-spruce-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 2. Chronological Activity & Follow-Up History Timeline */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-spruce-500 uppercase tracking-wider">
-                        Activity &amp; Follow-Up History ({commentCount})
-                      </p>
-                      {ticket.status !== 'CLOSED' && !isAmending && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openAmendPanel(ticket, false)}
-                            className="text-xs text-spruce-700 dark:text-spruce-300 hover:underline font-medium"
-                          >
-                            Add Follow-Up Reply
-                          </button>
-                          <span className="text-spruce-300 dark:text-spruce-700">·</span>
-                          <button
-                            type="button"
-                            onClick={() => openAmendPanel(ticket, true)}
-                            className="text-xs text-spruce-500 hover:text-spruce-800 dark:hover:text-spruce-200 hover:underline"
-                          >
-                            Amend Ticket Details
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {commentCount === 0 ? (
-                      <p className="text-xs text-spruce-400 italic py-1">
-                        No follow-up messages or support notes yet.
-                      </p>
-                    ) : (() => {
-                      const comments = ticket.comments || [];
-                      const hasMultiple = comments.length > 1;
-                      const isHistoryExpanded = Boolean(expandedCommentHistories[ticket.id]);
-                      const earlierComments = hasMultiple ? comments.slice(0, -1) : [];
-                      const latestComment = comments[comments.length - 1];
-
-                      const renderCommentCard = (comment: typeof comments[0], isLatest = false) => {
-                        const parsed = parseTimelineComment(comment.content);
-                        const commentAttachmentKey = `comment:${comment.id}`;
-                        const decryptedCommentImg = decryptedAttachments[commentAttachmentKey];
-                        const isLoadingCommentImg = Boolean(loadingAttachmentKeys[commentAttachmentKey]);
-                        const isCommentImgHidden = Boolean(hiddenAttachmentKeys[commentAttachmentKey]);
-
-                        const cardTone =
-                          parsed.kind === 'FOLLOW_UP'
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200'
-                            : parsed.kind === 'AMENDMENT'
-                              ? 'bg-spruce-100/70 dark:bg-spruce-900/60 border-spruce-300 dark:border-spruce-700/80 text-spruce-950 dark:text-spruce-100'
-                              : 'bg-white dark:bg-spruce-900/40 border-spruce-200/90 dark:border-spruce-800 text-spruce-950 dark:text-spruce-200';
-
-                        return (
-                          <div
-                            key={comment.id}
-                            className={`p-3 rounded-lg border text-xs space-y-2 ${cardTone}`}
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="font-semibold text-spruce-900 dark:text-white">
-                                  {comment.author?.fullName || 'Support'}
-                                </span>
-                                {comment.author?.role && (
-                                  <span className="text-[11px] text-spruce-500 dark:text-spruce-400 font-normal">
-                                    ({comment.author.role.toLowerCase()})
-                                  </span>
-                                )}
-                                {parsed.kind === 'FOLLOW_UP' ? (
-                                  <Badge variant="warning" className="text-[10px] py-0 px-1.5">
-                                    Follow-Up
-                                  </Badge>
-                                ) : parsed.kind === 'AMENDMENT' ? (
-                                  <Badge variant="default" className="text-[10px] py-0 px-1.5">
-                                    Amendment
-                                  </Badge>
-                                ) : null}
-                              </div>
-                              <span className="text-[11px] text-spruce-500 dark:text-spruce-400">
-                                {formatCommentTime(comment.createdAt)}
-                              </span>
-                            </div>
-
-                            <p className="text-spruce-800 dark:text-spruce-200 whitespace-pre-wrap leading-relaxed">
-                              {parsed.cleanText}
-                            </p>
-
-                            {/* Attachment linked directly to this Follow-Up / Amendment message */}
-                            {comment.hasAttachment && (
-                              <div className="p-2.5 rounded-md bg-white/80 dark:bg-spruce-950/70 border border-spruce-200/80 dark:border-spruce-800 space-y-2">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-spruce-800 dark:text-spruce-200">
-                                      {comment.attachmentName || 'attachment.webp'}
-                                    </span>
-                                    {comment.attachmentOriginalSize && (
-                                      <span className="text-spruce-500 dark:text-spruce-400">
-                                        ({formatByteSize(comment.attachmentOriginalSize)})
-                                      </span>
-                                    )}
-                                  </div>
-                                  {decryptedCommentImg ? (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        toggleAttachmentVisibility(commentAttachmentKey)
-                                      }
-                                      className="h-7 text-xs"
-                                    >
-                                      {isCommentImgHidden ? 'Show Image' : 'Hide Image'}
-                                    </Button>
-                                  ) : (
-                                    <span className="text-[11px] text-spruce-400">
-                                      {isLoadingCommentImg ? 'Loading image...' : ''}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {decryptedCommentImg && !isCommentImgHidden && (
-                                  <div className="pt-1 max-w-full overflow-hidden">
-                                    <img
-                                      src={decryptedCommentImg.dataUrl}
-                                      alt={decryptedCommentImg.fileName}
-                                      onClick={() =>
-                                        setLightboxImage(decryptedCommentImg)
-                                      }
-                                      title="Click to inspect full-size image"
-                                      className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-spruce-200 dark:border-spruce-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      };
-
-                      return (
-                        <div className="space-y-2.5 pl-2 border-l-2 border-spruce-200 dark:border-spruce-800">
-                          {hasMultiple && (
-                            <div className="pb-1">
-                              <button
-                                type="button"
-                                onClick={() => toggleCommentHistory(ticket.id)}
-                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-spruce-200 dark:border-spruce-800 bg-spruce-100/70 dark:bg-spruce-900/60 hover:bg-spruce-200/60 dark:hover:bg-spruce-800/80 text-xs text-spruce-700 dark:text-spruce-300 font-medium transition-colors"
-                              >
-                                <span className="flex items-center gap-1.5">
-                                  <svg
-                                    className="w-3.5 h-3.5 text-spruce-600 dark:text-spruce-400"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
-                                  </svg>
-                                  <span>
-                                    {isHistoryExpanded
-                                      ? `Showing entire thread (${comments.length} messages)`
-                                      : `Show ${earlierComments.length} earlier ${
-                                          earlierComments.length === 1 ? 'reply' : 'replies'
-                                        }`}
-                                  </span>
-                                </span>
-                                <span className="text-[11px] text-spruce-700 dark:text-spruce-300 font-semibold hover:underline">
-                                  {isHistoryExpanded ? 'Collapse thread \u2191' : 'Expand thread \u2193'}
-                                </span>
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Earlier comments rendered only when thread is expanded */}
-                          {hasMultiple && isHistoryExpanded && (
-                            <div className="space-y-2.5">
-                              {earlierComments.map((c) => renderCommentCard(c, false))}
-                            </div>
-                          )}
-
-                          {/* Latest comment always displayed */}
-                          {latestComment && renderCommentCard(latestComment, true)}
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* 3. Inline Customer Follow-Up Reply & Amendment Composer */}
-                  {isAmending && (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const trimmedNote = amendNote.trim();
-                        const formattedNote = trimmedNote
-                          ? `[CUSTOMER AMENDMENT] ${trimmedNote}`
-                          : amendAttachment
-                            ? `[CUSTOMER AMENDMENT] Attached ${amendAttachment.fileName}`
-                            : '[CUSTOMER AMENDMENT] Updated ticket details.';
-
-                        amendTicketMutation.mutate({
-                          id: ticket.id,
-                          payload: {
-                            ...(showFieldEdit
-                              ? {
-                                  title: amendTitle.trim(),
-                                  description: amendDescription.trim(),
-                                  priority: amendPriority,
-                                }
-                              : {}),
-                            amendmentNote: formattedNote,
-                            actorId: user?.id,
-                            ...(amendAttachment
-                              ? { encryptedAttachment: amendAttachment }
-                              : {}),
-                          },
-                        });
-                      }}
-                      className="p-3.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/20 space-y-3"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                          {showFieldEdit
-                            ? `Amend Ticket ${formatShortTicketId(ticket.id)}`
-                            : `Follow-Up Reply on ${formatShortTicketId(ticket.id)}`}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setShowFieldEdit((v) => !v)}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            {showFieldEdit
-                              ? 'Hide Ticket Field Edits'
-                              : 'Edit Title / Priority / Description'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAmendingTicketId(null)}
-                            className="text-xs text-spruce-400 hover:text-spruce-600 dark:hover:text-spruce-200"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-
-                      {amendError && (
-                        <p className="text-xs text-red-500 font-medium">{amendError}</p>
-                      )}
-
-                      {showFieldEdit && (
-                        <div className="space-y-2.5 p-2.5 rounded-md bg-white/70 dark:bg-spruce-900/70 border border-spruce-200/70 dark:border-spruce-800">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <div className="sm:col-span-2 space-y-1">
-                              <Label className="text-xs">Amended Title</Label>
-                              <Input
-                                value={amendTitle}
-                                onChange={(e) => setAmendTitle(e.target.value)}
-                                className="h-8 text-xs"
-                                required
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Priority</Label>
-                              <select
-                                value={amendPriority}
-                                onChange={(e) =>
-                                  setAmendPriority(
-                                    e.target.value as Ticket['priority'],
-                                  )
-                                }
-                                className="flex h-8 w-full rounded-md border border-spruce-300 bg-white px-2 text-xs text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
-                              >
-                                <option value="LOW">LOW</option>
-                                <option value="MEDIUM">MEDIUM</option>
-                                <option value="HIGH">HIGH</option>
-                                <option value="URGENT">URGENT</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs">Amended Description</Label>
-                            <Textarea
-                              rows={3}
-                              value={amendDescription}
-                              onChange={(e) => setAmendDescription(e.target.value)}
-                              className="text-xs"
-                              required
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">
-                          Follow-Up Message / Clarification Note
-                        </Label>
-                        <Textarea
-                          rows={2}
-                          placeholder="Provide the requested details or explain what changed..."
-                          value={amendNote}
-                          onChange={(e) => setAmendNote(e.target.value)}
-                          className="text-xs"
-                          required={!showFieldEdit && !amendAttachment}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">
-                          Attach Screenshot to This Message (Optional)
-                        </Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAmendFileChange}
-                          className="h-8 text-xs cursor-pointer"
-                        />
-                        {amendAttachment && (
-                          <div className="flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 pt-0.5">
-                            <span>
-                              Attached to message: {amendAttachment.fileName} (
-                              {formatByteSize(amendAttachment.originalSize)})
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setAmendAttachment(null)}
-                              className="text-red-500 hover:underline"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setAmendingTicketId(null)}
-                          className="h-8 text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          size="sm"
-                          disabled={
-                            amendTicketMutation.isPending || isPreparingAmendImage
-                          }
-                          className="h-8 text-xs"
-                        >
-                          {amendTicketMutation.isPending
-                            ? 'Saving...'
-                            : 'Submit Follow-Up'}
-                        </Button>
-                      </div>
-                    </form>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-          );
-        })}
-
-      {/* Full-Screen Image Lightbox Modal */}
-      {lightboxImage && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setLightboxImage(null)}
-          className="fixed inset-0 z-50 bg-spruce-950/85 backdrop-blur-sm flex items-center justify-center p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-5xl w-full bg-white dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 rounded-xl p-4 space-y-3 shadow-2xl"
-          >
-            <div className="flex items-center justify-between gap-3 text-xs text-spruce-800 dark:text-spruce-200">
-              <div className="flex items-center gap-2 truncate">
-                <span className="font-semibold truncate">{lightboxImage.fileName}</span>
-                <span className="text-spruce-500 dark:text-spruce-400">
-                  ({formatByteSize(lightboxImage.originalSize)})
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setLightboxImage(null)}
-                className="h-7 text-xs"
-              >
-                Close Preview
-              </Button>
-            </div>
-            <div className="flex items-center justify-center max-h-[80vh] overflow-auto bg-spruce-100/50 dark:bg-spruce-950 rounded-lg p-2">
-              <img
-                src={lightboxImage.dataUrl}
-                alt={lightboxImage.fileName}
-                className="max-h-[76vh] w-auto object-contain rounded"
-              />
-            </div>
-          </div>
+      {!isLoading && filteredTickets.length === 0 && (
+        <div className="text-center py-12 border border-dashed rounded-lg bg-spruce-50/50 dark:bg-spruce-900/20 border-spruce-300 dark:border-spruce-800">
+          <p className="text-sm text-spruce-600 dark:text-spruce-400">
+            {portalSearchQuery
+              ? `No tickets match "${portalSearchQuery}". Try adjusting your search term.`
+              : 'You have not submitted any tickets yet. Use the form above to submit your first request.'}
+          </p>
         </div>
       )}
+
+      <div className="space-y-3">
+        {filteredTickets.map((ticket) => {
+          const isExpanded = Boolean(expandedTicketIds[ticket.id]);
+          const isViewed = Boolean(viewedTicketIds[ticket.id]);
+          const isHighlighted = highlightedTicketId === ticket.id;
+          const isAmending = amendingTicketId === ticket.id;
+          const isHistoryExpanded = Boolean(expandedCommentHistories[ticket.id]);
+
+          return (
+            <TicketCard
+              key={ticket.id}
+              ticket={ticket}
+              isExpanded={isExpanded}
+              isViewed={isViewed}
+              isHighlighted={isHighlighted}
+              onToggleExpand={handleToggleExpand}
+              onToggleViewed={handleToggleViewed}
+              currentUserId={user?.id}
+              currentUserRole={user?.role}
+              decryptedAttachments={decryptedAttachments}
+              loadingAttachmentKeys={loadingAttachmentKeys}
+              hiddenAttachmentKeys={hiddenAttachmentKeys}
+              onToggleAttachmentVisibility={toggleAttachmentVisibility}
+              onInspectImage={setLightboxImage}
+              isHistoryExpanded={isHistoryExpanded}
+              onToggleCommentHistory={toggleCommentHistory}
+              isAmending={isAmending}
+              onOpenAmend={openAmendPanel}
+              onCancelAmend={() => setAmendingTicketId(null)}
+              onConfirmResolution={(id) =>
+                amendTicketMutation.mutate({
+                  id,
+                  payload: {
+                    status: 'CLOSED',
+                    amendmentNote: '[CUSTOMER CONFIRMATION] Confirmed issue resolved.',
+                    actorId: user?.id,
+                  },
+                })
+              }
+              onReopenTicket={(id) =>
+                amendTicketMutation.mutate({
+                  id,
+                  payload: {
+                    status: 'OPEN',
+                    amendmentNote: '[CUSTOMER RE-OPEN] Issue still persists after resolution.',
+                    actorId: user?.id,
+                  },
+                })
+              }
+              isResolvingOrReopening={amendTicketMutation.isPending}
+              showFieldEdit={showFieldEdit}
+              setShowFieldEdit={setShowFieldEdit}
+              amendTitle={amendTitle}
+              setAmendTitle={setAmendTitle}
+              amendDescription={amendDescription}
+              setAmendDescription={setAmendDescription}
+              amendPriority={amendPriority}
+              setAmendPriority={setAmendPriority}
+              amendNote={amendNote}
+              setAmendNote={setAmendNote}
+              amendAttachment={amendAttachment}
+              setAmendAttachment={setAmendAttachment}
+              onAmendFileChange={handleAmendFileChange}
+              onSubmitAmend={(e) => handleSubmitAmend(e, ticket)}
+              isSubmittingAmend={amendTicketMutation.isPending}
+              isPreparingAmendImage={isPreparingAmendImage}
+              amendError={amendError}
+            />
+          );
+        })}
+      </div>
+
+      <TicketLightbox
+        image={lightboxImage}
+        onClose={() => setLightboxImage(null)}
+      />
     </div>
   );
 }

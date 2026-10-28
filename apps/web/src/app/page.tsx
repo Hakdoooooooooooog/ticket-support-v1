@@ -2,13 +2,12 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@ui/card';
-import { Input } from '@ui/input';
-import { Label } from '@ui/label';
-import { Button } from '@ui/button';
-import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { ThemeToggle } from '@components/theme-toggle';
+import { AuthCard } from '@components/auth/auth-card';
+import { LoginForm } from '@components/auth/login-form';
+import { RegisterForm, VerifiedInviteInfo } from '@components/auth/register-form';
+import { DemoAccountsBar } from '@components/auth/demo-accounts-bar';
 import { apiClient } from '@lib/api-client';
 import { APP_VERSION } from '@lib/constants';
 import {
@@ -19,15 +18,7 @@ import {
 } from '@lib/helpers';
 import { useAuthStore } from '@store/auth.store';
 
-interface VerifiedInviteInfo {
-  valid: boolean;
-  email?: string;
-  role?: 'AGENT' | 'ADMIN';
-  invitedBy?: string;
-  message?: string;
-}
-
-function AuthForm() {
+function AuthContainer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlInviteCode = searchParams.get('invite') || searchParams.get('inviteCode') || '';
@@ -71,7 +62,6 @@ function AuthForm() {
     });
   }, [isSessionVerified, storedUser, ensureSessionVerified, redirectByUserRole]);
 
-  // If an invite code is present in URL, auto-switch to register mode and verify invite
   React.useEffect(() => {
     if (urlInviteCode) {
       setMode('register');
@@ -86,7 +76,6 @@ function AuthForm() {
       setInviteInfo(null);
       return;
     }
-
     setIsVerifyingInvite(true);
     try {
       const res = await apiClient.get<VerifiedInviteInfo>(
@@ -120,10 +109,7 @@ function AuthForm() {
 
     try {
       if (mode === 'login') {
-        const res = await apiClient.post('/auth/login', {
-          email,
-          password,
-        });
+        const res = await apiClient.post('/auth/login', { email, password });
         const { accessToken, user } = res.data;
         const verified = (await verifyPassportSession(accessToken)) || user;
         setSession({ accessToken, user: verified });
@@ -139,11 +125,9 @@ function AuthForm() {
           email,
           password,
         };
-
         if (inviteCode.trim()) {
           payload.inviteCode = inviteCode.trim();
         }
-
         const res = await apiClient.post('/auth/register', payload);
         const { accessToken, user } = res.data;
         const verified = (await verifyPassportSession(accessToken)) || user;
@@ -152,14 +136,17 @@ function AuthForm() {
       }
     } catch (err: unknown) {
       setError(
-        extractApiErrorMessage(
-          err,
-          'Authentication failed. Check your credentials.',
-        ),
+        extractApiErrorMessage(err, 'Authentication failed. Check your credentials.'),
       );
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSelectDevAccount = (devEmail: string, devPass: string) => {
+    setEmail(devEmail);
+    setPassword(devPass);
+    setError(null);
   };
 
   return (
@@ -180,192 +167,52 @@ function AuthForm() {
           </p>
         </div>
 
-        <Card className="shadow-lg border-spruce-200 dark:border-spruce-700/80">
-          <CardHeader className="space-y-3 pb-4">
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('login');
-                  setError(null);
-                }}
-                className={`py-2 text-sm font-semibold rounded-md transition-colors ${
-                  mode === 'login'
-                    ? 'bg-white text-spruce-950 shadow-sm dark:bg-spruce-800 dark:text-spruce-200'
-                    : 'text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('register');
-                  setError(null);
-                }}
-                className={`py-2 text-sm font-semibold rounded-md transition-colors ${
-                  mode === 'register'
-                    ? 'bg-white text-spruce-950 shadow-sm dark:bg-spruce-800 dark:text-spruce-200'
-                    : 'text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white'
-                }`}
-              >
-                Create Account
-              </button>
-            </div>
-            <div>
-              <CardTitle className="text-xl">
-                {mode === 'login' ? 'Welcome back' : 'Register an account'}
-              </CardTitle>
-              <CardDescription>
-                {mode === 'login'
-                  ? 'Enter your email and password to continue.'
-                  : inviteInfo?.valid
-                    ? `Staff Invitation: Registering as ${inviteInfo.role === 'ADMIN' ? 'Administrator' : 'Support Engineer'}.`
-                    : 'Register as a customer to submit and track support tickets.'}
-              </CardDescription>
-            </div>
-          </CardHeader>
-
-          <form onSubmit={handleAuthSubmit}>
-            <CardContent className="space-y-4">
-              {error && (
-                <div className="p-3 text-xs font-medium rounded-md bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800">
-                  {error}
-                </div>
-              )}
-
-              {mode === 'register' && inviteInfo && (
-                <div
-                  className={`p-3 rounded-md border text-xs space-y-1 ${
-                    inviteInfo.valid
-                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300'
-                      : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
-                  }`}
-                >
-                  {inviteInfo.valid ? (
-                    <div className="flex items-center justify-between gap-2">
-                      <span>
-                        <strong>Staff Invitation Detected:</strong> Role:{' '}
-                        <Badge variant="default" className="ml-1 text-[10px]">
-                          {inviteInfo.role === 'ADMIN'
-                            ? 'Administrator'
-                            : 'Support Engineer'}
-                        </Badge>
-                      </span>
-                    </div>
-                  ) : (
-                    <span>{inviteInfo.message || 'Invalid or expired invitation code.'}</span>
-                  )}
-                </div>
-              )}
-
-              {mode === 'register' && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="e.g. Jane Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Minimum 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Staff invitation code toggle (Invite-only mechanism) */}
-              {mode === 'register' && (
-                <div className="pt-1">
-                  {!showInviteInput ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowInviteInput(true)}
-                      className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
-                    >
-                      Have an IT staff invitation code?
-                    </button>
-                  ) : (
-                    <div className="space-y-1.5 p-3 rounded-md bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="inviteCode" className="text-xs font-semibold">
-                          Staff Invitation Code
-                        </Label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowInviteInput(false);
-                            setInviteCode('');
-                            setInviteInfo(null);
-                          }}
-                          className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          id="inviteCode"
-                          placeholder="e.g. inv_xxxxxxxxxxxx"
-                          value={inviteCode}
-                          onChange={(e) => setInviteCode(e.target.value)}
-                          className="text-xs h-8"
-                        />
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => verifyCode(inviteCode)}
-                          disabled={isVerifyingInvite || !inviteCode.trim()}
-                          className="text-xs h-8 shrink-0"
-                        >
-                          {isVerifyingInvite ? 'Checking...' : 'Apply'}
-                        </Button>
-                      </div>
-                      <p className="text-[11px] text-slate-500">
-                        IT Support Engineers and Administrators must be invited by an IT Administrator.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting
-                  ? 'Authenticating...'
-                  : mode === 'login'
-                    ? 'Sign In'
-                    : inviteInfo?.valid
-                      ? 'Activate Staff Account'
-                      : 'Create Customer Account'}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+        <AuthCard
+          mode={mode}
+          onModeChange={(newMode) => {
+            setMode(newMode);
+            setError(null);
+          }}
+          isStaffInvite={inviteInfo?.valid}
+          staffRole={inviteInfo?.role}
+        >
+          {mode === 'login' ? (
+            <LoginForm
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              error={error}
+              isSubmitting={isSubmitting}
+              onSubmit={handleAuthSubmit}
+            >
+              <DemoAccountsBar
+                onSelectAccount={handleSelectDevAccount}
+                disabled={isSubmitting}
+              />
+            </LoginForm>
+          ) : (
+            <RegisterForm
+              fullName={fullName}
+              setFullName={setFullName}
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              inviteCode={inviteCode}
+              setInviteCode={setInviteCode}
+              showInviteInput={showInviteInput}
+              setShowInviteInput={setShowInviteInput}
+              inviteInfo={inviteInfo}
+              setInviteInfo={setInviteInfo}
+              isVerifyingInvite={isVerifyingInvite}
+              onVerifyInvite={verifyCode}
+              error={error}
+              isSubmitting={isSubmitting}
+              onSubmit={handleAuthSubmit}
+            />
+          )}
+        </AuthCard>
 
         <p className="text-center font-mono text-[11px] text-slate-500 pt-2">
           TicketSupport · {APP_VERSION}
@@ -386,7 +233,7 @@ export default function AuthRootPage() {
         />
       }
     >
-      <AuthForm />
+      <AuthContainer />
     </React.Suspense>
   );
 }
