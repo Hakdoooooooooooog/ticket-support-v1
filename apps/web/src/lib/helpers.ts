@@ -657,6 +657,61 @@ export interface NotificationListResponse {
   unreadCount: number;
 }
 
+export function formatNotificationTime(isoString: string): string {
+  try {
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDays = Math.floor(diffHr / 24);
+    return `${diffDays}d ago`;
+  } catch {
+    return 'Recent';
+  }
+}
+
+export function getNotificationBadge(type: AppNotification['type']): {
+  label: string;
+  badgeClass: string;
+} {
+  switch (type) {
+    case 'TICKET_CREATED':
+      return {
+        label: 'NEW TICKET',
+        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
+      };
+    case 'TICKET_FOLLOW_UP_REQUESTED':
+      return {
+        label: 'NEEDS INFO',
+        badgeClass: 'border-amber-500/40 bg-amber-500/15 text-amber-300 font-bold',
+      };
+    case 'TICKET_CUSTOMER_AMENDED':
+      return {
+        label: 'CUSTOMER',
+        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
+      };
+    case 'TICKET_NOTE_POSTED':
+      return {
+        label: 'NOTE',
+        badgeClass: 'border-purple-500/40 bg-purple-500/15 text-purple-300 font-bold',
+      };
+    case 'TICKET_ASSIGNED':
+      return {
+        label: 'ASSIGNED',
+        badgeClass: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-bold',
+      };
+    case 'TICKET_STATUS_CHANGED':
+    default:
+      return {
+        label: 'STATUS',
+        badgeClass: 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300 font-bold',
+      };
+  }
+}
+
 export interface CannedResponseTemplate {
   id: string;
   category: 'Troubleshooting' | 'Information Request' | 'Status & Escalation' | 'Resolution';

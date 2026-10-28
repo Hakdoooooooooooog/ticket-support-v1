@@ -25,15 +25,23 @@ export default function CustomerPortalPage() {
     ensureSessionVerified,
     clearSession,
   } = useAuthStore();
-  const { clearTickets, toggleTicketExpanded } = useTicketsStore();
+  const { clearTickets, highlightTicket } = useTicketsStore();
 
-  const handleSelectTicket = (ticketId: string) => {
-    toggleTicketExpanded(ticketId);
-    setTimeout(() => {
-      const el = document.getElementById(`ticket-${ticketId}`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
-  };
+  const handleSelectTicket = React.useCallback((ticketId: string) => {
+    highlightTicket(ticketId);
+  }, [highlightTicket]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const targetTicketId = params.get('ticketId');
+    if (targetTicketId) {
+      const timer = setTimeout(() => {
+        handleSelectTicket(targetTicketId);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [handleSelectTicket]);
 
   React.useEffect(() => {
     if (isSessionVerified && user) {

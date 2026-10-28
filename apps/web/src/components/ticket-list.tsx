@@ -85,6 +85,8 @@ export function TicketList() {
     hasLoadedTickets,
     lastUpdatedAt,
     expandedTicketIds,
+    expandedCommentHistories,
+    highlightedTicketId,
     portalSearchQuery,
     decryptedAttachments,
     loadingAttachmentKeys,
@@ -97,6 +99,7 @@ export function TicketList() {
     toggleTicketExpanded,
     setTicketExpanded,
     setAllTicketsExpanded,
+    toggleCommentHistory,
     ensureTicketAttachmentsLoaded,
     toggleAttachmentVisibility,
     setLightboxImage,
@@ -313,6 +316,10 @@ export function TicketList() {
                 ticket.status === 'NEEDS_INFO'
                   ? 'border-amber-400 dark:border-amber-600'
                   : 'border-slate-200 dark:border-slate-800'
+              } ${
+                highlightedTicketId === ticket.id
+                  ? 'ring-2 ring-blue-500 shadow-xl shadow-blue-500/20 dark:ring-blue-400'
+                  : ''
               }`}
             >
               {/* Accordion Header */}
@@ -573,122 +580,177 @@ export function TicketList() {
                       <p className="text-xs text-slate-400 italic py-1">
                         No follow-up messages or support notes yet.
                       </p>
-                    ) : (
-                      <div className="space-y-2.5 pl-2 border-l-2 border-slate-200 dark:border-slate-800">
-                        {ticket.comments?.map((comment) => {
-                          const parsed = parseTimelineComment(comment.content);
-                          const commentAttachmentKey = `comment:${comment.id}`;
-                          const decryptedCommentImg =
-                            decryptedAttachments[commentAttachmentKey];
-                          const isLoadingCommentImg = Boolean(
-                            loadingAttachmentKeys[commentAttachmentKey],
-                          );
-                          const isCommentImgHidden = Boolean(
-                            hiddenAttachmentKeys[commentAttachmentKey],
-                          );
+                    ) : (() => {
+                      const comments = ticket.comments || [];
+                      const hasMultiple = comments.length > 1;
+                      const isHistoryExpanded = Boolean(expandedCommentHistories[ticket.id]);
+                      const earlierComments = hasMultiple ? comments.slice(0, -1) : [];
+                      const latestComment = comments[comments.length - 1];
 
-                          const cardTone =
-                            parsed.kind === 'FOLLOW_UP'
-                              ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/80'
-                              : parsed.kind === 'AMENDMENT'
-                                ? 'bg-blue-50/50 dark:bg-blue-950/25 border-blue-200/80 dark:border-blue-900/70'
-                                : 'bg-slate-50 dark:bg-slate-900/80 border-slate-200/70 dark:border-slate-800';
+                      const renderCommentCard = (comment: typeof comments[0], isLatest = false) => {
+                        const parsed = parseTimelineComment(comment.content);
+                        const commentAttachmentKey = `comment:${comment.id}`;
+                        const decryptedCommentImg = decryptedAttachments[commentAttachmentKey];
+                        const isLoadingCommentImg = Boolean(loadingAttachmentKeys[commentAttachmentKey]);
+                        const isCommentImgHidden = Boolean(hiddenAttachmentKeys[commentAttachmentKey]);
 
-                          return (
-                            <div
-                              key={comment.id}
-                              className={`p-3 rounded-lg border text-xs space-y-2 ${cardTone}`}
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="font-semibold text-slate-900 dark:text-white">
-                                    {comment.author?.fullName || 'Support'}
-                                  </span>
-                                  {comment.author?.role && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-[10px] py-0 px-1.5"
-                                    >
-                                      {comment.author.role}
-                                    </Badge>
-                                  )}
+                        const cardTone =
+                          parsed.kind === 'FOLLOW_UP'
+                            ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/80'
+                            : parsed.kind === 'AMENDMENT'
+                              ? 'bg-blue-50/50 dark:bg-blue-950/25 border-blue-200/80 dark:border-blue-900/70'
+                              : 'bg-slate-50 dark:bg-slate-900/80 border-slate-200/70 dark:border-slate-800';
+
+                        return (
+                          <div
+                            key={comment.id}
+                            className={`p-3 rounded-lg border text-xs space-y-2 ${cardTone}`}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="font-semibold text-slate-900 dark:text-white">
+                                  {comment.author?.fullName || 'Support'}
+                                </span>
+                                {comment.author?.role && (
                                   <Badge
-                                    variant={
-                                      parsed.kind === 'FOLLOW_UP'
-                                        ? 'warning'
-                                        : parsed.kind === 'AMENDMENT'
-                                          ? 'default'
-                                          : 'secondary'
-                                    }
+                                    variant="outline"
                                     className="text-[10px] py-0 px-1.5"
                                   >
-                                    {parsed.badgeLabel}
+                                    {comment.author.role}
                                   </Badge>
-                                </div>
-                                <span className="text-[11px] text-slate-400">
-                                  {formatCommentTime(comment.createdAt)}
-                                </span>
+                                )}
+                                <Badge
+                                  variant={
+                                    parsed.kind === 'FOLLOW_UP'
+                                      ? 'warning'
+                                      : parsed.kind === 'AMENDMENT'
+                                        ? 'default'
+                                        : 'secondary'
+                                  }
+                                  className="text-[10px] py-0 px-1.5"
+                                >
+                                  {parsed.badgeLabel}
+                                </Badge>
+                                {isLatest && hasMultiple && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] py-0 px-1.5 border-blue-500/40 text-blue-500 font-bold"
+                                  >
+                                    Latest Update
+                                  </Badge>
+                                )}
                               </div>
+                              <span className="text-[11px] text-slate-400">
+                                {formatCommentTime(comment.createdAt)}
+                              </span>
+                            </div>
 
-                              <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                                {parsed.cleanText}
-                              </p>
+                            <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                              {parsed.cleanText}
+                            </p>
 
-                              {/* Attachment linked directly to this Follow-Up / Amendment message (auto-loaded once when viewed) */}
-                              {comment.hasAttachment && (
-                                <div className="p-2.5 rounded-md bg-white/80 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-slate-800 dark:text-slate-200">
-                                        {comment.attachmentName || 'attachment.webp'}
-                                      </span>
-                                      {comment.attachmentOriginalSize && (
-                                        <span className="text-slate-400">
-                                          (
-                                          {formatByteSize(comment.attachmentOriginalSize)}
-                                          )
-                                        </span>
-                                      )}
-                                    </div>
-                                    {decryptedCommentImg ? (
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                          toggleAttachmentVisibility(commentAttachmentKey)
-                                        }
-                                        className="h-7 text-xs"
-                                      >
-                                        {isCommentImgHidden ? 'Show Image' : 'Hide Image'}
-                                      </Button>
-                                    ) : (
-                                      <span className="text-[11px] text-slate-400">
-                                        {isLoadingCommentImg ? 'Loading image...' : ''}
+                            {/* Attachment linked directly to this Follow-Up / Amendment message */}
+                            {comment.hasAttachment && (
+                              <div className="p-2.5 rounded-md bg-white/80 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-800 dark:text-slate-200">
+                                      {comment.attachmentName || 'attachment.webp'}
+                                    </span>
+                                    {comment.attachmentOriginalSize && (
+                                      <span className="text-slate-400">
+                                        ({formatByteSize(comment.attachmentOriginalSize)})
                                       </span>
                                     )}
                                   </div>
-
-                                  {decryptedCommentImg && !isCommentImgHidden && (
-                                    <div className="pt-1">
-                                      <img
-                                        src={decryptedCommentImg.dataUrl}
-                                        alt={decryptedCommentImg.fileName}
-                                        onClick={() =>
-                                          setLightboxImage(decryptedCommentImg)
-                                        }
-                                        title="Click to inspect full-size image"
-                                        className="max-h-64 rounded-md border border-slate-200 dark:border-slate-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
-                                      />
-                                    </div>
+                                  {decryptedCommentImg ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        toggleAttachmentVisibility(commentAttachmentKey)
+                                      }
+                                      className="h-7 text-xs"
+                                    >
+                                      {isCommentImgHidden ? 'Show Image' : 'Hide Image'}
+                                    </Button>
+                                  ) : (
+                                    <span className="text-[11px] text-slate-400">
+                                      {isLoadingCommentImg ? 'Loading image...' : ''}
+                                    </span>
                                   )}
                                 </div>
-                              )}
+
+                                {decryptedCommentImg && !isCommentImgHidden && (
+                                  <div className="pt-1 max-w-full overflow-hidden">
+                                    <img
+                                      src={decryptedCommentImg.dataUrl}
+                                      alt={decryptedCommentImg.fileName}
+                                      onClick={() =>
+                                        setLightboxImage(decryptedCommentImg)
+                                      }
+                                      title="Click to inspect full-size image"
+                                      className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-slate-200 dark:border-slate-700 object-contain cursor-zoom-in hover:opacity-95 transition-opacity"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      };
+
+                      return (
+                        <div className="space-y-2.5 pl-2 border-l-2 border-slate-200 dark:border-slate-800">
+                          {hasMultiple && (
+                            <div className="pb-1">
+                              <button
+                                type="button"
+                                onClick={() => toggleCommentHistory(ticket.id)}
+                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/60 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 text-xs text-slate-600 dark:text-slate-400 font-medium transition-colors"
+                              >
+                                <span className="flex items-center gap-1.5">
+                                  <svg
+                                    className="w-3.5 h-3.5 text-blue-500"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  <span>
+                                    {isHistoryExpanded
+                                      ? `Showing entire thread (${comments.length} messages)`
+                                      : `Show ${earlierComments.length} earlier ${
+                                          earlierComments.length === 1 ? 'reply' : 'replies'
+                                        }`}
+                                  </span>
+                                </span>
+                                <span className="text-[11px] text-blue-500 font-semibold hover:underline">
+                                  {isHistoryExpanded ? 'Collapse thread \u2191' : 'Expand thread \u2193'}
+                                </span>
+                              </button>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                          )}
+
+                          {/* Earlier comments rendered only when thread is expanded */}
+                          {hasMultiple && isHistoryExpanded && (
+                            <div className="space-y-2.5">
+                              {earlierComments.map((c) => renderCommentCard(c, false))}
+                            </div>
+                          )}
+
+                          {/* Latest comment always displayed */}
+                          {latestComment && renderCommentCard(latestComment, true)}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* 3. Inline Customer Follow-Up Reply & Amendment Composer */}

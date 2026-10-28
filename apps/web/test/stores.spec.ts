@@ -129,6 +129,31 @@ describe('Web State Management Stores (Zustand)', () => {
       store.toggleAttachmentVisibility('ticket-1-root');
       expect(useTicketsStore.getState().hiddenAttachmentKeys['ticket-1-root']).toBe(false);
     });
+
+    it('toggles comment history expansion state', () => {
+      const store = useTicketsStore.getState();
+      expect(store.expandedCommentHistories['ticket-1']).toBeUndefined();
+
+      store.toggleCommentHistory('ticket-1');
+      expect(useTicketsStore.getState().expandedCommentHistories['ticket-1']).toBe(true);
+
+      store.toggleCommentHistory('ticket-1');
+      expect(useTicketsStore.getState().expandedCommentHistories['ticket-1']).toBe(false);
+    });
+
+    it('highlights and expands a targeted ticket from notifications', () => {
+      const store = useTicketsStore.getState();
+      expect(store.highlightedTicketId).toBeNull();
+      expect(store.expandedTicketIds['ticket-target']).toBeUndefined();
+
+      store.highlightTicket('ticket-target');
+      const state = useTicketsStore.getState();
+      expect(state.highlightedTicketId).toBe('ticket-target');
+      expect(state.expandedTicketIds['ticket-target']).toBe(true);
+
+      store.setHighlightedTicketId(null);
+      expect(useTicketsStore.getState().highlightedTicketId).toBeNull();
+    });
   });
 
   describe('AdminStore', () => {

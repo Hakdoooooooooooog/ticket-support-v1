@@ -16,6 +16,8 @@ export interface TicketsState {
 
   // Accordion & Portal UI state managed in Zustand
   expandedTicketIds: Record<string, boolean>;
+  expandedCommentHistories: Record<string, boolean>;
+  highlightedTicketId: string | null;
   hasInitializedExpansion: boolean;
   portalSearchQuery: string;
 
@@ -35,6 +37,9 @@ export interface TicketsState {
   toggleTicketExpanded: (ticketId: string) => void;
   setTicketExpanded: (ticketId: string, expanded: boolean) => void;
   setAllTicketsExpanded: (tickets: Ticket[], expanded: boolean) => void;
+  setHighlightedTicketId: (ticketId: string | null) => void;
+  highlightTicket: (ticketId: string) => void;
+  toggleCommentHistory: (ticketId: string) => void;
 
   loadTicketAttachment: (ticketId: string) => Promise<void>;
   loadCommentAttachment: (ticketId: string, commentId: string) => Promise<void>;
@@ -51,6 +56,8 @@ export const useTicketsStore = create<TicketsState>()(
       lastUpdatedAt: null,
 
       expandedTicketIds: {},
+      expandedCommentHistories: {},
+      highlightedTicketId: null,
       hasInitializedExpansion: false,
       portalSearchQuery: '',
 
@@ -93,6 +100,8 @@ export const useTicketsStore = create<TicketsState>()(
           hasLoadedTickets: false,
           lastUpdatedAt: null,
           expandedTicketIds: {},
+          expandedCommentHistories: {},
+          highlightedTicketId: null,
           hasInitializedExpansion: false,
           portalSearchQuery: '',
           decryptedAttachments: {},
@@ -150,6 +159,44 @@ export const useTicketsStore = create<TicketsState>()(
           next[t.id] = true;
         });
         set({ expandedTicketIds: next });
+      },
+
+      toggleCommentHistory: (ticketId: string) => {
+        const current = get().expandedCommentHistories;
+        set({
+          expandedCommentHistories: {
+            ...current,
+            [ticketId]: !current[ticketId],
+          },
+        });
+      },
+
+      setHighlightedTicketId: (ticketId: string | null) => {
+        set({ highlightedTicketId: ticketId });
+      },
+
+      highlightTicket: (ticketId: string) => {
+        const current = get().expandedTicketIds;
+        set({
+          expandedTicketIds: {
+            ...current,
+            [ticketId]: true,
+          },
+          highlightedTicketId: ticketId,
+        });
+
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            const el = document.getElementById(`ticket-${ticketId}`);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
+
+          setTimeout(() => {
+            if (get().highlightedTicketId === ticketId) {
+              set({ highlightedTicketId: null });
+            }
+          }, 4000);
+        }
       },
 
       loadTicketAttachment: async (ticketId: string) => {

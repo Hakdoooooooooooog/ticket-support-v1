@@ -1,69 +1,20 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@lib/api-client';
-import { AppNotification, NotificationListResponse } from '@lib/helpers';
+import {
+  AppNotification,
+  NotificationListResponse,
+  formatNotificationTime,
+  getNotificationBadge,
+} from '@lib/helpers';
 import { Button } from '@ui/button';
 
 interface NotificationCenterProps {
   onSelectTicket?: (ticketId: string) => void;
   className?: string;
-}
-
-function formatNotificationTime(isoString: string): string {
-  try {
-    const diffMs = Date.now() - new Date(isoString).getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    if (diffSec < 60) return 'Just now';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    const diffDays = Math.floor(diffHr / 24);
-    return `${diffDays}d ago`;
-  } catch {
-    return 'Recent';
-  }
-}
-
-function getNotificationBadge(type: AppNotification['type']): {
-  label: string;
-  badgeClass: string;
-} {
-  switch (type) {
-    case 'TICKET_CREATED':
-      return {
-        label: 'NEW TICKET',
-        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
-      };
-    case 'TICKET_FOLLOW_UP_REQUESTED':
-      return {
-        label: 'NEEDS INFO',
-        badgeClass: 'border-amber-500/40 bg-amber-500/15 text-amber-300 font-bold',
-      };
-    case 'TICKET_CUSTOMER_AMENDED':
-      return {
-        label: 'CUSTOMER',
-        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
-      };
-    case 'TICKET_NOTE_POSTED':
-      return {
-        label: 'NOTE',
-        badgeClass: 'border-purple-500/40 bg-purple-500/15 text-purple-300 font-bold',
-      };
-    case 'TICKET_ASSIGNED':
-      return {
-        label: 'ASSIGNED',
-        badgeClass: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-bold',
-      };
-    case 'TICKET_STATUS_CHANGED':
-    default:
-      return {
-        label: 'STATUS',
-        badgeClass: 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300 font-bold',
-      };
-  }
 }
 
 export function NotificationCenter({ onSelectTicket, className = '' }: NotificationCenterProps) {
@@ -117,6 +68,7 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
 
   const unreadCount = data?.unreadCount || 0;
   const notifications = data?.notifications || [];
+  const visibleNotifications = notifications.slice(0, 5);
 
   const handleNotificationClick = (notif: AppNotification) => {
     if (!notif.read) {
@@ -195,9 +147,18 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
                 <div className="text-xs text-slate-400">
                   No pending notifications in your feed.
                 </div>
+                <div className="pt-2">
+                  <Link
+                    href="/notifications"
+                    onClick={() => setIsOpen(false)}
+                    className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+                  >
+                    View notifications history &rarr;
+                  </Link>
+                </div>
               </div>
             ) : (
-              notifications.map((notif) => {
+              visibleNotifications.map((notif) => {
                 const badgeMeta = getNotificationBadge(notif.type);
                 return (
                   <button
@@ -241,6 +202,21 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
                 );
               })
             )}
+          </div>
+
+          {/* Footer linking to full notifications center route */}
+          <div className="p-2.5 border-t border-slate-800 bg-slate-950/80 text-center">
+            <Link
+              href="/notifications"
+              onClick={() => setIsOpen(false)}
+              className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 px-3 text-xs font-semibold text-blue-400 hover:text-blue-300 hover:bg-slate-800/60 rounded-md transition-colors"
+            >
+              <span>View all notifications</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                {notifications.length}
+              </span>
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
           </div>
         </div>
       )}

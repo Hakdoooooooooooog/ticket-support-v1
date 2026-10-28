@@ -11,6 +11,8 @@ import {
   countTicketAttachments,
   getPriorityBadgeVariant,
   getStatusBadgeVariant,
+  formatNotificationTime,
+  getNotificationBadge,
 } from '../src/lib/helpers';
 import type { Ticket } from '../src/components/ticket-list';
 
@@ -271,6 +273,31 @@ describe('Web Helpers & Domain Functions', () => {
       expect(getStatusBadgeVariant('NEEDS_INFO')).toBe('destructive');
       expect(getStatusBadgeVariant('RESOLVED')).toBe('success');
       expect(getStatusBadgeVariant('CLOSED')).toBe('success');
+    });
+  });
+
+  describe('Notifications formatting & badge helpers', () => {
+    it('formats notification relative time correctly', () => {
+      const now = new Date().toISOString();
+      expect(formatNotificationTime(now)).toBe('Just now');
+
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      expect(formatNotificationTime(tenMinutesAgo)).toBe('10m ago');
+
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      expect(formatNotificationTime(twoHoursAgo)).toBe('2h ago');
+
+      const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+      expect(formatNotificationTime(twoDaysAgo)).toBe('2d ago');
+    });
+
+    it('returns appropriate badge metadata for all notification types', () => {
+      expect(getNotificationBadge('TICKET_CREATED').label).toBe('NEW TICKET');
+      expect(getNotificationBadge('TICKET_FOLLOW_UP_REQUESTED').label).toBe('NEEDS INFO');
+      expect(getNotificationBadge('TICKET_CUSTOMER_AMENDED').label).toBe('CUSTOMER');
+      expect(getNotificationBadge('TICKET_NOTE_POSTED').label).toBe('NOTE');
+      expect(getNotificationBadge('TICKET_ASSIGNED').label).toBe('ASSIGNED');
+      expect(getNotificationBadge('TICKET_STATUS_CHANGED').label).toBe('STATUS');
     });
   });
 });

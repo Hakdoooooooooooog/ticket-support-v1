@@ -65,7 +65,12 @@ export default function AdminDashboardPage() {
     clearTickets,
     initializeDefaultExpansion,
     toggleTicketExpanded,
+    setTicketExpanded,
     setAllTicketsExpanded,
+    expandedCommentHistories,
+    highlightedTicketId,
+    toggleCommentHistory,
+    highlightTicket,
     ensureTicketAttachmentsLoaded,
     toggleAttachmentVisibility,
     setLightboxImage,
@@ -385,18 +390,36 @@ export default function AdminDashboardPage() {
     router.replace('/');
   };
 
-  const handleSelectTicket = (ticketId: string) => {
-    setActiveSection('ALL_TICKETS');
-    setAssignmentFilter('ALL');
-    setStatusFilter('ALL');
-    setPriorityFilter('ALL');
-    setSearchQuery('');
-    toggleTicketExpanded(ticketId);
-    setTimeout(() => {
-      const el = document.getElementById(`ticket-${ticketId}`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 150);
-  };
+  const handleSelectTicket = React.useCallback(
+    (ticketId: string) => {
+      setActiveSection('ALL_TICKETS');
+      setAssignmentFilter('ALL');
+      setStatusFilter('ALL');
+      setPriorityFilter('ALL');
+      setSearchQuery('');
+      highlightTicket(ticketId);
+    },
+    [
+      highlightTicket,
+      setActiveSection,
+      setAssignmentFilter,
+      setStatusFilter,
+      setPriorityFilter,
+      setSearchQuery,
+    ],
+  );
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const targetTicketId = params.get('ticketId');
+    if (targetTicketId) {
+      const timer = setTimeout(() => {
+        handleSelectTicket(targetTicketId);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [handleSelectTicket]);
 
   const handleSendFollowUpRequest = async (ticket: Ticket) => {
     setActionErrors((prev) => ({ ...prev, [ticket.id]: '' }));
@@ -586,10 +609,14 @@ export default function AdminDashboardPage() {
         <Card
           key={ticket.id}
           id={`ticket-${ticket.id}`}
-          className={`transition-colors ${
+          className={`transition-all ${
             ticket.status === 'NEEDS_INFO'
               ? 'border-amber-400/80 dark:border-amber-500/60'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          } ${
+            highlightedTicketId === ticket.id
+              ? 'ring-2 ring-blue-500 shadow-xl shadow-blue-500/20 dark:ring-blue-400'
+              : ''
           }`}
         >
           {/* Accordion Summary Header */}
@@ -1234,127 +1261,182 @@ export default function AdminDashboardPage() {
                   <p className="text-xs text-slate-500 italic py-1">
                     No follow-up requests, customer amendments, or resolution notes yet.
                   </p>
-                ) : (
-                  <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-800 space-y-3">
-                    {ticket.comments!.map((comment) => {
-                      const parsed = parseTimelineComment(comment.content);
-                      const commentAttachmentKey = `comment:${comment.id}`;
-                      const decryptedCommentImg =
-                        decryptedAttachments[commentAttachmentKey];
-                      const isLoadingCommentImg = Boolean(
-                        loadingAttachmentKeys[commentAttachmentKey],
-                      );
-                      const isCommentImgHidden = Boolean(
-                        hiddenAttachmentKeys[commentAttachmentKey],
-                      );
-                      const isFollowUpReq = parsed.kind === 'FOLLOW_UP';
-                      const isCustomerAmend = parsed.kind === 'AMENDMENT';
+                ) : (() => {
+                  const comments = ticket.comments || [];
+                  const hasMultiple = comments.length > 1;
+                  const isHistoryExpanded = Boolean(expandedCommentHistories[ticket.id]);
+                  const earlierComments = hasMultiple ? comments.slice(0, -1) : [];
+                  const latestComment = comments[comments.length - 1];
 
-                      return (
-                        <div
-                          key={comment.id}
-                          className={`relative p-3 rounded-lg border text-xs space-y-2 ${
-                            isFollowUpReq
-                              ? 'bg-amber-500/10 border-amber-500/30'
-                              : isCustomerAmend
-                                ? 'bg-blue-500/10 border-blue-500/30'
-                                : 'bg-slate-100/80 dark:bg-slate-900/90 border-slate-200/70 dark:border-slate-800'
-                          }`}
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-bold text-slate-900 dark:text-white">
-                                {comment.author?.fullName || 'Support User'}
-                              </span>
-                              {comment.author?.role && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                                  {comment.author.role}
-                                </span>
-                              )}
-                              <Badge
-                                variant={
-                                  isFollowUpReq
-                                    ? 'warning'
-                                    : isCustomerAmend
-                                      ? 'default'
-                                      : 'secondary'
-                                }
-                                className="text-[10px] py-0 px-2"
-                              >
-                                {parsed.badgeLabel}
-                              </Badge>
-                            </div>
-                            <span className="text-[11px] text-slate-400">
-                              {formatCommentTime(comment.createdAt)}
+                  const renderAdminComment = (comment: typeof comments[0], isLatest = false) => {
+                    const parsed = parseTimelineComment(comment.content);
+                    const commentAttachmentKey = `comment:${comment.id}`;
+                    const decryptedCommentImg = decryptedAttachments[commentAttachmentKey];
+                    const isLoadingCommentImg = Boolean(loadingAttachmentKeys[commentAttachmentKey]);
+                    const isCommentImgHidden = Boolean(hiddenAttachmentKeys[commentAttachmentKey]);
+                    const isFollowUpReq = parsed.kind === 'FOLLOW_UP';
+                    const isCustomerAmend = parsed.kind === 'AMENDMENT';
+
+                    return (
+                      <div
+                        key={comment.id}
+                        className={`relative p-3 rounded-lg border text-xs space-y-2 ${
+                          isFollowUpReq
+                            ? 'bg-amber-500/10 border-amber-500/30'
+                            : isCustomerAmend
+                              ? 'bg-blue-500/10 border-blue-500/30'
+                              : 'bg-slate-100/80 dark:bg-slate-900/90 border-slate-200/70 dark:border-slate-800'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              {comment.author?.fullName || 'Support User'}
                             </span>
+                            {comment.author?.role && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                                {comment.author.role}
+                              </span>
+                            )}
+                            <Badge
+                              variant={
+                                isFollowUpReq
+                                  ? 'warning'
+                                  : isCustomerAmend
+                                    ? 'default'
+                                    : 'secondary'
+                              }
+                              className="text-[10px] py-0 px-2"
+                            >
+                              {parsed.badgeLabel}
+                            </Badge>
+                            {isLatest && hasMultiple && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] py-0 px-1.5 border-blue-500/40 text-blue-500 font-bold"
+                              >
+                                Latest Update
+                              </Badge>
+                            )}
                           </div>
+                          <span className="text-[11px] text-slate-400">
+                            {formatCommentTime(comment.createdAt)}
+                          </span>
+                        </div>
 
-                          <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                            {parsed.cleanText}
-                          </p>
+                        <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                          {parsed.cleanText}
+                        </p>
 
-                          {/* Per-Message Attachment inside the timeline entry (auto-loaded once when viewed) */}
-                          {comment.hasAttachment && (
-                            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 space-y-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-[10px]">
-                                    Attached Image
-                                  </Badge>
-                                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                    {comment.attachmentName || 'attachment.png'}
-                                  </span>
-                                  {comment.attachmentOriginalSize && (
-                                    <span className="text-slate-400">
-                                      ({formatByteSize(comment.attachmentOriginalSize)})
-                                    </span>
-                                  )}
-                                </div>
-                                {decryptedCommentImg ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      toggleAttachmentVisibility(
-                                        commentAttachmentKey,
-                                      )
-                                    }
-                                    className="h-7 text-xs"
-                                  >
-                                    {isCommentImgHidden
-                                      ? 'Show Image'
-                                      : 'Hide Image'}
-                                  </Button>
-                                ) : (
-                                  <span className="text-[11px] text-slate-400">
-                                    {isLoadingCommentImg
-                                      ? 'Loading image...'
-                                      : ''}
+                        {/* Per-Message Attachment inside the timeline entry */}
+                        {comment.hasAttachment && (
+                          <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px]">
+                                  Attached Image
+                                </Badge>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {comment.attachmentName || 'attachment.png'}
+                                </span>
+                                {comment.attachmentOriginalSize && (
+                                  <span className="text-slate-400">
+                                    ({formatByteSize(comment.attachmentOriginalSize)})
                                   </span>
                                 )}
                               </div>
-
-                              {decryptedCommentImg && !isCommentImgHidden && (
-                                <div className="pt-1">
-                                  <img
-                                    src={decryptedCommentImg.dataUrl}
-                                    alt={decryptedCommentImg.fileName}
-                                    onClick={() =>
-                                      setLightboxImage(decryptedCommentImg)
-                                    }
-                                    title="Click to inspect full-size image"
-                                    className="max-h-80 rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
-                                  />
-                                </div>
+                              {decryptedCommentImg ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    toggleAttachmentVisibility(commentAttachmentKey)
+                                  }
+                                  className="h-7 text-xs"
+                                >
+                                  {isCommentImgHidden
+                                    ? 'Show Image'
+                                    : 'Hide Image'}
+                                </Button>
+                              ) : (
+                                <span className="text-[11px] text-slate-400">
+                                  {isLoadingCommentImg
+                                    ? 'Loading image...'
+                                    : ''}
+                                </span>
                               )}
                             </div>
-                          )}
+
+                            {decryptedCommentImg && !isCommentImgHidden && (
+                              <div className="pt-1 max-w-full overflow-hidden">
+                                <img
+                                  src={decryptedCommentImg.dataUrl}
+                                  alt={decryptedCommentImg.fileName}
+                                  onClick={() =>
+                                    setLightboxImage(decryptedCommentImg)
+                                  }
+                                  title="Click to inspect full-size image"
+                                  className="max-h-48 sm:max-h-56 max-w-full rounded-md border border-slate-200 dark:border-slate-700 object-contain bg-slate-950/20 cursor-zoom-in hover:opacity-95 transition-opacity"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-800 space-y-3">
+                      {hasMultiple && (
+                        <div className="pb-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleCommentHistory(ticket.id)}
+                            className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/60 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 text-xs text-slate-600 dark:text-slate-400 font-medium transition-colors"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <svg
+                                className="w-3.5 h-3.5 text-blue-500"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                              <span>
+                                {isHistoryExpanded
+                                  ? `Showing entire thread (${comments.length} messages)`
+                                  : `Show ${earlierComments.length} earlier ${
+                                      earlierComments.length === 1 ? 'reply' : 'replies'
+                                    }`}
+                              </span>
+                            </span>
+                            <span className="text-[11px] text-blue-500 font-semibold hover:underline">
+                              {isHistoryExpanded ? 'Collapse thread \u2191' : 'Expand thread \u2193'}
+                            </span>
+                          </button>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      )}
+
+                      {/* Earlier comments shown when expanded */}
+                      {hasMultiple && isHistoryExpanded && (
+                        <div className="space-y-3">
+                          {earlierComments.map((c) => renderAdminComment(c, false))}
+                        </div>
+                      )}
+
+                      {/* Latest comment always visible */}
+                      {latestComment && renderAdminComment(latestComment, true)}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* 4. Post IT Resolution Note Composer (visible once assigned, active, and manageable) */}
