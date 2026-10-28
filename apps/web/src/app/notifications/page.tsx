@@ -151,9 +151,6 @@ export default function NotificationsPage() {
               <span className="font-extrabold text-sm tracking-tight text-white">
                 TicketSupport
               </span>
-              <Badge variant="secondary" className="text-[10px]">
-                Notifications
-              </Badge>
             </div>
           </div>
 
@@ -193,9 +190,6 @@ export default function NotificationsPage() {
             {user && (
               <div className="hidden sm:flex items-center gap-2 text-xs text-slate-300">
                 <span className="font-medium">{user.fullName}</span>
-                <Badge variant="outline" className="text-[10px]">
-                  {user.role}
-                </Badge>
               </div>
             )}
 
@@ -365,9 +359,7 @@ export default function NotificationsPage() {
                             {formatNotificationTime(notif.createdAt)}
                           </span>
                           {!notif.read && (
-                            <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/30">
-                              NEW
-                            </span>
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" title="Unread" />
                           )}
                         </div>
                         <p className="text-xs text-slate-400 leading-relaxed">

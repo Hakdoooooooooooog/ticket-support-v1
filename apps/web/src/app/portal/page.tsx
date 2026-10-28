@@ -79,7 +79,9 @@ export default function CustomerPortalPage() {
             <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
               TicketSupport
             </span>
-            <Badge variant="secondary">End-User Portal</Badge>
+            <span className="text-xs font-medium text-slate-500 border-l border-slate-300 dark:border-slate-800 pl-2.5">
+              Customer Portal
+            </span>
             <div className="flex items-center gap-1.5 ml-1 text-xs text-slate-500">
               <span className="relative flex h-2 w-2 shrink-0">
                 <span
@@ -125,7 +127,6 @@ export default function CustomerPortalPage() {
             {user && (
               <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                 <span className="font-medium">{user.fullName}</span>
-                <Badge variant="outline">{user.role}</Badge>
               </div>
             )}
             <Button variant="ghost" size="sm" onClick={handleSignOut}>

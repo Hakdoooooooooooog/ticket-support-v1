@@ -645,13 +645,12 @@ export default function AdminDashboardPage() {
                   </CardTitle>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-7 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-7 text-xs text-slate-500 dark:text-slate-400">
                   <span>
                     Reported by{' '}
                     <strong className="font-semibold text-slate-700 dark:text-slate-300">
                       {ticket.creator?.fullName || 'Anonymous'}
-                    </strong>{' '}
-                    ({ticket.creator?.email || 'no-email'})
+                    </strong>
                   </span>
                   <span>•</span>
                   <span>{formatTicketDateTime(ticket.createdAt)}</span>
@@ -668,40 +667,50 @@ export default function AdminDashboardPage() {
                       {ticket.assignee?.fullName || 'Unassigned'}
                     </strong>
                   </span>
+                  {commentCount > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>
+                        {commentCount} {commentCount === 1 ? 'reply' : 'replies'}
+                      </span>
+                    </>
+                  )}
+                  {totalAttachments > 0 && (
+                    <>
+                      <span>•</span>
+                      <span className="text-blue-500 dark:text-blue-400 font-medium">
+                        {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
+                      </span>
+                    </>
+                  )}
+                  {sla.label && (
+                    <>
+                      <span>•</span>
+                      <span
+                        className={
+                          sla.isBreached
+                            ? 'text-red-500 font-semibold'
+                            : sla.isResolved
+                            ? 'text-emerald-500 font-medium'
+                            : 'text-slate-500'
+                        }
+                      >
+                        SLA: {sla.label}
+                      </span>
+                    </>
+                  )}
+                  {typeof ticket.csatRating === 'number' && (
+                    <>
+                      <span>•</span>
+                      <span className="text-emerald-500 font-medium">
+                        CSAT {ticket.csatRating}.0
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pl-7 lg:pl-0 shrink-0">
-                <span
-                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${
-                    sla.isBreached
-                      ? 'bg-red-500/10 text-red-600 dark:text-red-300 border-red-500/30'
-                      : sla.isResolved
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                  }`}
-                >
-                  {sla.label}
-                </span>
-                {commentCount > 0 && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                    {commentCount} {commentCount === 1 ? 'message' : 'messages'}
-                  </span>
-                )}
-                {totalAttachments > 0 && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/20 font-medium">
-                    {totalAttachments} {totalAttachments === 1 ? 'attachment' : 'attachments'}
-                  </span>
-                )}
-                {typeof ticket.csatRating === 'number' ? (
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    CSAT {ticket.csatRating}.0 / 5.0
-                  </span>
-                ) : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') ? (
-                  <span className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700/60">
-                    CSAT Pending
-                  </span>
-                ) : null}
+              <div className="flex items-center gap-2 pl-7 lg:pl-0 shrink-0">
                 <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
                   {ticket.priority}
                 </Badge>
@@ -868,16 +877,16 @@ export default function AdminDashboardPage() {
                     <span className="text-slate-400">•</span>
                     <span className="text-slate-500">
                       Status:{' '}
-                      <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                      <strong className="text-slate-700 dark:text-slate-200">
                         {ticket.status.replace('_', ' ')}
-                      </Badge>
+                      </strong>
                     </span>
                     <span className="text-slate-400">•</span>
                     <span className="text-slate-500">
                       Priority:{' '}
-                      <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                      <strong className="text-slate-700 dark:text-slate-200">
                         {ticket.priority}
-                      </Badge>
+                      </strong>
                     </span>
                   </div>
 
@@ -1203,9 +1212,6 @@ export default function AdminDashboardPage() {
                     <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">
-                            Initial Attachment
-                          </Badge>
                           <span className="font-semibold text-slate-800 dark:text-slate-200">
                             {ticket.attachmentName || 'attachment.png'}
                           </span>
@@ -1294,30 +1300,19 @@ export default function AdminDashboardPage() {
                               {comment.author?.fullName || 'Support User'}
                             </span>
                             {comment.author?.role && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                                {comment.author.role}
+                              <span className="text-[11px] text-slate-400 font-normal">
+                                ({comment.author.role.toLowerCase()})
                               </span>
                             )}
-                            <Badge
-                              variant={
-                                isFollowUpReq
-                                  ? 'warning'
-                                  : isCustomerAmend
-                                    ? 'default'
-                                    : 'secondary'
-                              }
-                              className="text-[10px] py-0 px-2"
-                            >
-                              {parsed.badgeLabel}
-                            </Badge>
-                            {isLatest && hasMultiple && (
-                              <Badge
-                                variant="outline"
-                                className="text-[9px] py-0 px-1.5 border-blue-500/40 text-blue-500 font-bold"
-                              >
-                                Latest Update
+                            {isFollowUpReq ? (
+                              <Badge variant="warning" className="text-[10px] py-0 px-1.5">
+                                Follow-Up
                               </Badge>
-                            )}
+                            ) : isCustomerAmend ? (
+                              <Badge variant="default" className="text-[10px] py-0 px-1.5">
+                                Amendment
+                              </Badge>
+                            ) : null}
                           </div>
                           <span className="text-[11px] text-slate-400">
                             {formatCommentTime(comment.createdAt)}
@@ -1333,9 +1328,6 @@ export default function AdminDashboardPage() {
                           <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 space-y-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px]">
-                                  Attached Image
-                                </Badge>
                                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                                   {comment.attachmentName || 'attachment.png'}
                                 </span>
@@ -1810,11 +1802,6 @@ export default function AdminDashboardPage() {
 
         <div className="flex items-center gap-2">
           <NotificationCenter onSelectTicket={handleSelectTicket} />
-          {user && (
-            <Badge variant="secondary" className="text-[10px]">
-              {user.role}
-            </Badge>
-          )}
           <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 text-xs">
             Sign Out
           </Button>

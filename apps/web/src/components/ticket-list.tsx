@@ -365,8 +365,8 @@ export function TicketList() {
                           </span>
                         )}
                         {typeof ticket.csatRating === 'number' && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold uppercase tracking-wider">
-                            CSAT {ticket.csatRating}.0 / 5.0
+                          <span className="text-emerald-500 font-medium">
+                            CSAT {ticket.csatRating}.0
                           </span>
                         )}
                       </div>
@@ -612,33 +612,19 @@ export function TicketList() {
                                   {comment.author?.fullName || 'Support'}
                                 </span>
                                 {comment.author?.role && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] py-0 px-1.5"
-                                  >
-                                    {comment.author.role}
-                                  </Badge>
+                                  <span className="text-[11px] text-slate-400 font-normal">
+                                    ({comment.author.role.toLowerCase()})
+                                  </span>
                                 )}
-                                <Badge
-                                  variant={
-                                    parsed.kind === 'FOLLOW_UP'
-                                      ? 'warning'
-                                      : parsed.kind === 'AMENDMENT'
-                                        ? 'default'
-                                        : 'secondary'
-                                  }
-                                  className="text-[10px] py-0 px-1.5"
-                                >
-                                  {parsed.badgeLabel}
-                                </Badge>
-                                {isLatest && hasMultiple && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[9px] py-0 px-1.5 border-blue-500/40 text-blue-500 font-bold"
-                                  >
-                                    Latest Update
+                                {parsed.kind === 'FOLLOW_UP' ? (
+                                  <Badge variant="warning" className="text-[10px] py-0 px-1.5">
+                                    Follow-Up
                                   </Badge>
-                                )}
+                                ) : parsed.kind === 'AMENDMENT' ? (
+                                  <Badge variant="default" className="text-[10px] py-0 px-1.5">
+                                    Amendment
+                                  </Badge>
+                                ) : null}
                               </div>
                               <span className="text-[11px] text-slate-400">
                                 {formatCommentTime(comment.createdAt)}
