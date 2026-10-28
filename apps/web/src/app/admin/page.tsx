@@ -35,6 +35,7 @@ import {
 import { Ticket } from '@components/ticket-list';
 import { NotificationCenter } from '@components/notification-center';
 import { CannedResponsesMenu } from '@components/canned-responses-menu';
+import { useRealtimeEvents } from '@hooks/use-realtime-events';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
 import { useAdminStore } from '@store/admin.store';
@@ -97,6 +98,28 @@ export default function AdminDashboardPage() {
   const [commentAttachments, setCommentAttachments] = React.useState<
     Record<string, File | null>
   >({});
+  const [realtimeAlert, setRealtimeAlert] = React.useState<string | null>(null);
+
+  const { status: realtimeStatus } = useRealtimeEvents({
+    onTicketCreated: (payload) => {
+      setRealtimeAlert(
+        `New Ticket #${payload.id?.slice(-6) || ''}: "${payload.title?.slice(0, 32) || 'Incident'}" received for triage`,
+      );
+    },
+    onCommentAdded: (payload) => {
+      if (payload.kind === 'AMENDMENT') {
+        setRealtimeAlert(
+          `Customer updated ticket #${payload.ticketId?.slice(-6) || ''}`,
+        );
+      }
+    },
+  });
+
+  React.useEffect(() => {
+    if (!realtimeAlert) return;
+    const timer = setTimeout(() => setRealtimeAlert(null), 8000);
+    return () => clearTimeout(timer);
+  }, [realtimeAlert]);
   const [followUpAttachment, setFollowUpAttachment] = React.useState<File | null>(null);
   const [actionErrors, setActionErrors] = React.useState<Record<string, string>>({});
 
@@ -152,7 +175,7 @@ export default function AdminDashboardPage() {
     queryKey: ['tickets'],
     initialData: hasLoadedTickets ? storedTickets : undefined,
     refetchOnWindowFocus: 'always',
-    refetchInterval: 15 * 1000,
+    refetchInterval: 60 * 1000,
     queryFn: async () => {
       const res = await apiClient.get('/tickets');
       setTickets(res.data);
@@ -178,7 +201,7 @@ export default function AdminDashboardPage() {
     queryKey: ['agents'],
     initialData: hasLoadedAgents ? storedAgents : undefined,
     refetchOnWindowFocus: 'always',
-    refetchInterval: 15 * 1000,
+    refetchInterval: 60 * 1000,
     queryFn: async () => {
       try {
         const res = await apiClient.get('/auth/agents');
@@ -1606,17 +1629,35 @@ export default function AdminDashboardPage() {
               <span className="relative flex h-2 w-2 shrink-0">
                 <span
                   className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    isFetching ? 'bg-blue-400' : 'bg-emerald-400'
+                    isFetching
+                      ? 'bg-blue-400'
+                      : realtimeStatus === 'connected'
+                      ? 'bg-emerald-400'
+                      : realtimeStatus === 'connecting'
+                      ? 'bg-amber-400'
+                      : 'bg-rose-400'
                   }`}
                 />
                 <span
                   className={`relative inline-flex rounded-full h-2 w-2 ${
-                    isFetching ? 'bg-blue-500' : 'bg-emerald-500'
+                    isFetching
+                      ? 'bg-blue-500'
+                      : realtimeStatus === 'connected'
+                      ? 'bg-emerald-500'
+                      : realtimeStatus === 'connecting'
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500'
                   }`}
                 />
               </span>
               <span className="text-[11px] font-medium truncate">
-                {isFetching ? 'Syncing...' : 'Live Connected'}
+                {isFetching
+                  ? 'Syncing...'
+                  : realtimeStatus === 'connected'
+                  ? 'Live Connected'
+                  : realtimeStatus === 'connecting'
+                  ? 'Connecting...'
+                  : 'Offline'}
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -1927,6 +1968,29 @@ export default function AdminDashboardPage() {
               </Button>
             </div>
           </div>
+
+          {/* Live Real-Time Stream Banner */}
+          {realtimeAlert && (
+            <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-200 text-xs shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                </span>
+                <span className="font-semibold">{realtimeAlert}</span>
+                <span className="text-[10px] text-blue-300 font-mono uppercase px-1 py-0.5 rounded bg-blue-500/20">
+                  Live SSE
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRealtimeAlert(null)}
+                className="text-blue-400 hover:text-blue-100 text-xs font-semibold px-2 py-0.5 rounded hover:bg-blue-500/20 transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
           {/* Expand / Collapse toggle for ticket sections */}
           {activeSection !== 'TEAM_MANAGEMENT' && displayedTickets.length > 0 && (

@@ -9,13 +9,15 @@ import { NotificationCenter } from '@components/notification-center';
 import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
-import { getStoredSession } from '@lib/helpers';
+import { getStoredSession, cn } from '@lib/helpers';
 import { APP_VERSION } from '@lib/constants';
 import { useAuthStore } from '@store/auth.store';
 import { useTicketsStore } from '@store/tickets.store';
+import { useRealtimeEvents } from '@hooks/use-realtime-events';
 
 export default function CustomerPortalPage() {
   const router = useRouter();
+  const { status: realtimeStatus } = useRealtimeEvents();
   const {
     user,
     isSessionVerified,
@@ -70,6 +72,37 @@ export default function CustomerPortalPage() {
               TicketSupport
             </span>
             <Badge variant="secondary">End-User Portal</Badge>
+            <div className="flex items-center gap-1.5 ml-1 text-xs text-slate-500">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span
+                  className={cn(
+                    'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
+                    realtimeStatus === 'connected'
+                      ? 'bg-emerald-400'
+                      : realtimeStatus === 'connecting'
+                      ? 'bg-amber-400'
+                      : 'bg-rose-400',
+                  )}
+                />
+                <span
+                  className={cn(
+                    'relative inline-flex rounded-full h-2 w-2',
+                    realtimeStatus === 'connected'
+                      ? 'bg-emerald-500'
+                      : realtimeStatus === 'connecting'
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500',
+                  )}
+                />
+              </span>
+              <span className="hidden sm:inline text-[11px] font-medium text-slate-400">
+                {realtimeStatus === 'connected'
+                  ? 'Live Connected'
+                  : realtimeStatus === 'connecting'
+                  ? 'Connecting...'
+                  : 'Offline'}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

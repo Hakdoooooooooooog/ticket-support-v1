@@ -32,6 +32,11 @@ apps/api/src/
 │   ├── notifications.service.ts    # Role-based notification routing & admin filtering
 │   └── dto/                        # Notification response schemas
 │
+├── realtime/                       # Server-Sent Events (SSE) Live Stream Module
+│   ├── realtime.controller.ts      # GET /realtime/stream live push endpoint
+│   ├── realtime.service.ts         # RxJS Subject event bus, role filtering & heartbeats
+│   └── realtime.module.ts          # Global realtime broadcast module
+│
 ├── database/                       # Data Persistence Layer
 │   ├── prisma.service.ts           # PrismaClient configured with @prisma/adapter-pg
 │   └── prisma.module.ts            # Global database injection module
@@ -100,6 +105,11 @@ apps/api/src/
 | `GET` | `/notifications` | Authenticated | Retrieve user notification feed and unread count |
 | `PATCH`| `/notifications/:id/read` | Authenticated | Mark a single notification as read |
 | `PATCH`| `/notifications/mark-all-read` | Authenticated | Mark all notifications as read for current user |
+
+### Real-Time Live Stream (`/realtime`)
+| Method | Endpoint | Access | Description |
+|:---|:---|:---:|:---|
+| `GET` | `/realtime/stream` | Authenticated | Server-Sent Events (SSE) live stream for instant ticket mutations, notes, and role-scoped notifications (Bearer header or `?token=<jwt>`) |
 
 ### System & Health
 | Method | Endpoint | Access | Description |

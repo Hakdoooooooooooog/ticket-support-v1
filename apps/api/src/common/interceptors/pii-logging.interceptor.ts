@@ -108,6 +108,7 @@ export class PiiRedactingLoggingInterceptor implements NestInterceptor {
       url?: string;
       body?: unknown;
       query?: unknown;
+      headers?: Record<string, string | string[] | undefined>;
     }>();
     const res = http.getResponse<{ statusCode?: number }>();
 
@@ -120,6 +121,15 @@ export class PiiRedactingLoggingInterceptor implements NestInterceptor {
         : undefined;
 
     const startTime = Date.now();
+
+    // Bypass per-message tap logging for Server-Sent Events (SSE) long-lived streams
+    const isSse =
+      rawUrl.includes('/realtime/stream') ||
+      req.headers?.accept === 'text/event-stream';
+    if (isSse) {
+      this.logger.log(`${method} ${safeUrl} | SSE connection initiated`);
+      return next.handle();
+    }
 
     return next.handle().pipe(
       tap((responseData) => {

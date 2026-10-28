@@ -36,7 +36,12 @@ It provides dedicated workspaces for both end-user customers and IT support pers
 - **In-Browser Decryption**: Decrypted on-demand only in authenticated staff and customer sessions.
 - **Integrated Lightbox**: Full-screen inspect modal with zoom, rotation, and file metadata inspection.
 
-### 6. Design System & Display Resilience
+### 6. Real-Time Push Events (Server-Sent Events / SSE)
+- **Zero-Latency Dispatch**: Replaces aggressive background polling with HTTP/2 Server-Sent Events (`/realtime/stream`), pushing instant ticket mutations, follow-up notes, and role-filtered notification alerts.
+- **Reactive Cache Invalidation**: The Next.js frontend invalidates TanStack Query caches the millisecond a mutation is committed on PostgreSQL.
+- **Live Stream Telemetry**: Dynamic visual indicators in both `/admin` and `/portal` show active socket health (`Live Connected`, `Connecting...`, `Offline`) with exponential reconnect backoff.
+
+### 7. Design System & Display Resilience
 - **Emoji-Free Visual Hierarchy**: Incident priorities and queue health are communicated using calibrated color systems and badge borders (Critical/Urgent in Rose, Triage in Amber, Assigned to Me in Blue, CSAT Score in Gold, Resolved in Emerald).
 - **1280×720 Display Optimization**: Responsive 4-column KPI grid preventing awkward badge overlaps, text wrapping, and viewport cramping on compact displays and laptops.
 - **Jitter-Free Background Polling**: Layout shifts during TanStack Query polling are eliminated with fixed-width action controls (`w-32`) and structural skeleton loaders (`ContextualLoader`).
@@ -52,6 +57,7 @@ TicketSupport/
 │   ├── web/                     # Next.js 16 (App Router, React 19, Turbopack, Tailwind CSS v4)
 │   │   ├── src/
 │   │   │   ├── app/             # Application routes (/, /portal, /admin)
+│   │   │   ├── hooks/           # useRealtimeEvents SSE hook & cache sync
 │   │   │   ├── components/      # Domain components, modals, UI primitives
 │   │   │   │   ├── forms/       # React Hook Form + Zod ticket composer
 │   │   │   │   └── ui/          # Accessible UI primitives & ContextualLoader
@@ -68,6 +74,7 @@ TicketSupport/
 │       │   ├── auth/            # JWT authentication, invite generation & claim
 │       │   ├── tickets/         # Ticket state machines, comments & CSAT logic
 │       │   ├── notifications/   # Role-filtered in-app notification service
+│       │   ├── realtime/        # SSE event stream & heartbeat service
 │       │   └── database/        # PrismaService using @prisma/adapter-pg
 │       ├── test/
 │       │   ├── unit/            # Vitest unit test suites (79 passing)

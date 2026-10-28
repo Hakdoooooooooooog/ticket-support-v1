@@ -77,7 +77,7 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
       const res = await apiClient.get<NotificationListResponse>('/notifications');
       return res.data;
     },
-    refetchInterval: 10000,
+    refetchInterval: 60000,
   });
 
   const markReadMutation = useMutation({

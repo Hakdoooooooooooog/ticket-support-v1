@@ -35,6 +35,9 @@ apps/web/src/
 │   └── admin/
 │       └── page.tsx                    # IT Service Desk Console workspace
 │
+├── hooks/                              # Custom React Hooks
+│   └── use-realtime-events.ts          # Server-Sent Events (SSE) stream listener & cache invalidator
+│
 ├── components/                         # Reusable UI & Domain Components
 │   ├── notification-center.tsx         # In-app popover notification feed with unread badges
 │   ├── csat-rating-widget.tsx          # Interactive 5-star customer satisfaction widget
@@ -108,8 +111,14 @@ Replaces generic full-page spinners with structural skeletons matching the exact
 - `admin-queue`: Table and card skeletons aligned with triage items to prevent layout shifts.
 - `ticket-submission`: Multi-step progress pipeline animation for file encryption and database commit.
 
+### Real-Time Event Stream (`useRealtimeEvents`)
+- **Server-Sent Events (SSE)**: Connects to `/realtime/stream?token=<jwt>` to stream live mutations from the NestJS backend.
+- **Zero-Latency Invalidation**: Automatically invalidates `['tickets']` and `['notifications']` TanStack queries whenever tickets are created, claimed, resolved, or amended.
+- **Visual Connectivity Indicator**: Sidebar and portal headers display an animated status dot reflecting true live socket status (`connected` in emerald, `connecting` in amber, `disconnected` in rose).
+- **Incident Triage Banners**: Instant in-app alerts pop up when new incidents arrive in the queue without waiting for background polling intervals.
+
 ### Role-Filtered In-App Notifications (`NotificationCenter`)
-- Popover notification feed powered by TanStack Query background polling.
+- Popover notification feed connected to real-time SSE stream with slow safety fallback polling.
 - Direct-jump routing: Clicking a notification automatically opens the referenced ticket in the triage queue or customer portal.
 - Role-specific event routing:
   - Administrators receive `TICKET_CREATED` alerts for incoming tickets.

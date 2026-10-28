@@ -7,6 +7,7 @@ import { PrismaModule } from './database/prisma.module.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { RealtimeModule } from './realtime/realtime.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
       ],
     }),
     PrismaModule,
+    RealtimeModule,
     NotificationsModule,
     TicketsModule,
     AuthModule,

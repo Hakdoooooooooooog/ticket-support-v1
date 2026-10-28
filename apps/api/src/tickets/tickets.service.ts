@@ -21,6 +21,7 @@ import {
   OnDemandAttachmentResponse,
 } from './attachment-crypto.util.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { RealtimeService } from '../realtime/realtime.service.js';
 
 export interface TicketActorContext {
   id: string;
@@ -39,6 +40,7 @@ export class TicketsService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly notificationsService?: NotificationsService,
+    @Optional() private readonly realtimeService?: RealtimeService,
   ) {}
 
   /**
@@ -231,6 +233,22 @@ export class TicketsService implements OnModuleInit {
       });
     }
 
+    if (this.realtimeService) {
+      this.realtimeService.emit({
+        type: 'TICKET_CREATED',
+        recipientRoles: ['ADMIN', 'AGENT'],
+        payload: {
+          id: record.id,
+          title: record.title,
+          priority: record.priority,
+          status: record.status,
+          creatorId: record.creatorId,
+          creatorName: user.fullName || user.email || 'Customer',
+          createdAt: record.createdAt.toISOString(),
+        },
+      });
+    }
+
     return TicketMapper.toResponseDto(record);
   }
 
@@ -304,7 +322,7 @@ export class TicketsService implements OnModuleInit {
         }
       }
 
-      await tx.comment.create({
+      const newComment = await tx.comment.create({
         data: {
           ticketId,
           content: trimmedContent,
@@ -330,6 +348,21 @@ export class TicketsService implements OnModuleInit {
             message: `${author.fullName || 'IT Support'}: "${trimmedContent.slice(0, 100)}${trimmedContent.length > 100 ? '...' : ''}"`,
           });
         }
+      }
+
+      if (this.realtimeService) {
+        this.realtimeService.emit({
+          type: 'COMMENT_ADDED',
+          recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
+          payload: {
+            ticketId,
+            commentId: newComment.id,
+            authorId: author.id,
+            authorName: author.fullName || 'Support Engineer',
+            authorRole: author.role,
+            preview: trimmedContent.slice(0, 100),
+          },
+        });
       }
 
       return TicketMapper.toResponseDto(updatedTicket!);
@@ -595,6 +628,20 @@ export class TicketsService implements OnModuleInit {
         }
       }
 
+      if (this.realtimeService) {
+        this.realtimeService.emit({
+          type: 'TICKET_UPDATED',
+          recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
+          payload: {
+            ticketId: id,
+            status: updated.status,
+            priority: updated.priority,
+            assigneeId: updated.assigneeId,
+            updatedBy: actor?.id,
+          },
+        });
+      }
+
       return TicketMapper.toResponseDto(updated);
     });
   }
@@ -662,6 +709,19 @@ export class TicketsService implements OnModuleInit {
           message: dto.comment
             ? `Customer submitted a ${dto.rating}/5 rating: "${dto.comment.trim().slice(0, 100)}"`
             : `Customer rated ticket "${(existingTicket as any).title?.slice(0, 30) || id}" with ${dto.rating} out of 5 stars.`,
+        });
+      }
+
+      if (this.realtimeService) {
+        this.realtimeService.emit({
+          type: 'CSAT_SUBMITTED',
+          recipientRoles: ['ADMIN', 'AGENT'],
+          payload: {
+            ticketId: id,
+            rating: dto.rating,
+            comment: dto.comment,
+            creatorId: (existingTicket as any).creatorId,
+          },
         });
       }
 
@@ -793,6 +853,17 @@ export class TicketsService implements OnModuleInit {
       await tx.ticket.delete({
         where: { id },
       });
+
+      if (this.realtimeService) {
+        this.realtimeService.emit({
+          type: 'TICKET_DELETED',
+          recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
+          payload: {
+            ticketId: id,
+            deletedBy: actor?.id,
+          },
+        });
+      }
     });
   }
 

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
+import { RealtimeService } from '../realtime/realtime.service.js';
 import {
   NotificationResponseDto,
   NotificationListResponseDto,
@@ -23,7 +24,10 @@ export interface CreateNotificationParams {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly realtimeService?: RealtimeService,
+  ) {}
 
   async getForUser(userId: string, limit = 50): Promise<NotificationListResponseDto> {
     const user =
@@ -125,6 +129,19 @@ export class NotificationsService {
           }),
         ),
       );
+
+      if (this.realtimeService) {
+        this.realtimeService.emit({
+          type: 'NOTIFICATION',
+          recipientRoles: ['ADMIN'],
+          payload: {
+            ticketId: params.ticketId,
+            type: 'TICKET_CREATED',
+            title: params.title,
+            message: params.message,
+          },
+        });
+      }
     } catch (err) {
       console.error('Failed to notify administrators of new ticket:', err);
     }
@@ -158,11 +175,21 @@ export class NotificationsService {
         },
       });
 
-      return notificationResponseSchema.parse({
+      const result = notificationResponseSchema.parse({
         ...created,
         readAt: created.readAt ? created.readAt.toISOString() : null,
         createdAt: created.createdAt.toISOString(),
       });
+
+      if (this.realtimeService) {
+        this.realtimeService.emit({
+          type: 'NOTIFICATION',
+          recipientUserIds: [params.userId],
+          payload: result,
+        });
+      }
+
+      return result;
     } catch (err) {
       // Soft-fail notification creation if user or ticket no longer exists
       console.error('Failed to create notification:', err);

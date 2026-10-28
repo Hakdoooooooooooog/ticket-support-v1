@@ -123,7 +123,7 @@ export function TicketList() {
     queryKey: ['tickets'],
     initialData: hasLoadedTickets ? storedTickets : undefined,
     refetchOnWindowFocus: 'always',
-    refetchInterval: 15 * 1000,
+    refetchInterval: 60 * 1000,
     queryFn: async () => {
       try {
         const res = await apiClient.get('/tickets');
