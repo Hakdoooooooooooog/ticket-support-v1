@@ -65,10 +65,10 @@ export function RegisterForm({
 
         {inviteInfo && (
           <div
-            className={`p-3 rounded-md border text-xs space-y-1 ${
+            className={`p-3 rounded-lg border text-xs space-y-1 ${
               inviteInfo.valid
-                ? 'bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                ? 'bg-spruce-500/15 border-spruce-400/30 text-spruce-800 dark:text-spruce-200'
+                : 'bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-200'
             }`}
           >
             {inviteInfo.valid ? (
@@ -130,14 +130,14 @@ export function RegisterForm({
             <button
               type="button"
               onClick={() => setShowInviteInput(true)}
-              className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              className="text-xs text-spruce-600 hover:text-spruce-800 dark:text-spruce-300 dark:hover:text-spruce-100 hover:underline font-medium transition-colors cursor-pointer"
             >
               Have an IT staff invitation code?
             </button>
           ) : (
-            <div className="space-y-1.5 p-3 rounded-md bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div className="space-y-2 p-3.5 rounded-lg bg-spruce-50 dark:bg-spruce-950/80 border border-spruce-200 dark:border-spruce-800">
               <div className="flex items-center justify-between">
-                <Label htmlFor="register-inviteCode" className="text-xs font-semibold">
+                <Label htmlFor="register-inviteCode" className="text-xs font-semibold text-spruce-900 dark:text-spruce-200">
                   Staff Invitation Code
                 </Label>
                 <button
@@ -147,7 +147,7 @@ export function RegisterForm({
                     setInviteCode('');
                     setInviteInfo(null);
                   }}
-                  className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="text-[11px] text-spruce-400 hover:text-spruce-600 dark:text-spruce-400 dark:hover:text-spruce-200 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -171,7 +171,7 @@ export function RegisterForm({
                   {isVerifyingInvite ? 'Checking...' : 'Apply'}
                 </Button>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-spruce-500 dark:text-spruce-400">
                 IT Support Engineers and Administrators must be invited by an IT Administrator.
               </p>
             </div>

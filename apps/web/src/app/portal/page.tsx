@@ -83,10 +83,10 @@ export default function CustomerPortalPage() {
       <main className="flex-1 py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="space-y-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-extrabold tracking-tight text-spruce-950 dark:text-white">
               Customer Support Portal
             </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-spruce-600 dark:text-spruce-300">
               Submit new helpdesk requests and track real-time status updates from our IT engineering team.
             </p>
           </div>
@@ -102,10 +102,10 @@ export default function CustomerPortalPage() {
         </div>
       </main>
 
-      <footer className="border-t border-slate-200 dark:border-slate-800 py-6 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
+      <footer className="border-t border-spruce-200 dark:border-spruce-800 py-6 px-4 sm:px-6 lg:px-8 text-xs text-spruce-600 dark:text-spruce-400">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>TicketSupport Helpdesk Platform</p>
-          <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="font-mono text-[11px] text-spruce-500/80 dark:text-spruce-400/70">
             Version {APP_VERSION}
           </p>
         </div>

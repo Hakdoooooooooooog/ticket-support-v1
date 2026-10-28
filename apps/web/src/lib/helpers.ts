@@ -815,7 +815,7 @@ export function getNotificationBadge(type: AppNotification['type']): {
     case 'TICKET_CREATED':
       return {
         label: 'NEW TICKET',
-        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
+        badgeClass: 'border-spruce-400/40 bg-spruce-400/15 text-spruce-300 font-bold',
       };
     case 'TICKET_FOLLOW_UP_REQUESTED':
       return {
@@ -825,7 +825,7 @@ export function getNotificationBadge(type: AppNotification['type']): {
     case 'TICKET_CUSTOMER_AMENDED':
       return {
         label: 'CUSTOMER',
-        badgeClass: 'border-blue-500/40 bg-blue-500/15 text-blue-300 font-bold',
+        badgeClass: 'border-spruce-400/40 bg-spruce-400/15 text-spruce-300 font-bold',
       };
     case 'TICKET_NOTE_POSTED':
       return {

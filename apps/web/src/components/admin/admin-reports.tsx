@@ -274,10 +274,10 @@ export function AdminReports() {
               Tech Support Volume
             </span>
             <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-blue-600 dark:text-blue-400">
+              <span className="text-2xl sm:text-3xl font-extrabold text-spruce-700 dark:text-spruce-300">
                 {departments.technicalSupport}
               </span>
-              <Badge variant="outline" className="text-xs font-medium border-blue-500/30 text-blue-600">
+              <Badge variant="outline" className="text-xs font-medium border-spruce-500/30 text-spruce-700 dark:text-spruce-300">
                 {kpis.totalTickets > 0 ? `${Math.round((departments.technicalSupport / kpis.totalTickets) * 100)}%` : '0%'}
               </Badge>
             </div>
@@ -293,10 +293,10 @@ export function AdminReports() {
               General Scope Volume
             </span>
             <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-purple-600 dark:text-purple-400">
+              <span className="text-2xl sm:text-3xl font-extrabold text-spruce-600 dark:text-spruce-400">
                 {departments.general}
               </span>
-              <Badge variant="outline" className="text-xs font-medium border-purple-500/30 text-purple-600">
+              <Badge variant="outline" className="text-xs font-medium border-spruce-400/30 text-spruce-600 dark:text-spruce-400">
                 {kpis.totalTickets > 0 ? `${Math.round((departments.general / kpis.totalTickets) * 100)}%` : '0%'}
               </Badge>
             </div>
@@ -324,7 +324,7 @@ export function AdminReports() {
               </div>
               <div className="h-2 rounded-full bg-spruce-100 dark:bg-spruce-800 overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 transition-all duration-300"
+                  className="h-full bg-spruce-600 dark:bg-spruce-400 transition-all duration-300"
                   style={{
                     width: `${kpis.totalTickets > 0 ? (departments.technicalSupport / kpis.totalTickets) * 100 : 0}%`,
                   }}
@@ -339,7 +339,7 @@ export function AdminReports() {
               </div>
               <div className="h-2 rounded-full bg-spruce-100 dark:bg-spruce-800 overflow-hidden">
                 <div
-                  className="h-full bg-purple-600 transition-all duration-300"
+                  className="h-full bg-spruce-500/80 dark:bg-spruce-500 transition-all duration-300"
                   style={{
                     width: `${kpis.totalTickets > 0 ? (departments.general / kpis.totalTickets) * 100 : 0}%`,
                   }}

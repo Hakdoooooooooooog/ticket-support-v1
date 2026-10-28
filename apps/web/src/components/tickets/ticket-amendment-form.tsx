@@ -58,10 +58,10 @@ export function TicketAmendmentForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="p-3.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/20 space-y-3"
+      className="p-3.5 rounded-lg border border-spruce-200 dark:border-spruce-700/80 bg-spruce-50/80 dark:bg-spruce-900/60 space-y-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+        <p className="text-xs font-bold uppercase tracking-wider text-spruce-800 dark:text-spruce-200">
           {showFieldEdit
             ? `Amend Ticket ${formatShortTicketId(ticket.id)}`
             : `Follow-Up Reply on ${formatShortTicketId(ticket.id)}`}
@@ -70,14 +70,14 @@ export function TicketAmendmentForm({
           <button
             type="button"
             onClick={() => setShowFieldEdit((v) => !v)}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-xs text-spruce-600 hover:text-spruce-800 dark:text-spruce-300 dark:hover:text-spruce-100 hover:underline font-medium cursor-pointer"
           >
             {showFieldEdit ? 'Hide Ticket Field Edits' : 'Edit Title / Priority / Description'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="text-xs text-spruce-400 hover:text-spruce-600 dark:hover:text-spruce-200"
+            className="text-xs text-spruce-400 hover:text-spruce-600 dark:hover:text-spruce-200 cursor-pointer"
           >
             Cancel
           </button>

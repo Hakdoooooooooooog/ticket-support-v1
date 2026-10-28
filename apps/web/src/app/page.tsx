@@ -150,19 +150,34 @@ function AuthContainer() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-spruce-50 dark:bg-spruce-950 text-spruce-950 dark:text-spruce-50 relative">
-      <div className="absolute top-4 right-4">
+    <main className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-spruce-50 dark:bg-spruce-950 text-spruce-950 dark:text-spruce-50 relative overflow-hidden">
+      {/* Ambient Top Aurora Glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
+      >
+        <div
+          style={{
+            clipPath:
+              'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
+          }}
+          className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-spruce-400/20 to-spruce-600/30 opacity-40 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
+        />
+      </div>
+
+      <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
-      <div className="max-w-md w-full mx-auto space-y-8">
+      <div className="max-w-md w-full mx-auto space-y-7 relative z-10">
         <div className="text-center space-y-3">
-          <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider text-spruce-700 bg-spruce-100 dark:bg-spruce-800/80 dark:text-spruce-300 rounded-full border border-spruce-200 dark:border-spruce-700/60">
-            Support Desk
-          </span>
-          <h1 className="text-4xl font-extrabold tracking-tight text-spruce-950 dark:text-white">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-spruce-800 dark:text-spruce-300 bg-spruce-100 dark:bg-spruce-900/90 rounded-full border border-spruce-200 dark:border-spruce-700/80 shadow-sm backdrop-blur-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-spruce-500 dark:bg-spruce-400 animate-pulse" />
+            <span>Support Desk</span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-spruce-950 dark:text-white drop-shadow-sm">
             TicketSupport
           </h1>
-          <p className="text-sm text-spruce-600 dark:text-spruce-300">
+          <p className="text-sm text-spruce-600 dark:text-spruce-300/90 max-w-sm mx-auto">
             Sign in to submit support requests or manage the service desk queue.
           </p>
         </div>
@@ -214,7 +229,7 @@ function AuthContainer() {
           )}
         </AuthCard>
 
-        <p className="text-center font-mono text-[11px] text-slate-500 pt-2">
+        <p className="text-center font-mono text-[11px] text-spruce-500/80 dark:text-spruce-400/60 pt-2">
           TicketSupport · {APP_VERSION}
         </p>
       </div>
