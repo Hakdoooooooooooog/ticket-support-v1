@@ -20,11 +20,15 @@ export enum TicketPriority {
 }
 
 export const encryptedAttachmentSchema = z.object({
-  ciphertext: z.string().min(1).describe('Attachment payload'),
-  iv: z.string().min(1).describe('Payload vector'),
+  ciphertext: z.string().optional().describe('Attachment payload for legacy base64 mode'),
+  iv: z.string().optional().describe('Payload vector'),
+  storageKey: z.string().optional().describe('S3/MinIO object key'),
+  storageType: z.enum(['BASE64', 'S3']).default('BASE64').describe('Storage engine type'),
+  bucket: z.string().optional().describe('S3/MinIO bucket name'),
   fileName: z.string().trim().min(1).max(255).describe('Attachment file name'),
-  mimeType: z.string().trim().min(1).max(100).describe('Attachment MIME type'),
+  mimeType: z.string().trim().min(1).max(100).default('application/octet-stream').describe('Attachment MIME type'),
   originalSize: z.number().int().positive().optional().describe('Attachment byte size'),
+  compressedSize: z.number().int().positive().optional().describe('Attachment compressed/stored byte size'),
 });
 
 // 1. Single source of truth for validation, type inference, and OpenAPI documentation

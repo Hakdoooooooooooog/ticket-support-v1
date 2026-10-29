@@ -77,13 +77,33 @@ It provides dedicated workspaces for both end-user customers and IT support pers
   - **Investigation & Follow-Up**: Additional details requests, bug reproduction notices, engineering escalations, and maintenance advisories.
   - **Resolution & Closure**: Verified fix confirmations, knowledge-base references, and inactivity warnings.
 
-### 10. Client-Side Image Encryption & Lightbox
-- **Zero-Knowledge Attachments**: Customer screenshots and logs are compressed via the HTML Canvas API and encrypted in-browser using AES-GCM 256-bit cryptography before uploading to the server.
-- **In-Browser Decryption**: Decrypted on-demand only in authenticated staff and customer sessions.
-- **Integrated Lightbox**: Full-screen inspect modal with zoom, rotation, and file metadata inspection.
+### 10. S3 & MinIO Object Storage for Encrypted Attachments
+- **Zero-Knowledge Architecture**: Customer diagnostic screenshots and logs are compressed in-browser and encrypted using AES-GCM 256-bit cryptography with client-derived cryptographic keys prior to leaving the client device.
+- **S3 Pre-Signed Direct Uploads**: Built on AWS SDK v3 (`@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`). The browser requests a short-lived pre-signed PUT URL via `POST /tickets/attachments/presign-upload` and uploads encrypted ciphertext directly to S3 or MinIO, offloading server bandwidth and memory.
+- **API Proxy Fallback**: If browser direct S3 uploads fail (e.g. strict corporate firewalls, ad blockers, or CORS restrictions), the client automatically streams through the API proxy endpoint `POST /tickets/attachments/upload`.
+- **Pre-Signed & Proxy Streaming Retrieval**: On-demand download via pre-signed GET URLs with proxy streaming fallback (`GET /tickets/attachments/stream?key=...`). Backward-compatible with legacy inline base64 attachments.
+- **Local Development**: Fully supported via the drop-in S3-compatible community distribution `pgsty/silo:latest` on ports 9000 & 9001 (configured for AWS region `ap-southeast-1`).
 
-### 11. Real-Time Push Events (Server-Sent Events / SSE)
-- **Zero-Latency Dispatch**: Replaces aggressive background polling with HTTP/2 Server-Sent Events (`/realtime/stream`), pushing instant ticket mutations, follow-up notes, and role-filtered notification alerts.
+### 11. Automated Skill-Based Routing & Priority Auto-Escalation Engine
+- **Urgency Auto-Escalation**: Incoming ticket titles and descriptions are analyzed by an automated detection engine matching critical operational signals (`production down`, `outage`, `crash`, `sev-1`, `urgent`, `critical`, `fatal`). Matching tickets are automatically escalated to `URGENT` priority, tagged with `autoEscalated: true`, and display a prominent `⚡ AUTO-ESCALATED` badge across consoles.
+- **Specialty Skill-Based Routing**: Engineers are provisioned with technical specialties (`NETWORK`, `IDENTITY`, `BILLING`, `HARDWARE`, `SOFTWARE`). The dispatch engine identifies the incident domain and prioritizes routing to specialized engineers with matching domain expertise before falling back to general round-robin queue rotation.
+
+### 12. Global Incident & Outage Banner System
+- **Real-Time Outage Alerts**: Administrators can publish live service incident banners (`CRITICAL`, `WARNING`, `INFO`) broadcast instantaneously across the Customer Portal and Admin Console via Server-Sent Events (SSE).
+- **Admin Management Console (`/admin` → Outage Banners)**: Allows Administrators to create banners, target affected services, toggle active status, and decommission resolved incident alerts in real time.
+
+### 13. Orval API Codegen Pipeline & TanStack Query v5 Integration
+- **Automated Type & Hook Generation**: Synchronizes NestJS OpenAPI 3.1.0 specifications directly into typed TanStack React Query v5 hooks, schemas, and Axios clients via `npm run codegen`.
+- **Advanced Query Features**:
+  - `useQuery`, `useMutation`, `useInfiniteQuery`, and `useSuspenseQuery` generation.
+  - Pre-fetching helpers (`prefetch*`) and query options factories (`get*QueryOptions`) for SSR / Suspense integration.
+  - Local cache updating (`useSetQueryData`, `useGetQueryData`) and query invalidation helpers (`invalidate*`).
+  - Automated `mutationInvalidates` rules: committed mutations (`ticketsControllerCreate`, `incidentBannersControllerCreate`, etc.) automatically trigger target query cache invalidations with zero manual boilerplate.
+- **Strict Git Hygiene**: Generated OpenAPI specifications (`openapi.json`) are ignored in Git to prevent merge conflicts.
+- **Continuous Integration Pipeline**: `.github/workflows/api-codegen.yml` automatically validates and regenerates the API client on every backend PR or push.
+
+### 14. Real-Time Push Events (Server-Sent Events / SSE)
+- **Zero-Latency Dispatch**: Replaces aggressive background polling with HTTP/2 Server-Sent Events (`/realtime/stream`), pushing instant ticket mutations, follow-up notes, outage banners, and role-filtered notification alerts.
 - **Reactive Cache Invalidation**: The Next.js frontend invalidates TanStack Query caches the millisecond a mutation is committed on PostgreSQL.
 - **Live Stream Telemetry**: Dynamic visual indicators in both `/admin` and `/portal` show active socket health (`Live Connected`, `Connecting...`, `Offline`) with exponential reconnect backoff.
 
@@ -162,10 +182,10 @@ TicketSupport/
 
 ## Technology Stack
 
-- **Frontend**: Next.js 16.4 (Turbopack, App Router, React 19), Tailwind CSS v4, TanStack Query v5, Zustand, Axios, react-markdown, remark-gfm, Radix UI.
-- **Backend**: NestJS 12, Node.js (ESM), Passport JWT, `@nestjs/throttler`, ioredis, helmet, cookie-parser, nestjs-zod, Zod, bcryptjs.
-- **Database & Cache**: PostgreSQL 16, Redis 7, Prisma ORM 7 (`@prisma/adapter-pg` pool adapter).
-- **Monorepo Tools**: Turborepo 2.4, Docker Compose.
+- **Frontend**: Next.js 16.4 (Turbopack, App Router, React 19), Tailwind CSS v4, TanStack Query v5, Orval 8, Zustand, Axios, react-markdown, remark-gfm, Radix UI.
+- **Backend**: NestJS 12, Node.js (ESM), Passport JWT, AWS SDK v3 (`@aws-sdk/client-s3`), `@nestjs/throttler`, ioredis, helmet, cookie-parser, nestjs-zod, Zod, bcryptjs.
+- **Database & Object Storage**: PostgreSQL 16, Redis 7, S3 / MinIO (`pgsty/silo`), Prisma ORM 7 (`@prisma/adapter-pg` pool adapter).
+- **Monorepo Tools**: Turborepo 2.4, Docker Compose, Orval Codegen.
 - **Testing & Verification**: Vitest 4, Supertest, Playwright MCP.
 
 ---
@@ -174,7 +194,7 @@ TicketSupport/
 
 ### 1. Prerequisites
 - **Node.js**: v20 or v22 LTS (v24 supported)
-- **Docker Desktop**: for PostgreSQL 16 & Redis 7
+- **Docker Desktop**: for PostgreSQL 16, Redis 7 & MinIO/S3
 - **npm**: v10+
 
 ### 2. Environment Configuration
@@ -196,6 +216,14 @@ JWT_EXPIRES_IN=15m
 REFRESH_TOKEN_EXPIRES_IN=7d
 CORS_ORIGIN=http://localhost:3000
 NEXT_PUBLIC_API_URL="http://localhost:3001"
+
+# S3 / MinIO Object Storage
+S3_ENDPOINT=http://localhost:9000
+S3_REGION=ap-southeast-1
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minioadmin
+S3_BUCKET_NAME=ticketsupport-attachments
+S3_FORCE_PATH_STYLE=true
 ```
 
 ### 3. Start Database & Cache Services
@@ -213,7 +241,14 @@ npm --prefix apps/api run db:push
 npm --prefix apps/api run db:generate
 ```
 
-### 5. Launch Development Servers
+### 5. API Client Code Generation (Orval)
+Generate the typed TanStack Query v5 hooks and TypeScript schemas from the NestJS backend OpenAPI spec:
+
+```bash
+npm run codegen
+```
+
+### 6. Launch Development Servers
 Run the full monorepo pipeline using Turborepo:
 
 ```bash
@@ -229,20 +264,20 @@ npm run dev
 
 ## Testing & Verification
 
-Run all test suites across the monorepo (250+ passing tests):
+Run all test suites across the monorepo (240+ passing tests):
 
 ```bash
-# Run all unit test suites across monorepo (API: 161 tests, Web: 65 tests)
+# Run all unit test suites across monorepo (API: 170 tests, Web: 65 tests)
 npm test
 
-# Run backend unit tests specifically (161 tests across 23 suites)
+# Run backend unit tests specifically (170 tests across 25 suites)
 npm --prefix apps/api test
 
 # Run frontend unit tests and strict TypeScript compiler check (65 tests across 7 suites)
 npm --prefix apps/web test
 
-# Run backend end-to-end integration tests (24 tests)
-npm --prefix apps/api run test:e2e
+# Run API client codegen pipeline
+npm run codegen
 
 # Run frontend production build (Turbopack standalone build)
 npm --prefix apps/web run build

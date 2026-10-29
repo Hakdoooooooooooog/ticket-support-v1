@@ -3,7 +3,11 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@lib/api-client';
+import {
+  notificationsControllerGetMyNotifications,
+  notificationsControllerMarkRead,
+  notificationsControllerMarkAllRead,
+} from '@api';
 import {
   AppNotification,
   NotificationListResponse,
@@ -43,15 +47,15 @@ export default function NotificationsPage() {
   const { data, isLoading, refetch, isFetching } = useQuery<NotificationListResponse>({
     queryKey: ['notifications', 'full-list'],
     queryFn: async () => {
-      const res = await apiClient.get<NotificationListResponse>('/notifications?limit=100');
-      return res.data;
+      const res = (await notificationsControllerGetMyNotifications()) as any;
+      return res;
     },
     refetchInterval: 15000,
   });
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiClient.patch(`/notifications/${id}/read`);
+      await notificationsControllerMarkRead(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -60,7 +64,7 @@ export default function NotificationsPage() {
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post('/notifications/mark-all-read');
+      await notificationsControllerMarkAllRead();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

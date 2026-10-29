@@ -100,7 +100,7 @@ export function TicketCardHeader({
             {showAssignee && (
               <>
                 <span>·</span>
-                <span>
+                <span className="inline-flex items-center flex-wrap gap-1">
                   Assignee:{' '}
                   <strong
                     className={`font-medium ${
@@ -111,6 +111,18 @@ export function TicketCardHeader({
                   >
                     {ticket.assignee?.fullName || 'Unassigned'}
                   </strong>
+                  {ticket.assignee?.specialties && ticket.assignee.specialties.length > 0 && (
+                    <span className="inline-flex items-center gap-1 ml-0.5">
+                      {ticket.assignee.specialties.map((spec, i) => (
+                        <span
+                          key={i}
+                          className="text-[9px] font-mono px-1 py-0.2 rounded bg-spruce-200/70 dark:bg-spruce-800 text-spruce-800 dark:text-spruce-200 border border-spruce-300 dark:border-spruce-700"
+                        >
+                          {spec}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </span>
               </>
             )}
@@ -159,6 +171,15 @@ export function TicketCardHeader({
 
         {/* Right Side: Badges + Chevron Indicator */}
         <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-start sm:self-center">
+          {ticket.autoEscalated && (
+            <Badge
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-600 text-white font-bold text-[10px] uppercase tracking-wider animate-pulse shadow-xs"
+              title={ticket.escalationReason || 'Auto-escalated by high-severity keyword match'}
+            >
+              ⚡ AUTO-ESCALATED
+            </Badge>
+          )}
           <Badge
             variant="outline"
             className={`text-[11px] font-semibold ${

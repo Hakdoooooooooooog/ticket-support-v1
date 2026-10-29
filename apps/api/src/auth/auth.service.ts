@@ -28,6 +28,7 @@ interface SeedAccountConfig {
   fullName: string;
   password: string;
   role: 'ADMIN' | 'AGENT' | 'CUSTOMER';
+  specialties?: string[];
 }
 
 @Injectable()
@@ -51,6 +52,14 @@ export class AuthService implements OnModuleInit {
         const normalizedEmail = account.email.toLowerCase().trim();
         const passwordHash = await this.hashPassword(account.password);
 
+        const defaultSpecialties =
+          account.specialties ||
+          (account.role === 'AGENT'
+            ? ['NETWORK', 'IDENTITY', 'SOFTWARE']
+            : account.role === 'ADMIN'
+              ? ['NETWORK', 'IDENTITY', 'BILLING', 'HARDWARE', 'SOFTWARE']
+              : []);
+
         if (typeof tx.user.upsert === 'function') {
           await tx.user.upsert({
             where: { email: normalizedEmail },
@@ -58,12 +67,14 @@ export class AuthService implements OnModuleInit {
               fullName: account.fullName,
               role: account.role,
               passwordHash,
+              specialties: defaultSpecialties,
             },
             create: {
               email: normalizedEmail,
               fullName: account.fullName,
               passwordHash,
               role: account.role,
+              specialties: defaultSpecialties,
             },
           });
         } else {
@@ -77,6 +88,7 @@ export class AuthService implements OnModuleInit {
                 fullName: account.fullName,
                 passwordHash,
                 role: account.role,
+                specialties: defaultSpecialties,
               },
             });
           }

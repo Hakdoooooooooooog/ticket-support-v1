@@ -8,7 +8,7 @@ import {
   CannedResponseInterpolationContext,
   interpolateCannedResponse,
 } from '@lib/helpers';
-import { apiClient } from '@lib/api-client';
+import { cannedResponsesControllerFindAll } from '../api/endpoints/canned-responses/canned-responses';
 
 interface CannedResponsesMenuProps {
   onSelect: (content: string) => void;
@@ -38,8 +38,8 @@ export function CannedResponsesMenu({
     queryKey: ['canned-responses'],
     queryFn: async () => {
       try {
-        const res = await apiClient.get<CannedResponseTemplate[]>('/canned-responses');
-        return res.data;
+        const res = (await cannedResponsesControllerFindAll()) as any;
+        return res;
       } catch {
         return CANNED_RESPONSES;
       }

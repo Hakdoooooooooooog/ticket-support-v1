@@ -13,9 +13,26 @@ export class TicketMapper {
    */
   static toCreateInput(dto: unknown, creatorId: string) {
     const validated = createTicketSchema.parse(dto);
-    const compressedAttachment = validated.encryptedAttachment
-      ? decryptAndCompressAttachment(validated.encryptedAttachment)
-      : undefined;
+    let attachmentFields: Record<string, unknown> = {};
+
+    if (validated.encryptedAttachment) {
+      if (validated.encryptedAttachment.storageType === 'S3') {
+        attachmentFields = {
+          attachmentName: validated.encryptedAttachment.fileName,
+          attachmentMimeType: validated.encryptedAttachment.mimeType,
+          attachmentStorageKey: validated.encryptedAttachment.storageKey,
+          attachmentStorageType: 'S3',
+          attachmentBucket: validated.encryptedAttachment.bucket,
+          attachmentOriginalSize: validated.encryptedAttachment.originalSize,
+          attachmentCompressedSize: validated.encryptedAttachment.compressedSize || validated.encryptedAttachment.originalSize,
+        };
+      } else if (validated.encryptedAttachment.ciphertext && validated.encryptedAttachment.iv) {
+        attachmentFields = {
+          ...decryptAndCompressAttachment(validated.encryptedAttachment as any),
+          attachmentStorageType: 'BASE64',
+        };
+      }
+    }
 
     return {
       title: validated.title,
@@ -23,7 +40,7 @@ export class TicketMapper {
       priority: validated.priority,
       department: validated.department,
       creatorId,
-      ...(compressedAttachment ? compressedAttachment : {}),
+      ...attachmentFields,
     };
   }
 
@@ -44,6 +61,9 @@ export class TicketMapper {
         attachmentCompressed: null,
         attachmentOriginalSize: null,
         attachmentCompressedSize: null,
+        attachmentStorageKey: null,
+        attachmentStorageType: null,
+        attachmentBucket: null,
       };
     }
 
@@ -59,15 +79,32 @@ export class TicketMapper {
   }
 
   /**
-   * Decrypts and compresses an optional attachment for a comment/amendment message.
+   * Decrypts and compresses an optional attachment for a comment/amendment message,
+   * or attaches S3 storage key metadata if uploaded directly to S3.
    */
   static toCommentAttachmentInput(dtoAttachment: unknown) {
     if (!dtoAttachment || typeof dtoAttachment !== 'object') {
       return {};
     }
-    return {
-      ...decryptAndCompressAttachment(dtoAttachment as any),
-    };
+    const att = dtoAttachment as Record<string, any>;
+    if (att.storageType === 'S3') {
+      return {
+        attachmentName: att.fileName,
+        attachmentMimeType: att.mimeType,
+        attachmentStorageKey: att.storageKey,
+        attachmentStorageType: 'S3',
+        attachmentBucket: att.bucket,
+        attachmentOriginalSize: att.originalSize,
+        attachmentCompressedSize: att.compressedSize || att.originalSize,
+      };
+    }
+    if (att.ciphertext && att.iv) {
+      return {
+        ...decryptAndCompressAttachment(att as any),
+        attachmentStorageType: 'BASE64',
+      };
+    }
+    return {};
   }
 
   /**
@@ -90,7 +127,8 @@ export class TicketMapper {
       const commentHasAttachment = Boolean(
         commentObj.hasAttachment ||
           commentObj.attachmentName ||
-          commentObj.attachmentCompressed,
+          commentObj.attachmentCompressed ||
+          commentObj.attachmentStorageKey,
       );
       return {
         ...commentObj,
@@ -99,7 +137,10 @@ export class TicketMapper {
     });
 
     const hasTicketAttachment = Boolean(
-      record.hasAttachment || record.attachmentName || record.attachmentCompressed,
+      record.hasAttachment ||
+        record.attachmentName ||
+        record.attachmentCompressed ||
+        record.attachmentStorageKey,
     );
 
     return ticketResponseSchema.parse({

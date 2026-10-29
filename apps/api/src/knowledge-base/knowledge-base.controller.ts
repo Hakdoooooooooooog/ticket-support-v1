@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { KnowledgeBaseService } from './knowledge-base.service.js';
-import { CreateArticleDto, UpdateArticleDto } from './knowledge-base.types.js';
+import { CreateArticleDto, UpdateArticleDto, ArticleFeedbackDto } from './knowledge-base.types.js';
 
 @ApiTags('Knowledge Base')
 @ApiBearerAuth()
@@ -94,10 +94,10 @@ export class KnowledgeBaseController {
   @ApiOperation({ summary: 'Record helpful/unhelpful rating on a knowledge base guide' })
   async recordFeedback(
     @Param('id') id: string,
-    @Body('helpful') helpful: boolean,
+    @Body() dto: ArticleFeedbackDto,
     @Req() req: any,
   ) {
-    return this.kbService.recordFeedback(id, Boolean(helpful), this.extractUserId(req)!);
+    return this.kbService.recordFeedback(id, Boolean(dto?.helpful), this.extractUserId(req)!);
   }
 
   @Post(':id/deflection')

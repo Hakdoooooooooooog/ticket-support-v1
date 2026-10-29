@@ -73,6 +73,7 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     cleanupOpenApiDoc(document);
+    document.openapi = '3.1.0';
 
     SwaggerModule.setup('api/docs', app, document, {
       jsonDocumentUrl: 'api-json',

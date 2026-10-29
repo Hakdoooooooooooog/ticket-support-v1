@@ -11,7 +11,8 @@ export type AdminSection =
   | 'TEAM_MANAGEMENT'
   | 'CANNED_RESPONSES'
   | 'REPORTS'
-  | 'KNOWLEDGE_BASE';
+  | 'KNOWLEDGE_BASE'
+  | 'INCIDENT_BANNERS';
 
 export interface AdminState {
   agents: AuthUser[];

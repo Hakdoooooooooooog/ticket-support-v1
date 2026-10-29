@@ -1,7 +1,20 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { apiClient } from './api-client';
 import type { Ticket } from '@components/ticket-list';
+import {
+  storageControllerPresignUpload,
+  storageControllerUploadFallback,
+  storageControllerStreamAttachment,
+} from '../api/endpoints/storage/storage';
+import {
+  authControllerGetProfile,
+  authControllerRefresh,
+  authControllerLogout,
+} from '../api/endpoints/authentication/authentication';
+import {
+  ticketsControllerGetAttachment,
+  ticketsControllerGetCommentAttachment,
+} from '../api/endpoints/tickets/tickets';
 
 // ============================================================================
 // 1. UI Class Name Helper
@@ -244,12 +257,12 @@ export async function verifyPassportSession(
   accessToken: string,
 ): Promise<AuthUser | null> {
   try {
-    const res = await apiClient.get<AuthUser>('/auth/me', {
+    const res = (await authControllerGetProfile({
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
-    });
-    return sanitizeAuthUser(res.data);
+    })) as any;
+    return sanitizeAuthUser(res);
   } catch {
     return null;
   }
@@ -257,12 +270,12 @@ export async function verifyPassportSession(
 
 export async function refreshPassportSession(): Promise<AuthSession | null> {
   try {
-    const res = await apiClient.post<{ accessToken: string; user: AuthUser }>('/auth/refresh');
-    if (res.data?.accessToken && res.data?.user) {
-      const sanitized = sanitizeAuthUser(res.data.user);
+    const res = (await authControllerRefresh()) as any;
+    if (res?.accessToken && res?.user) {
+      const sanitized = sanitizeAuthUser(res.user);
       if (sanitized) {
         return {
-          accessToken: res.data.accessToken,
+          accessToken: res.accessToken,
           user: sanitized,
         };
       }
@@ -275,7 +288,7 @@ export async function refreshPassportSession(): Promise<AuthSession | null> {
 
 export async function logoutPassportSession(): Promise<void> {
   try {
-    await apiClient.post('/auth/logout');
+    await authControllerLogout();
   } catch {
     // Ignore network errors during logout
   }
@@ -586,11 +599,15 @@ export function computeTicketSlaStatus(ticket: Ticket): TicketSlaStatus {
 // ============================================================================
 
 export interface EncryptedAttachmentPayload {
-  ciphertext: string;
-  iv: string;
+  ciphertext?: string;
+  iv?: string;
+  storageType?: 'BASE64' | 'S3';
+  storageKey?: string;
+  bucket?: string;
   fileName: string;
   mimeType: string;
   originalSize: number;
+  compressedSize?: number;
 }
 
 export interface DecryptedAttachmentResult {
@@ -695,8 +712,9 @@ async function compressImageToDataUrl(
 }
 
 /**
- * Compresses a user-selected image on the client and encrypts the resulting payload
- * using AES-256-GCM so the image is encrypted in-transit before reaching the API.
+ * Compresses a user-selected image on the client, encrypts the resulting payload
+ * using AES-256-GCM, and uploads directly to MinIO/S3 via a pre-signed URL.
+ * Automatically falls back to API streaming proxy upload or inline payload if direct S3 is blocked.
  */
 export async function compressAndEncryptImageFile(
   file: File,
@@ -712,31 +730,122 @@ export async function compressAndEncryptImageFile(
     plainBytes,
   );
 
-  return {
-    ciphertext: bytesToBase64(new Uint8Array(encryptedBuffer)),
-    iv: bytesToBase64(iv),
-    fileName: file.name,
-    mimeType,
-    originalSize: file.size,
-  };
+  const ciphertext = bytesToBase64(new Uint8Array(encryptedBuffer));
+  const ivBase64 = bytesToBase64(iv);
+  const payloadString = JSON.stringify({ ciphertext, iv: ivBase64 });
+
+  // 1. Attempt S3/MinIO direct pre-signed upload
+  try {
+    const presignRes = (await storageControllerPresignUpload({
+      fileName: file.name,
+      mimeType: 'application/json',
+      fileSize: payloadString.length,
+    })) as any;
+
+    const { uploadUrl, storageKey, bucket } = presignRes;
+
+    const s3PutRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: payloadString,
+    });
+
+    if (s3PutRes.ok) {
+      return {
+        storageType: 'S3',
+        storageKey,
+        bucket,
+        fileName: file.name,
+        mimeType,
+        originalSize: file.size,
+        compressedSize: payloadString.length,
+      };
+    }
+  } catch {
+    // S3 direct connection blocked by network or CORS, attempt API fallback
+  }
+
+  // 2. Fallback: API proxy upload
+  try {
+    const fallbackRes = (await storageControllerUploadFallback({
+      fileName: file.name,
+      mimeType: 'application/json',
+      data: window.btoa(payloadString),
+    })) as any;
+
+    return {
+      storageType: 'S3',
+      storageKey: fallbackRes.storageKey,
+      bucket: fallbackRes.bucket,
+      fileName: file.name,
+      mimeType,
+      originalSize: file.size,
+      compressedSize: payloadString.length,
+    };
+  } catch {
+    // 3. Ultimate Fallback: Legacy inline base64
+    return {
+      storageType: 'BASE64',
+      ciphertext,
+      iv: ivBase64,
+      fileName: file.name,
+      mimeType,
+      originalSize: file.size,
+      compressedSize: payloadString.length,
+    };
+  }
 }
 
 /**
- * Requests on-demand Brotli decompression from `GET /tickets/:id/attachment`
- * and decrypts the AES-256-GCM transit payload in the browser.
+ * Requests on-demand attachment data from `GET /tickets/:id/attachment`
+ * (resolving presigned S3 download or API stream) and decrypts the AES-256-GCM payload in the browser.
  */
 export async function fetchAndDecryptTicketAttachment(
   ticketId: string,
 ): Promise<DecryptedAttachmentResult> {
-  const res = await apiClient.get<{
-    ticketId: string;
-    fileName: string;
-    mimeType: string;
-    originalSize: number;
-    encrypted: { ciphertext: string; iv: string };
-  }>(`/tickets/${ticketId}/attachment`);
+  const res = (await ticketsControllerGetAttachment(ticketId)) as any;
 
-  const { encrypted, fileName, mimeType, originalSize } = res.data;
+  let encrypted = res.encrypted;
+
+  if (res.storageType === 'S3') {
+    let payloadText: string | null = null;
+    if (res.downloadUrl) {
+      try {
+        const s3Get = await fetch(res.downloadUrl);
+        if (s3Get.ok) {
+          payloadText = await s3Get.text();
+        }
+      } catch {
+        payloadText = null;
+      }
+    }
+
+    if (!payloadText && res.storageKey) {
+      try {
+        const streamRes = (await storageControllerStreamAttachment(
+          { key: res.storageKey },
+          { responseType: 'text' as any },
+        )) as any;
+        payloadText = typeof streamRes === 'string' ? streamRes : JSON.stringify(streamRes);
+      } catch {
+        payloadText = null;
+      }
+    }
+
+    if (payloadText) {
+      try {
+        encrypted = JSON.parse(payloadText);
+      } catch {
+        // payloadText might already be JSON
+      }
+    }
+  }
+
+  if (!encrypted?.ciphertext || !encrypted?.iv) {
+    throw new Error('Unable to decrypt attachment payload');
+  }
+
+  const { fileName, mimeType, originalSize } = res;
   const key = await deriveBrowserAesKey();
   const iv = base64ToBytes(encrypted.iv);
   const cipherBytes = base64ToBytes(encrypted.ciphertext);
@@ -762,15 +871,49 @@ export async function fetchAndDecryptCommentAttachment(
   ticketId: string,
   commentId: string,
 ): Promise<DecryptedAttachmentResult> {
-  const res = await apiClient.get<{
-    ticketId: string;
-    fileName: string;
-    mimeType: string;
-    originalSize: number;
-    encrypted: { ciphertext: string; iv: string };
-  }>(`/tickets/${ticketId}/comments/${commentId}/attachment`);
+  const res = (await ticketsControllerGetCommentAttachment(ticketId, commentId)) as any;
 
-  const { encrypted, fileName, mimeType, originalSize } = res.data;
+  let encrypted = res.encrypted;
+
+  if (res.storageType === 'S3') {
+    let payloadText: string | null = null;
+    if (res.downloadUrl) {
+      try {
+        const s3Get = await fetch(res.downloadUrl);
+        if (s3Get.ok) {
+          payloadText = await s3Get.text();
+        }
+      } catch {
+        payloadText = null;
+      }
+    }
+
+    if (!payloadText && res.storageKey) {
+      try {
+        const streamRes = (await storageControllerStreamAttachment(
+          { key: res.storageKey },
+          { responseType: 'text' as any },
+        )) as any;
+        payloadText = typeof streamRes === 'string' ? streamRes : JSON.stringify(streamRes);
+      } catch {
+        payloadText = null;
+      }
+    }
+
+    if (payloadText) {
+      try {
+        encrypted = JSON.parse(payloadText);
+      } catch {
+        // payloadText might already be JSON
+      }
+    }
+  }
+
+  if (!encrypted?.ciphertext || !encrypted?.iv) {
+    throw new Error('Unable to decrypt comment attachment payload');
+  }
+
+  const { fileName, mimeType, originalSize } = res;
   const key = await deriveBrowserAesKey();
   const iv = base64ToBytes(encrypted.iv);
   const cipherBytes = base64ToBytes(encrypted.ciphertext);

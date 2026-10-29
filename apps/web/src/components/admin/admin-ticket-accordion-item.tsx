@@ -135,6 +135,20 @@ export function AdminTicketAccordionItem({
       {/* Accordion Body */}
       {isExpanded && (
         <CardContent className="p-4 sm:p-5 pt-0 space-y-5 border-t border-spruce-100 dark:border-spruce-800/80">
+          {/* Priority Auto-Escalation Banner */}
+          {ticket.autoEscalated && (
+            <div className="pt-3">
+              <div className="flex items-center gap-2.5 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-900 dark:text-red-200 text-xs shadow-xs">
+                <span className="font-bold uppercase tracking-wider text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-700 dark:text-red-300 shrink-0">
+                  ⚡ PRIORITY AUTO-ESCALATED
+                </span>
+                <span>
+                  {ticket.escalationReason || 'System auto-escalated this incident to URGENT based on critical outage keywords.'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* 1. Admin / Agent Triage & Actions Bar */}
           {isClosed ? (
             <div className="pt-3 flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-300">

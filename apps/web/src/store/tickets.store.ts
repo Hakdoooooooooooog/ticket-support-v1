@@ -244,7 +244,7 @@ export const useTicketsStore = create<TicketsState>()(
           highlightedTicketId: ticketId,
         });
 
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
           setTimeout(() => {
             const el = document.getElementById(`ticket-${ticketId}`);
             el?.scrollIntoView({ behavior: 'smooth', block: 'center' });

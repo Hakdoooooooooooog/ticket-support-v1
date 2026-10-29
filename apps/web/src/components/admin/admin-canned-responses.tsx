@@ -6,7 +6,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@ui/card';
 import { Button } from '@ui/button';
 import { Input } from '@ui/input';
 import { Badge } from '@ui/badge';
-import { apiClient } from '@lib/api-client';
+import {
+  cannedResponsesControllerFindAll,
+  cannedResponsesControllerCreate,
+  cannedResponsesControllerUpdate,
+  cannedResponsesControllerDelete,
+} from '../../api/endpoints/canned-responses/canned-responses';
 import {
   CANNED_RESPONSES,
   CannedResponseTemplate,
@@ -46,8 +51,8 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
     queryKey: ['canned-responses'],
     queryFn: async () => {
       try {
-        const res = await apiClient.get<CannedResponseTemplate[]>('/canned-responses');
-        return res.data;
+        const res = (await cannedResponsesControllerFindAll()) as any;
+        return res;
       } catch {
         return CANNED_RESPONSES;
       }
@@ -57,8 +62,8 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
   // 2. Create mutation
   const createMutation = useMutation({
     mutationFn: async (payload: { category: string; label: string; content: string }) => {
-      const res = await apiClient.post<CannedResponseTemplate>('/canned-responses', payload);
-      return res.data;
+      const res = (await cannedResponsesControllerCreate(payload as any)) as any;
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['canned-responses'] });
@@ -72,8 +77,8 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
   // 3. Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: string; payload: { category?: string; label?: string; content?: string } }) => {
-      const res = await apiClient.put<CannedResponseTemplate>(`/canned-responses/${id}`, payload);
-      return res.data;
+      const res = (await cannedResponsesControllerUpdate(id, payload as any)) as any;
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['canned-responses'] });
@@ -87,8 +92,8 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
   // 4. Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiClient.delete(`/canned-responses/${id}`);
-      return res.data;
+      const res = (await cannedResponsesControllerDelete(id)) as any;
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['canned-responses'] });

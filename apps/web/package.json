@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "codegen": "orval --config ./orval.config.ts",
+    "generate:api": "orval --config ./orval.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.0",

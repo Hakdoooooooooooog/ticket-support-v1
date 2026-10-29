@@ -9,4 +9,5 @@ export { AdminTeamManagement, type StaffInviteRecord } from './admin-team-manage
 export { AdminTicketAccordionItem } from './admin-ticket-accordion-item';
 export { AdminReports } from './admin-reports';
 export { AdminKnowledgeBase } from './admin-knowledge-base';
+export { AdminIncidentBanners } from './admin-incident-banners';
 

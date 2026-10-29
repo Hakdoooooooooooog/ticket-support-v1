@@ -5,7 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@ui/card';
 import { Button } from '@ui/button';
 import { Badge } from '@ui/badge';
-import { apiClient } from '@lib/api-client';
+import {
+  reportsControllerGetSummary,
+  reportsControllerExportTicketsCsv,
+  reportsControllerExportCsatCsv,
+} from '../../api/endpoints/reports/reports';
 import { formatTicketDate } from '@lib/helpers';
 
 interface ReportsSummaryData {
@@ -59,8 +63,8 @@ export function AdminReports() {
   const { data, isLoading, error, refetch } = useQuery<ReportsSummaryData>({
     queryKey: ['reports-summary'],
     queryFn: async () => {
-      const res = await apiClient.get('/reports/summary');
-      return res.data;
+      const res = (await reportsControllerGetSummary()) as any;
+      return res;
     },
   });
 
@@ -68,16 +72,17 @@ export function AdminReports() {
     setIsExportingTickets(true);
     setExportError(null);
     try {
-      const params = new URLSearchParams();
-      if (departmentFilter !== 'ALL') params.set('department', departmentFilter);
-      if (statusFilter !== 'ALL') params.set('status', statusFilter);
-      if (priorityFilter !== 'ALL') params.set('priority', priorityFilter);
+      const queryParams: Record<string, string> = {};
+      if (departmentFilter !== 'ALL') queryParams.department = departmentFilter;
+      if (statusFilter !== 'ALL') queryParams.status = statusFilter;
+      if (priorityFilter !== 'ALL') queryParams.priority = priorityFilter;
 
-      const res = await apiClient.get(`/reports/tickets/csv?${params.toString()}`, {
-        responseType: 'blob',
-      });
+      const res = (await reportsControllerExportTicketsCsv(
+        queryParams as any,
+        { responseType: 'blob' as any },
+      )) as any;
 
-      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -97,11 +102,11 @@ export function AdminReports() {
     setIsExportingCsat(true);
     setExportError(null);
     try {
-      const res = await apiClient.get('/reports/csat/csv', {
-        responseType: 'blob',
-      });
+      const res = (await reportsControllerExportCsatCsv(
+        { responseType: 'blob' as any },
+      )) as any;
 
-      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

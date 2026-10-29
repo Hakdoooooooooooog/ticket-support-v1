@@ -16,7 +16,9 @@
     "db:down": "docker compose down",
     "db:studio": "npm run db:studio --workspace=api",
     "db:migrate": "npm run db:migrate --workspace=api",
-    "generate:api": "npm run generate:api --workspace=web"
+    "generate:api": "npm run generate:api --workspace=web",
+    "openapi:dump": "node apps/api/scripts/generate-openapi.mjs",
+    "codegen": "npm run openapi:dump && npm run generate:api"
   },
   "devDependencies": {
     "turbo": "^2.4.0"

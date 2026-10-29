@@ -12,7 +12,7 @@ import { Textarea } from '@ui/textarea';
 import { Label } from '@ui/label';
 import { Badge } from '@ui/badge';
 import { ContextualLoader } from '@ui/contextual-loader';
-import { apiClient } from '@lib/api-client';
+import { ticketsControllerCreate } from '../../api/endpoints/tickets/tickets';
 import {
   getStoredSession,
   formatShortTicketId,
@@ -165,12 +165,12 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
     mutationFn: async (values: TicketFormValues) => {
       const session = getStoredSession();
       const activeCreatorId = creatorId || user?.id || session?.user?.id;
-      const response = await apiClient.post('/tickets', {
+      const response = (await ticketsControllerCreate({
         ...values,
         ...(activeCreatorId ? { creatorId: activeCreatorId } : {}),
-        ...(encryptedAttachment ? { encryptedAttachment } : {}),
-      });
-      return response.data;
+        ...(encryptedAttachment ? { encryptedAttachment: encryptedAttachment as any } : {}),
+      } as any)) as any;
+      return response;
     },
     onSuccess: (data) => {
       upsertTicket(data);

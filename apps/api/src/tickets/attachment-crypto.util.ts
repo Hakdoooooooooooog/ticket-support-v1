@@ -23,7 +23,10 @@ export interface OnDemandAttachmentResponse {
   fileName: string;
   mimeType: string;
   originalSize: number;
-  encrypted: {
+  storageType?: 'BASE64' | 'S3';
+  downloadUrl?: string;
+  storageKey?: string;
+  encrypted?: {
     ciphertext: string;
     iv: string;
   };

@@ -3,7 +3,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@lib/api-client';
+import {
+  notificationsControllerGetMyNotifications,
+  notificationsControllerMarkRead,
+  notificationsControllerMarkAllRead,
+} from '../api/endpoints/notifications/notifications';
 import {
   AppNotification,
   NotificationListResponse,
@@ -25,16 +29,15 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
   const { data } = useQuery<NotificationListResponse>({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const res = await apiClient.get<NotificationListResponse>('/notifications');
-      return res.data;
+      const res = (await notificationsControllerGetMyNotifications()) as any;
+      return res;
     },
     refetchInterval: 60000,
   });
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiClient.patch(`/notifications/${id}/read`);
-      return res.data;
+      await notificationsControllerMarkRead(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -43,8 +46,7 @@ export function NotificationCenter({ onSelectTicket, className = '' }: Notificat
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.patch('/notifications/mark-all-read');
-      return res.data;
+      await notificationsControllerMarkAllRead();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

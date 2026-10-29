@@ -54,6 +54,7 @@ model User {
   fullName        String
   role            Role           @default(CUSTOMER)
   department      Department?    @default(TECHNICAL_SUPPORT)
+  specialties     String[]       @default([])
   lastAssignedAt  DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -69,6 +70,7 @@ model User {
   publishedArticles KnowledgeArticle[]  @relation("PublishedArticles")
   articleFeedback   ArticleFeedback[]
   deflections       ArticleDeflection[]
+  createdIncidentBanners IncidentBanner[] @relation("CreatedIncidentBanners")
 
   @@index([role, fullName])
   @@map("users")
@@ -120,6 +122,12 @@ model Ticket {
   attachmentCompressed     String?
   attachmentOriginalSize   Int?
   attachmentCompressedSize Int?
+  attachmentStorageKey     String?
+  attachmentStorageType    String?        @default("BASE64")
+  attachmentBucket         String?
+
+  autoEscalated            Boolean        @default(false)
+  escalationReason         String?
 
   creatorId   String
   creator     User           @relation("CreatedTickets", fields: [creatorId], references: [id], onDelete: Cascade)
@@ -168,6 +176,9 @@ model Comment {
   attachmentCompressed     String?
   attachmentOriginalSize   Int?
   attachmentCompressedSize Int?
+  attachmentStorageKey     String?
+  attachmentStorageType    String?        @default("BASE64")
+  attachmentBucket         String?
 
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -262,4 +273,20 @@ model ArticleDeflection {
 
   @@index([articleId, createdAt])
   @@map("article_deflections")
+}
+
+model IncidentBanner {
+  id               String   @id @default(cuid())
+  title            String
+  message          String
+  severity         String   @default("WARNING")
+  isActive         Boolean  @default(true)
+  affectedServices String[] @default([])
+  createdById      String
+  createdBy        User     @relation("CreatedIncidentBanners", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isActive, createdAt])
+  @@map("incident_banners")
 }

@@ -5,7 +5,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@ui/input';
 import { Button } from '@ui/button';
 import { ContextualLoader } from '@ui/contextual-loader';
-import { apiClient } from '@lib/api-client';
+import {
+  ticketsControllerFindAll,
+  ticketsControllerUpdate,
+} from '../api/endpoints/tickets/tickets';
 import {
   formatLastUpdatedTimestamp,
   filterTickets,
@@ -66,8 +69,8 @@ export function TicketList() {
   const { data, isLoading, isError, refetch, isFetching, dataUpdatedAt } = useQuery<Ticket[]>({
     queryKey: ['tickets'],
     queryFn: async () => {
-      const res = await apiClient.get<Ticket[]>('/tickets');
-      return res.data;
+      const res = (await ticketsControllerFindAll()) as any;
+      return res;
     },
     staleTime: 60 * 1000,
     placeholderData: (previousData) => previousData,
@@ -126,8 +129,8 @@ export function TicketList() {
         encryptedAttachment?: EncryptedAttachmentPayload;
       };
     }) => {
-      const res = await apiClient.patch<Ticket>(`/tickets/${id}`, payload);
-      return res.data;
+      const res = (await ticketsControllerUpdate(id, payload as any)) as any;
+      return res;
     },
     onSuccess: (updated) => {
       upsertTicket(updated);

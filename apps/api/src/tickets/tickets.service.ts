@@ -22,6 +22,7 @@ import {
 } from './attachment-crypto.util.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
+import { StorageService } from '../storage/storage.service.js';
 
 export interface TicketActorContext {
   id: string;
@@ -42,6 +43,7 @@ export class TicketsService implements OnModuleInit {
     private readonly prisma: PrismaService,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly realtimeService?: RealtimeService,
+    @Optional() private readonly storageService?: StorageService,
   ) {}
 
   /**
@@ -194,23 +196,94 @@ export class TicketsService implements OnModuleInit {
     return TicketMapper.toResponseDto(ticket);
   }
 
+  detectUrgency(title: string, description: string): { isUrgent: boolean; reason: string | null } {
+    const text = `${title} ${description}`.toLowerCase();
+    const criticalKeywords = [
+      'production down',
+      'outage',
+      'crash',
+      'security breach',
+      'data loss',
+      'sev-1',
+      'sev1',
+      'p1',
+      'system offline',
+      'emergency',
+      'critical bug',
+      'database down',
+      'urgent',
+    ];
+
+    for (const kw of criticalKeywords) {
+      if (text.includes(kw)) {
+        return {
+          isUrgent: true,
+          reason: `Auto-escalated: High-severity keyword detected ("${kw}")`,
+        };
+      }
+    }
+
+    return { isUrgent: false, reason: null };
+  }
+
+  detectSpecialty(title: string, description: string): string | null {
+    const text = `${title} ${description}`.toLowerCase();
+    if (/\b(network|dns|vpn|firewall|connectivity|latency|wifi|router|ip address|packet loss|ssl cert)\b/i.test(text)) {
+      return 'NETWORK';
+    }
+    if (/\b(auth|login|sso|mfa|password|saml|jwt|token|account lockout|permission|unauthorized|2fa)\b/i.test(text)) {
+      return 'IDENTITY';
+    }
+    if (/\b(billing|invoice|payment|charge|refund|credit card|pricing|subscription|receipt|stripe)\b/i.test(text)) {
+      return 'BILLING';
+    }
+    if (/\b(laptop|monitor|printer|keyboard|mouse|headset|hardware|dock|macbook|workstation)\b/i.test(text)) {
+      return 'HARDWARE';
+    }
+    if (/\b(bug|crash|deploy|api|database|postgres|frontend|backend|500 error|exception|unhandled|null pointer)\b/i.test(text)) {
+      return 'SOFTWARE';
+    }
+    return null;
+  }
+
   /**
-   * Selects an eligible agent for a department using fair round-robin rotation.
+   * Selects an eligible agent for a department using skill-based routing with fair round-robin fallback.
    * Priority:
-   * 1. Active AGENTs belonging specifically to the target department (ordered by least recently assigned: lastAssignedAt ASC, createdAt ASC).
-   * 2. If no department-specific agent exists, any active AGENT (general pool).
-   * 3. Fallback: If no agents exist in the system, select an ADMIN so tickets are never left untriaged.
+   * 1. Specialist: Active AGENTs with matching specialty in their specialties list (ordered by lastAssignedAt ASC).
+   * 2. Active AGENTs belonging specifically to the target department (ordered by lastAssignedAt ASC, createdAt ASC).
+   * 3. Any active AGENT (general pool).
+   * 4. Fallback: Any active ADMIN.
    */
   async selectNextRoundRobinAgent(
     department: 'TECHNICAL_SUPPORT' | 'GENERAL',
     tx: any,
+    specialty?: string | null,
   ): Promise<{ id: string; fullName: string; email: string } | null> {
     if (!tx?.user?.findFirst) {
       return null;
     }
 
     try {
-      // 1. Try finding an agent assigned specifically to this department
+      // 1. Skill-based: If a specialty was detected, find an AGENT possessing that specialty
+      if (specialty) {
+        const specialist = await tx.user.findFirst({
+          where: {
+            role: 'AGENT',
+            specialties: { has: specialty },
+          },
+          orderBy: [
+            { lastAssignedAt: 'asc' },
+            { createdAt: 'asc' },
+          ],
+          select: { id: true, fullName: true, email: true },
+        });
+
+        if (specialist) {
+          return specialist;
+        }
+      }
+
+      // 2. Try finding an agent assigned specifically to this department
       let nextAgent = await tx.user.findFirst({
         where: {
           role: 'AGENT',
@@ -223,11 +296,25 @@ export class TicketsService implements OnModuleInit {
         select: { id: true, fullName: true, email: true },
       });
 
-      // 2. If no department-specific agent, find any active AGENT (general pool)
+      // 3. If no department-specific agent, find any active AGENT (general pool)
       if (!nextAgent) {
         nextAgent = await tx.user.findFirst({
           where: {
             role: 'AGENT',
+          },
+          orderBy: [
+            { lastAssignedAt: 'asc' },
+            { createdAt: 'asc' },
+          ],
+          select: { id: true, fullName: true, email: true },
+        });
+      }
+
+      // 4. Fallback: Any active ADMIN so tickets are never left untriaged
+      if (!nextAgent) {
+        nextAgent = await tx.user.findFirst({
+          where: {
+            role: 'ADMIN',
           },
           orderBy: [
             { lastAssignedAt: 'asc' },
@@ -270,12 +357,22 @@ export class TicketsService implements OnModuleInit {
         }
       }
 
-      // Automated round-robin assignment if assigneeId is not manually provided
+      // Automated urgency auto-escalation based on critical keywords
+      const urgency = this.detectUrgency(createData.title, createData.description);
+      if (urgency.isUrgent) {
+        (createData as any).priority = 'URGENT';
+        (createData as any).autoEscalated = true;
+        (createData as any).escalationReason = urgency.reason;
+      }
+
+      // Automated skill-based or round-robin assignment if assigneeId is not manually provided
+      const detectedSpecialty = this.detectSpecialty(createData.title, createData.description);
       let assignedAgent: { id: string; fullName: string; email: string } | null = null;
       if (!(createData as any).assigneeId) {
         assignedAgent = await this.selectNextRoundRobinAgent(
           (createData as any).department || 'TECHNICAL_SUPPORT',
           tx,
+          detectedSpecialty,
         );
         if (assignedAgent) {
           (createData as any).assigneeId = assignedAgent.id;
@@ -356,9 +453,11 @@ export class TicketsService implements OnModuleInit {
         throw new NotFoundException(`Ticket with ID "${id}" not found`);
       }
 
+      const specialty = this.detectSpecialty(existing.title, existing.description);
       const assignedAgent = await this.selectNextRoundRobinAgent(
         (existing as any).department || 'TECHNICAL_SUPPORT',
         tx,
+        specialty,
       );
 
       if (!assignedAgent) {
@@ -413,7 +512,7 @@ export class TicketsService implements OnModuleInit {
     ticketId: string,
     content: string,
     authorId?: string,
-    encryptedAttachment?: EncryptedAttachmentInput,
+    encryptedAttachment?: any,
     actor?: TicketActorContext,
   ): Promise<TicketResponseDto> {
     const trimmedContent = content.trim();
@@ -906,8 +1005,15 @@ export class TicketsService implements OnModuleInit {
         attachmentMimeType: true,
         attachmentCompressed: true,
         attachmentOriginalSize: true,
+        attachmentStorageKey: true,
+        attachmentStorageType: true,
         comments: {
-          where: { attachmentCompressed: { not: null } },
+          where: {
+            OR: [
+              { attachmentCompressed: { not: null } },
+              { attachmentStorageKey: { not: null } },
+            ],
+          },
           orderBy: { createdAt: 'desc' },
           take: 1,
           select: {
@@ -916,6 +1022,8 @@ export class TicketsService implements OnModuleInit {
             attachmentMimeType: true,
             attachmentCompressed: true,
             attachmentOriginalSize: true,
+            attachmentStorageKey: true,
+            attachmentStorageType: true,
           },
         },
       },
@@ -927,12 +1035,31 @@ export class TicketsService implements OnModuleInit {
 
     this.assertCustomerOwnership(ticket, actor, 'access this attachment');
 
-    const source = ticket.attachmentCompressed
+    const source = (ticket.attachmentCompressed || ticket.attachmentStorageKey)
       ? ticket
       : ticket.comments?.[0];
 
-    if (!source?.attachmentCompressed) {
+    if (!source || (!source.attachmentCompressed && !source.attachmentStorageKey)) {
       throw new NotFoundException(`Ticket "${id}" does not have an image attachment`);
+    }
+
+    if (source.attachmentStorageType === 'S3' && source.attachmentStorageKey && this.storageService) {
+      const { downloadUrl } = await this.storageService.generatePresignedDownloadUrl(
+        source.attachmentStorageKey,
+      );
+      return {
+        ticketId: ticket.id,
+        storageType: 'S3',
+        storageKey: source.attachmentStorageKey,
+        downloadUrl,
+        fileName: source.attachmentName || 'attachment.webp',
+        mimeType: source.attachmentMimeType || 'image/webp',
+        originalSize: source.attachmentOriginalSize || 0,
+      };
+    }
+
+    if (!source.attachmentCompressed) {
+      throw new NotFoundException(`Attachment data not available`);
     }
 
     const { ciphertext, iv, decompressedSize } = decompressAndEncryptAttachment(
@@ -941,6 +1068,7 @@ export class TicketsService implements OnModuleInit {
 
     return {
       ticketId: ticket.id,
+      storageType: 'BASE64',
       fileName: source.attachmentName || 'attachment.webp',
       mimeType: source.attachmentMimeType || 'image/webp',
       originalSize: source.attachmentOriginalSize || decompressedSize,
@@ -976,11 +1104,32 @@ export class TicketsService implements OnModuleInit {
         attachmentMimeType: true,
         attachmentCompressed: true,
         attachmentOriginalSize: true,
+        attachmentStorageKey: true,
+        attachmentStorageType: true,
       },
     });
 
-    if (!comment || !comment.attachmentCompressed) {
+    if (!comment || (!comment.attachmentCompressed && !comment.attachmentStorageKey)) {
       throw new NotFoundException(`Comment attachment not found`);
+    }
+
+    if (comment.attachmentStorageType === 'S3' && comment.attachmentStorageKey && this.storageService) {
+      const { downloadUrl } = await this.storageService.generatePresignedDownloadUrl(
+        comment.attachmentStorageKey,
+      );
+      return {
+        ticketId: comment.ticketId,
+        storageType: 'S3',
+        storageKey: comment.attachmentStorageKey,
+        downloadUrl,
+        fileName: comment.attachmentName || 'attachment.webp',
+        mimeType: comment.attachmentMimeType || 'image/webp',
+        originalSize: comment.attachmentOriginalSize || 0,
+      };
+    }
+
+    if (!comment.attachmentCompressed) {
+      throw new NotFoundException(`Comment attachment payload not available`);
     }
 
     const { ciphertext, iv, decompressedSize } = decompressAndEncryptAttachment(
@@ -989,6 +1138,7 @@ export class TicketsService implements OnModuleInit {
 
     return {
       ticketId: comment.ticketId,
+      storageType: 'BASE64',
       fileName: comment.attachmentName || 'attachment.webp',
       mimeType: comment.attachmentMimeType || 'image/webp',
       originalSize: comment.attachmentOriginalSize || decompressedSize,

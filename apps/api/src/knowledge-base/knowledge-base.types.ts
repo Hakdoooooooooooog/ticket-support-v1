@@ -53,3 +53,7 @@ export class UpdateArticleDto {
   tags?: string[];
   keywords?: string[];
 }
+
+export class ArticleFeedbackDto {
+  helpful!: boolean;
+}

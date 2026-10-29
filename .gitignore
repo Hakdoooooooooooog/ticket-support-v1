@@ -46,6 +46,13 @@ Thumbs.db
 *.sln
 *.sw?
 
+# OpenAPI Spec (generated on-the-fly during codegen, never commit to git)
+openapi.json
+**/openapi.json
+apps/openapi.json
+apps/api/openapi.json
+apps/web/openapi.json
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

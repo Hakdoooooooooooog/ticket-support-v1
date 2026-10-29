@@ -15,6 +15,7 @@ import { useRealtimeEvents } from '@hooks/use-realtime-events';
 import { useMounted } from '@hooks/use-mounted';
 import { PortalQuickStats } from '@components/portal/portal-quick-stats';
 import { PortalKnowledgeBase } from '@components/portal/portal-knowledge-base';
+import { GlobalIncidentBanner } from '@components/incident-banner';
 
 export default function CustomerPortalPage() {
   const router = useRouter();
@@ -131,6 +132,9 @@ export default function CustomerPortalPage() {
               </button>
             </div>
           </div>
+
+          {/* Global Incident Outage & Maintenance Banner */}
+          <GlobalIncidentBanner />
 
           {/* Quick Metrics / Dashboard Overview Header */}
           <PortalQuickStats />

@@ -8,7 +8,11 @@ import { AuthCard } from '@components/auth/auth-card';
 import { LoginForm } from '@components/auth/login-form';
 import { RegisterForm, VerifiedInviteInfo } from '@components/auth/register-form';
 import { DemoAccountsBar } from '@components/auth/demo-accounts-bar';
-import { apiClient } from '@lib/api-client';
+import {
+  authControllerVerifyInvite,
+  authControllerLogin,
+  authControllerRegister,
+} from '../api/endpoints/authentication/authentication';
 import { APP_VERSION } from '@lib/constants';
 import {
   verifyPassportSession,
@@ -78,12 +82,10 @@ function AuthContainer() {
     }
     setIsVerifyingInvite(true);
     try {
-      const res = await apiClient.get<VerifiedInviteInfo>(
-        `/auth/invites/verify/${encodeURIComponent(code.trim())}`,
-      );
-      setInviteInfo(res.data);
-      if (res.data.email && !email) {
-        setEmail(res.data.email);
+      const res = (await authControllerVerifyInvite(code.trim())) as any;
+      setInviteInfo(res);
+      if (res?.email && !email) {
+        setEmail(res.email);
       }
     } catch {
       setInviteInfo({ valid: false, message: 'Unable to verify invitation code' });
@@ -109,8 +111,8 @@ function AuthContainer() {
 
     try {
       if (mode === 'login') {
-        const res = await apiClient.post('/auth/login', { email, password });
-        const { accessToken, user } = res.data;
+        const res = (await authControllerLogin({ email, password })) as any;
+        const { accessToken, user } = res;
         const verified = (await verifyPassportSession(accessToken)) || user;
         setSession({ accessToken, user: verified });
         redirectByUserRole(verified);
@@ -128,8 +130,8 @@ function AuthContainer() {
         if (inviteCode.trim()) {
           payload.inviteCode = inviteCode.trim();
         }
-        const res = await apiClient.post('/auth/register', payload);
-        const { accessToken, user } = res.data;
+        const res = (await authControllerRegister(payload as any)) as any;
+        const { accessToken, user } = res;
         const verified = (await verifyPassportSession(accessToken)) || user;
         setSession({ accessToken, user: verified });
         redirectByUserRole(verified);

@@ -24,6 +24,7 @@
       "@lib/*": ["./src/lib/*"],
       "@hooks/*": ["./src/hooks/*"],
       "@store/*": ["./src/store/*"],
+      "@api": ["./src/api/index.ts"],
       "@api/*": ["./src/api/*"],
       "@app/*": ["./src/app/*"],
       "@/*": ["./src/*"]

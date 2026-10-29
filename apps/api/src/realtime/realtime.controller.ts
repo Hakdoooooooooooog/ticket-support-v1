@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { RealtimeService } from './realtime.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 
+@SkipThrottle()
 @ApiTags('Realtime')
 @Controller('realtime')
 export class RealtimeController {

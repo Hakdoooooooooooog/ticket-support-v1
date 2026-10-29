@@ -9,6 +9,7 @@ export const userSummarySchema = z.object({
   email: z.string().default(''),
   fullName: z.string().default('Anonymous User'),
   role: z.enum(['ADMIN', 'AGENT', 'CUSTOMER']).default('CUSTOMER'),
+  specialties: z.array(z.string()).default([]),
 });
 
 export const commentResponseSchema = z.object({
@@ -20,6 +21,8 @@ export const commentResponseSchema = z.object({
   attachmentName: z.string().nullable().optional().default(null),
   attachmentMimeType: z.string().nullable().optional().default(null),
   attachmentOriginalSize: z.number().nullable().optional().default(null),
+  attachmentStorageKey: z.string().nullable().optional().default(null),
+  attachmentStorageType: z.string().nullable().optional().default(null),
 });
 
 export const ticketResponseSchema = z.object({
@@ -39,6 +42,10 @@ export const ticketResponseSchema = z.object({
   attachmentName: z.string().nullable().optional().default(null),
   attachmentMimeType: z.string().nullable().optional().default(null),
   attachmentOriginalSize: z.number().nullable().optional().default(null),
+  attachmentStorageKey: z.string().nullable().optional().default(null),
+  attachmentStorageType: z.string().nullable().optional().default(null),
+  autoEscalated: z.boolean().default(false),
+  escalationReason: z.string().nullable().optional().default(null),
   comments: z.array(commentResponseSchema).default([]),
   tags: z.array(z.any()).default([]),
   csatRating: z.number().int().min(1).max(5).nullable().optional().default(null),

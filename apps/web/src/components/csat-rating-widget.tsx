@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@lib/api-client';
+import { ticketsControllerSubmitCsat } from '../api/endpoints/tickets/tickets';
 import { Button } from '@ui/button';
 import { extractApiErrorMessage } from '@lib/helpers';
 
@@ -63,8 +63,8 @@ export function CsatRatingWidget({
 
   const csatMutation = useMutation({
     mutationFn: async (payload: { rating: number; comment?: string }) => {
-      const res = await apiClient.post(`/tickets/${ticketId}/csat`, payload);
-      return res.data;
+      const res = (await ticketsControllerSubmitCsat(ticketId, payload as any)) as any;
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });

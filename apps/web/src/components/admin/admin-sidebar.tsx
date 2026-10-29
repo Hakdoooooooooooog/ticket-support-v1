@@ -187,6 +187,30 @@ export function AdminSidebar({
           </span>
         </button>
 
+        {/* Global Incident Outage Banners (Admins) */}
+        {user?.role === 'ADMIN' && (
+          <button
+            type="button"
+            onClick={() => onSelectSection('INCIDENT_BANNERS')}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
+              activeSection === 'INCIDENT_BANNERS'
+                ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
+                : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+            }`}
+          >
+            <span>Outage Banners</span>
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                activeSection === 'INCIDENT_BANNERS'
+                  ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
+                  : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200'
+              }`}
+            >
+              Alerts
+            </span>
+          </button>
+        )}
+
         {/* Reports & CSAT Studio */}
         <button
           type="button"

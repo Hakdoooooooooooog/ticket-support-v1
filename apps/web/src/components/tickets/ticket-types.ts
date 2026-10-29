@@ -6,11 +6,14 @@ export interface TicketComment {
   attachmentName?: string | null;
   attachmentMimeType?: string | null;
   attachmentOriginalSize?: number | null;
+  attachmentStorageKey?: string | null;
+  attachmentStorageType?: string | null;
   author?: {
     id: string;
     fullName: string;
     email: string;
     role?: 'ADMIN' | 'AGENT' | 'CUSTOMER';
+    specialties?: string[];
   } | null;
 }
 
@@ -37,11 +40,16 @@ export interface Ticket {
     fullName: string;
     email: string;
     role?: 'ADMIN' | 'AGENT' | 'CUSTOMER';
+    specialties?: string[];
   } | null;
   hasAttachment?: boolean;
   attachmentName?: string | null;
   attachmentMimeType?: string | null;
   attachmentOriginalSize?: number | null;
+  attachmentStorageKey?: string | null;
+  attachmentStorageType?: string | null;
+  autoEscalated?: boolean;
+  escalationReason?: string | null;
   comments?: TicketComment[];
   csatRating?: number | null;
   csatComment?: string | null;

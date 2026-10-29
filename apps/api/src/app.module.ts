@@ -13,6 +13,8 @@ import { RealtimeModule } from './realtime/realtime.module.js';
 import { CannedResponsesModule } from './canned-responses/canned-responses.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module.js';
+import { StorageModule } from './storage/storage.module.js';
+import { IncidentBannersModule } from './incident-banners/incident-banners.module.js';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storage.js';
 
 @Module({
@@ -48,6 +50,8 @@ import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storag
     CannedResponsesModule,
     ReportsModule,
     KnowledgeBaseModule,
+    StorageModule,
+    IncidentBannersModule,
   ],
   controllers: [AppController],
   providers: [

@@ -9,7 +9,20 @@ import { Input } from '@ui/input';
 import { ContextualLoader } from '@ui/contextual-loader';
 import { ThemeToggle } from '@components/theme-toggle';
 import { NotificationCenter } from '@components/notification-center';
-import { apiClient } from '@lib/api-client';
+import {
+  ticketsControllerFindAll,
+  ticketsControllerUpdate,
+  ticketsControllerAutoAssign,
+  ticketsControllerAddComment,
+  ticketsControllerRemove,
+} from '../../api/endpoints/tickets/tickets';
+import {
+  authControllerGetAgents,
+  authControllerListInvites,
+  authControllerCreateInvite,
+  authControllerAdminCreateUser,
+  authControllerRevokeInvite,
+} from '../../api/endpoints/authentication/authentication';
 import {
   getStoredSession,
   formatLastUpdatedTimestamp,
@@ -41,8 +54,10 @@ import {
   AdminTicketAccordionItem,
   AdminReports,
   AdminKnowledgeBase,
+  AdminIncidentBanners,
   type StaffInviteRecord,
 } from '@components/admin';
+import { GlobalIncidentBanner } from '@components/incident-banner';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -203,8 +218,8 @@ export default function AdminDashboardPage() {
   } = useQuery<Ticket[]>({
     queryKey: ['tickets'],
     queryFn: async () => {
-      const res = await apiClient.get('/tickets');
-      return res.data;
+      const res = (await ticketsControllerFindAll()) as any;
+      return res;
     },
     staleTime: 60 * 1000,
     placeholderData: (previousData) => previousData,
@@ -229,8 +244,8 @@ export default function AdminDashboardPage() {
     queryKey: ['agents'],
     queryFn: async () => {
       try {
-        const res = await apiClient.get('/auth/agents');
-        return res.data;
+        const res = (await authControllerGetAgents()) as any;
+        return res;
       } catch {
         return [];
       }
@@ -260,8 +275,8 @@ export default function AdminDashboardPage() {
         encryptedAttachment?: EncryptedAttachmentPayload | null;
       };
     }) => {
-      const res = await apiClient.patch(`/tickets/${id}`, payload);
-      return res.data as Ticket;
+      const res = (await ticketsControllerUpdate(id, payload as any)) as any;
+      return res as Ticket;
     },
     onSuccess: (updatedTicket) => {
       if (updatedTicket?.id) {
@@ -281,8 +296,8 @@ export default function AdminDashboardPage() {
 
   const autoAssignMutation = useMutation({
     mutationFn: async (ticketId: string) => {
-      const res = await apiClient.post(`/tickets/${ticketId}/auto-assign`);
-      return res.data as Ticket;
+      const res = (await ticketsControllerAutoAssign(ticketId)) as any;
+      return res as Ticket;
     },
     onSuccess: (updatedTicket) => {
       if (updatedTicket?.id) {
@@ -312,12 +327,12 @@ export default function AdminDashboardPage() {
       content: string;
       encryptedAttachment?: EncryptedAttachmentPayload;
     }) => {
-      const res = await apiClient.post(`/tickets/${ticketId}/comments`, {
+      const res = (await ticketsControllerAddComment(ticketId, {
         content,
         authorId: user?.id,
-        ...(encryptedAttachment ? { encryptedAttachment } : {}),
-      });
-      return res.data as Ticket;
+        ...(encryptedAttachment ? { encryptedAttachment: encryptedAttachment as any } : {}),
+      } as any)) as any;
+      return res as Ticket;
     },
     onSuccess: (updatedTicket, variables) => {
       setCommentDraft(variables.ticketId, '');
@@ -337,7 +352,7 @@ export default function AdminDashboardPage() {
 
   const deleteTicketMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiClient.delete(`/tickets/${id}`);
+      await ticketsControllerRemove(id);
       return id;
     },
     onSuccess: (deletedId) => {
@@ -356,8 +371,8 @@ export default function AdminDashboardPage() {
     enabled: user?.role === 'ADMIN',
     queryFn: async () => {
       try {
-        const res = await apiClient.get('/auth/admin/invites');
-        return res.data;
+        const res = (await authControllerListInvites()) as any;
+        return res;
       } catch {
         return [];
       }
@@ -366,8 +381,8 @@ export default function AdminDashboardPage() {
 
   const createInviteMutation = useMutation({
     mutationFn: async (payload: { email: string; role: 'AGENT' | 'ADMIN' }) => {
-      const res = await apiClient.post('/auth/admin/invites', payload);
-      return res.data;
+      const res = (await authControllerCreateInvite(payload as any)) as any;
+      return res;
     },
     onSuccess: (data) => {
       refetchInvites();
@@ -388,8 +403,8 @@ export default function AdminDashboardPage() {
       password: string;
       role: 'AGENT' | 'ADMIN';
     }) => {
-      const res = await apiClient.post('/auth/admin/users', payload);
-      return res.data;
+      const res = (await authControllerAdminCreateUser(payload as any)) as any;
+      return res;
     },
     onSuccess: () => {
       refetchAgents();
@@ -404,7 +419,7 @@ export default function AdminDashboardPage() {
 
   const revokeInviteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiClient.delete(`/auth/admin/invites/${id}`);
+      await authControllerRevokeInvite(id);
     },
     onSuccess: () => {
       refetchInvites();
@@ -737,6 +752,9 @@ export default function AdminDashboardPage() {
       {/* 3. Main Content Workspace */}
       <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
         <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 space-y-6 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
+          {/* Global Incident Outage & Maintenance Banner */}
+          <GlobalIncidentBanner />
+
           {/* Main Top Header */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-spruce-200 dark:border-spruce-800 pb-5">
             <div className="min-w-0 flex-1">
@@ -748,6 +766,7 @@ export default function AdminDashboardPage() {
                 {activeSection === 'TEAM_MANAGEMENT' && 'IT Support Team & Staff Invitations'}
                 {activeSection === 'REPORTS' && 'Reports & CSAT Analytics Studio'}
                 {activeSection === 'KNOWLEDGE_BASE' && 'Knowledge Base & Troubleshooting Guides'}
+                {activeSection === 'INCIDENT_BANNERS' && 'Platform Outage & Maintenance Alerts'}
               </h1>
               <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-400 mt-1 max-w-xl leading-relaxed">
                 {activeSection === 'DASHBOARD' &&
@@ -764,6 +783,8 @@ export default function AdminDashboardPage() {
                   'Executive service desk metrics, technical support vs general department volumes, customer satisfaction (CSAT), and RFC 4180 CSV exports.'}
                 {activeSection === 'KNOWLEDGE_BASE' &&
                   'Author, preview in Markdown, publish self-service deflection guides, and monitor helpful ratings across departments.'}
+                {activeSection === 'INCIDENT_BANNERS' &&
+                  'Broadcast active outage banners, scheduled downtime notices, and degraded service warnings.'}
               </p>
             </div>
 
@@ -1027,6 +1048,11 @@ export default function AdminDashboardPage() {
           {/* SECTION 7: KNOWLEDGE BASE MANAGER */}
           {activeSection === 'KNOWLEDGE_BASE' && (
             <AdminKnowledgeBase user={user} />
+          )}
+
+          {/* SECTION 8: GLOBAL INCIDENT OUTAGE BANNERS */}
+          {activeSection === 'INCIDENT_BANNERS' && (
+            <AdminIncidentBanners />
           )}
         </main>
       </div>

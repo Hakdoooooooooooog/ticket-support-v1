@@ -1,0 +1,73 @@
+name: API Codegen & Contract Sync
+
+on:
+  push:
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/orval.config.ts'
+      - '.github/workflows/api-codegen.yml'
+    branches:
+      - main
+      - develop
+      - 'feat/**'
+      - 'feature/**'
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/orval.config.ts'
+      - '.github/workflows/api-codegen.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  codegen-sync:
+    name: Generate OpenAPI Spec & Sync Orval Frontend Client
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "postgresql://postgres:testpassword123@localhost:5432/ticketsupport_test?schema=public"
+      JWT_SECRET: "ci_test_super_secret_jwt_key_must_be_over_32_characters_long_for_security"
+      PORT: "3001"
+      NODE_ENV: "development"
+      S3_BUCKET_NAME: "ticketsupport-attachments"
+      S3_REGION: "ap-southeast-1"
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate Prisma Client
+        run: npm run db:generate --workspace=api
+
+      - name: Build Backend NestJS API
+        run: npm run build --workspace=api
+
+      - name: Generate OpenAPI Spec (No commit)
+        run: npm run openapi:dump
+
+      - name: Run Orval Client Codegen
+        run: npm run generate:api --workspace=web
+
+      - name: Verify Web TypeScript Integrity with Generated API
+        run: npm run typecheck --workspace=web
+
+      - name: Check for Uncommitted API Contract Drift
+        id: check_drift
+        run: |
+          if [ -n "$(git status --porcelain apps/web/src/api)" ]; then
+            echo "API client drift detected: Generated files differ from repository."
+            git status --porcelain apps/web/src/api
+          else
+            echo "API client is fully synchronized with backend OpenAPI contract."
+          fi
