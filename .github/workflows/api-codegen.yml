@@ -45,7 +45,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install
 
       - name: Generate Prisma Client
         run: npm run db:generate --workspace=api
