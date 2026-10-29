@@ -1,11 +1,26 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { execSync } from 'node:child_process';
 
 describe('Backend OpenAPI Specification & Frontend Contract Alignment', () => {
   const rootDir = path.resolve(__dirname, '../../../../..');
   const openApiPath = path.resolve(rootDir, 'openapi.json');
   const webApiEndpointsDir = path.resolve(rootDir, 'apps/web/src/api/endpoints');
+
+  beforeAll(() => {
+    if (!fs.existsSync(openApiPath)) {
+      try {
+        const distModule = path.resolve(rootDir, 'apps/api/dist/app.module.js');
+        if (!fs.existsSync(distModule)) {
+          execSync('npm run build --workspace=api', { cwd: rootDir, stdio: 'ignore' });
+        }
+        execSync('node apps/api/scripts/generate-openapi.mjs', { cwd: rootDir, stdio: 'ignore' });
+      } catch {
+        // Fallback or ignore
+      }
+    }
+  });
 
   it('verifies openapi.json is generated with valid OpenAPI 3.1.0 version', () => {
     expect(fs.existsSync(openApiPath)).toBe(true);

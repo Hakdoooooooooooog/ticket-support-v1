@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { execSync } from 'node:child_process';
 import * as ApiModule from '../src/api';
 
 /**
@@ -20,6 +21,20 @@ function toOrvalFunctionName(operationId: string): string {
 describe('Frontend & Backend API Synchronization Test Suite', () => {
   const rootDir = path.resolve(__dirname, '../../..');
   const openApiPath = path.resolve(rootDir, 'openapi.json');
+
+  beforeAll(() => {
+    if (!fs.existsSync(openApiPath)) {
+      try {
+        const distModule = path.resolve(rootDir, 'apps/api/dist/app.module.js');
+        if (!fs.existsSync(distModule)) {
+          execSync('npm run build --workspace=api', { cwd: rootDir, stdio: 'ignore' });
+        }
+        execSync('node apps/api/scripts/generate-openapi.mjs', { cwd: rootDir, stdio: 'ignore' });
+      } catch {
+        // Fallback
+      }
+    }
+  });
 
   it('verifies that the backend OpenAPI contract specification exists', () => {
     expect(fs.existsSync(openApiPath)).toBe(true);

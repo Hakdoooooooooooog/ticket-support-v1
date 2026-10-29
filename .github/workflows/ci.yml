@@ -6,6 +6,7 @@ on:
       - main
       - develop
       - 'feature/**'
+      - 'feat/**'
   pull_request:
     branches:
       - main
@@ -89,6 +90,8 @@ jobs:
       NODE_ENV: "test"
       MAX_PAYLOAD_SIZE: "10mb"
       NEXT_PUBLIC_ATTACHMENT_KEY: "ci_aes_256_gcm_transit_key_for_testing_32chars!"
+      S3_BUCKET_NAME: "test-bucket"
+      S3_REGION: "ap-southeast-1"
 
     steps:
       - name: Checkout Code Repository
@@ -110,14 +113,17 @@ jobs:
         working-directory: apps/api
         run: npx prisma migrate deploy --config=prisma.config.ts
 
+      - name: Verify Backend Production Build
+        run: npm --prefix apps/api run build
+
+      - name: Generate OpenAPI Spec (No commit)
+        run: npm run openapi:dump
+
       - name: Run Backend Unit Tests (Vitest)
         run: npm --prefix apps/api run test
 
       - name: Run Backend E2E Tests (Vitest + Supertest)
         run: npm --prefix apps/api run test:e2e
-
-      - name: Verify Backend Production Build
-        run: npm --prefix apps/api run build
 
   test-web:
     name: Frontend Web Unit Tests & Production Build
@@ -125,6 +131,7 @@ jobs:
     env:
       NEXT_PUBLIC_API_URL: "http://localhost:3001"
       NEXT_PUBLIC_ATTACHMENT_KEY: "ci_aes_256_gcm_transit_key_for_testing_32chars!"
+      JWT_SECRET: "ci_test_super_secret_jwt_key_must_be_over_32_characters_long_for_security"
       CI: "true"
 
     steps:
@@ -139,6 +146,15 @@ jobs:
 
       - name: Install Monorepo Dependencies
         run: npm install
+
+      - name: Generate Prisma 7 Client Types
+        run: npm run db:generate --workspace=api
+
+      - name: Build Backend NestJS API for Contract Spec
+        run: npm --prefix apps/api run build
+
+      - name: Generate OpenAPI Spec (No commit)
+        run: npm run openapi:dump
 
       - name: Run Frontend Unit Tests (Vitest)
         run: npm --prefix apps/web run test

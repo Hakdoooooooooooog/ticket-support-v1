@@ -24,8 +24,8 @@ describe('RolesGuard', () => {
   });
 
   const withRoles = (roles: string[] | undefined) => {
-    reflector.getAllAndOverride = ((key: string) =>
-      key === ROLES_KEY ? roles : undefined) as Reflector['getAllAndOverride'];
+    reflector.getAllAndOverride = ((key: unknown) =>
+      key === ROLES_KEY ? roles : undefined) as unknown as Reflector['getAllAndOverride'];
   };
 
   it('allows any authenticated user when no roles are declared', () => {

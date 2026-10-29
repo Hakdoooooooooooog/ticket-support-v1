@@ -21,6 +21,13 @@ describe('TicketSupport API (e2e)', () => {
   const testEmail = `e2e.user.${Date.now()}@example.com`;
   const otherCustomerEmail = `e2e.other.${Date.now()}@example.com`;
 
+  function extractCookies(res: request.Response): string[] {
+    const raw = res.headers['set-cookie'];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') return [raw];
+    return [];
+  }
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -115,9 +122,9 @@ describe('TicketSupport API (e2e)', () => {
       expect(res.body.user.passwordHash).toBeUndefined();
       expect(res.body.accessToken).toBeDefined();
 
-      const cookies = res.headers['set-cookie'];
-      expect(cookies).toBeDefined();
-      const rtCookie = cookies?.find((c: string) => c.startsWith('rt='));
+      const cookies = extractCookies(res);
+      expect(cookies.length).toBeGreaterThan(0);
+      const rtCookie = cookies.find((c: string) => c.startsWith('rt='));
       expect(rtCookie).toBeDefined();
     });
 
@@ -146,8 +153,8 @@ describe('TicketSupport API (e2e)', () => {
       expect(res.body.user.email).toBe(testEmail);
       expect(res.body.user.passwordHash).toBeUndefined();
 
-      const cookies = res.headers['set-cookie'] as string[];
-      expect(cookies).toBeDefined();
+      const cookies = extractCookies(res);
+      expect(cookies.length).toBeGreaterThan(0);
       const rtCookie = cookies.find((c: string) => c.startsWith('rt='));
       expect(rtCookie).toBeDefined();
       customerRefreshToken = rtCookie!.split(';')[0]; // e.g. "rt=rt_..."
@@ -184,8 +191,8 @@ describe('TicketSupport API (e2e)', () => {
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.user.email).toBe(testEmail);
 
-      const cookies = res.headers['set-cookie'] as string[];
-      expect(cookies).toBeDefined();
+      const cookies = extractCookies(res);
+      expect(cookies.length).toBeGreaterThan(0);
       const newRtCookie = cookies.find((c: string) => c.startsWith('rt='));
       expect(newRtCookie).toBeDefined();
       customerRefreshToken = newRtCookie!.split(';')[0];
