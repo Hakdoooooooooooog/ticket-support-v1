@@ -1,8 +1,8 @@
 # TicketSupport Platform
 
-TicketSupport is an enterprise IT service desk and incident response platform built with **Next.js 16**, **NestJS 12**, **Prisma 7**, **PostgreSQL**, and **Turborepo**.
+TicketSupport is an enterprise IT service desk and incident response platform built with **Next.js 16**, **NestJS 12**, **Prisma 7**, **PostgreSQL 16**, **Redis 7**, and **Turborepo**.
 
-It provides dedicated workspaces for both end-user customers and IT support personnel, featuring role-scoped ticket triage, client-side encrypted attachments, an in-app notification center, 5-star customer satisfaction (CSAT) ratings, categorized canned responses, and invite-only staff provisioning.
+It provides dedicated workspaces for both end-user customers and IT support personnel, featuring role-scoped ticket triage, rotating session tokens, server-side Edge route protection, client-side encrypted attachments, an in-app notification center, 5-star customer satisfaction (CSAT) ratings, categorized canned responses, a database-backed Knowledge Base with real-time ticket deflection, and invite-only staff provisioning.
 
 ---
 
@@ -10,67 +10,82 @@ It provides dedicated workspaces for both end-user customers and IT support pers
 
 ### 1. Workspaces & Role-Based Access Control
 - **Customer Support Portal (`/portal`)**: Allows registered customers to submit support tickets, select department routing (`Technical Support` or `General Inquiry`), attach encrypted diagnostic screenshots, monitor live resolution progress, respond to engineer follow-up requests, and rate completed service.
-- **IT Service Desk Console (`/admin`)**: Command center for support engineers and administrators to monitor real-time SLA metrics, triage unassigned tickets, claim incidents, update priorities, trigger automated round-robin assignments, and append resolution notes.
+- **IT Service Desk Console (`/admin`)**: Command center for support engineers and administrators to monitor real-time SLA metrics, triage unassigned tickets, claim incidents, update priorities, trigger automated round-robin assignments, author/publish self-service guides, and append resolution notes.
+- **Strict Role Authorization**: Custom `@Roles('ADMIN', 'AGENT', 'CUSTOMER')` decorator and global `RolesGuard` strictly validate permissions on every endpoint. Sensitive operations (personnel directory, report metrics, auto-assignment, ticket deletion, article publishing) enforce role requirements.
 - **Staff Ownership & Closed Immutability**: Only assigned support engineers or administrators can update ticket status or post notes. Once marked `CLOSED`, incidents are permanently locked from modifications unless explicitly reopened.
 - **Invite-Only Staff Provisioning (`/admin` &rarr; Team & Invites)**: Public registration is strictly restricted to customer accounts. IT Support Engineers (`AGENT`) and Administrators (`ADMIN`) must be invited by an existing administrator via cryptographically secure single-use claim tokens.
 
-### 2. Department Routing & Round-Robin Assignment
+### 2. Enterprise Authentication & Security Lockdown
+- **Dual-Token Session Architecture**:
+  - **Access Token**: Short-lived 15-minute Bearer JWT kept strictly in client runtime memory (never written to `localStorage` or `sessionStorage` in plaintext).
+  - **Rotating Refresh Token**: Long-lived 7-day cryptographically random token stored in an `httpOnly`, `sameSite=lax` cookie (`rt`).
+  - **Token Family & Reuse Detection**: Refresh tokens are stored as SHA-256 hashes in PostgreSQL. If a previously rotated token is presented again (indicating token theft), the entire token family is immediately revoked, forcing re-authentication.
+- **Transparent Refresh Interceptor**: The frontend Axios client automatically catches `401 Unauthorized` responses on expired access tokens, silently calls `POST /auth/refresh` using the `httpOnly` cookie, updates the Zustand auth store, and replays the original request without user interruption.
+- **Redis-Backed Rate Limiting**: Built on `@nestjs/throttler` with a custom `RedisThrottlerStorage` adapter (and in-memory fallback). Protects login, registration, invite verification, and token refresh endpoints against brute-force attacks.
+- **Tenant Isolation**: Realtime SSE streams (`COMMENT_ADDED`, `TICKET_UPDATED`, `TICKET_DELETED`) and ticket read operations are strictly scoped to staff and the owning customer ID, preventing cross-tenant data leaks.
+- **Security Headers & Hardening**: API is protected with Helmet HTTP headers, dynamic CORS origin verification, and trust-proxy support.
+
+### 3. Next.js Edge Proxy & Route Protection (`proxy.ts`)
+- **Server-Side Route Guarding**: Native Next.js 16 Edge proxy intercepts direct page requests to `/admin` and `/portal`. If the user does not possess an active `rt` session cookie, they are redirected to `/` (with `?redirect=/path`) before page HTML renders, eliminating visual flashes of unauthenticated content.
+- **Edge Security Headers**: Automatically injects enterprise security headers across all matched routes:
+  - `X-Frame-Options: DENY` (anti-clickjacking)
+  - `X-Content-Type-Options: nosniff` (anti-MIME sniffing)
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()`
+
+### 4. Database-Backed Knowledge Base & Ticket Deflection Engine
+- **PostgreSQL Persistence**: Managed via Prisma models `KnowledgeArticle`, `ArticleFeedback` (composite key `[articleId, userId]`), and `ArticleDeflection`.
+- **Full Editorial Lifecycle**: Articles progress through `DRAFT`, `PUBLISHED`, and `ARCHIVED` statuses. Support Agents and Admins can draft guides; only Administrators can publish guides to the public portal or archive them.
+- **Admin Knowledge Base Manager (`/admin` &rarr; Knowledge Base)**:
+  - Live KPI metrics: Total articles, Technical Support volume, General Scope volume, Helpful votes, and Deflections.
+  - Interactive Article Composer with Title, Department, Category, Summary, Tags, Keywords, and dynamic numbered Resolution Steps.
+  - Markdown content editor featuring tabbed **Write** and live **Preview** powered by `react-markdown` and `remark-gfm`.
+  - Publishing, archiving, and permanent deletion controls.
+- **Proactive Ticket Deflection**: As customers draft a ticket title in `/portal`, the deflection engine scores keywords and symptoms in real time. If a match is found, an expandable preview banner offers the solution immediately.
+- **1-Click Self-Resolution**: A `"✓ This Solved My Problem"` action increments deflection analytics in PostgreSQL and safely clears the ticket draft without entering the queue.
+- **Customer Feedback**: In-app `👍 Helpful` and `👎 No` voting. Changing a vote replaces the previous response and atomically recalculates article feedback totals.
+
+### 5. Department Routing & Round-Robin Assignment
 - **Focused Department Scoping**: Tickets are categorized into two primary service domains:
   - `TECHNICAL_SUPPORT`: Dedicated technical troubleshooting, hardware/software outages, and system errors.
   - `GENERAL`: Account questions, licensing, operational requests, and general customer inquiries.
 - **Automated Round-Robin Dispatch**:
   - Automatically matches unassigned incoming tickets with active frontline support engineers (`role: 'AGENT'`) based on department specialty.
   - Rotates workload fairly according to `lastAssignedAt ASC, createdAt ASC`, ensuring balanced assignment across the support team.
-  - One-click manual triage trigger: Staff can run on-demand round-robin reassignment via `POST /tickets/:id/auto-assign` or through the interactive Admin Console queue item button.
+  - Staff can run on-demand round-robin reassignment via `POST /tickets/:id/auto-assign` or through the interactive Admin Console queue item button.
 
-### 3. Data Export & Reporting Studio (`/admin` &rarr; Reports & CSAT)
+### 6. Data Export & Reporting Studio (`/admin` &rarr; Reports & CSAT)
 - **Executive Metric Dashboards**: Live service desk KPIs featuring total volume, overall resolution rates, unassigned backlogs, and real-time department allocation split (`Technical Support` vs `General Scope`).
 - **Customer Satisfaction (CSAT) Breakdown**: Average ratings, review counts, and 1–5 star distribution progress telemetry.
 - **Support Engineer Performance Leaderboard**: Per-agent audit view showing active tickets assigned, total resolved incidents, CSAT averages, and round-robin assignment rotation turns.
 - **RFC 4180 CSV Export**: Instant downloads of raw incident archives and customer satisfaction feedback with export filter presets (department, status, priority). All exported fields are safely escaped per RFC 4180 standards.
 
-### 4. In-App Notification Center
+### 7. In-App Notification Center
 - **Role-Filtered Dispatch**: Real-time popover notification feed with unread count indicators.
 - **IT Administrators**: Strictly receive notifications for new incoming customer tickets (`TICKET_CREATED`) to keep queue triage actionable without operational noise.
 - **Support Engineers**: Receive alerts for ticket assignments (`TICKET_ASSIGNED`), customer replies (`TICKET_CUSTOMER_AMENDED`), and satisfaction ratings (`TICKET_STATUS_CHANGED`).
 - **Customers**: Receive alerts when staff request follow-up info (`TICKET_FOLLOW_UP_REQUESTED`), post resolution notes (`TICKET_NOTE_POSTED`), or resolve/close incidents (`TICKET_STATUS_CHANGED`).
 
-### 5. Customer Satisfaction (CSAT) Rating Engine
+### 8. Customer Satisfaction (CSAT) Rating Engine
 - **5-Star Interactive Rating**: Rendered on resolved and closed tickets with optional text reviews.
 - **Strict Anti-Tampering Rules**: Satisfaction ratings can only be submitted by the customer who reported the ticket. Support staff and administrators attempting to self-rate are blocked with `403 Forbidden`.
 - **Live Sentiment Telemetry**: Aggregated CSAT averages and review counts displayed on the IT Admin Console dashboard.
 
-### 6. Categorized Canned Responses
+### 9. Categorized Canned Responses
 - Quick-reply template library embedded in the resolution note composer for fast, standardized incident triage:
   - **Troubleshooting**: Hardware power cycles, VPN/DNS cache flushes, browser data resets, and clean app reinstalls.
   - **Investigation & Follow-Up**: Additional details requests, bug reproduction notices, engineering escalations, and maintenance advisories.
   - **Resolution & Closure**: Verified fix confirmations, knowledge-base references, and inactivity warnings.
 
-### 7. Client-Side Image Encryption & Lightbox
+### 10. Client-Side Image Encryption & Lightbox
 - **Zero-Knowledge Attachments**: Customer screenshots and logs are compressed via the HTML Canvas API and encrypted in-browser using AES-GCM 256-bit cryptography before uploading to the server.
 - **In-Browser Decryption**: Decrypted on-demand only in authenticated staff and customer sessions.
 - **Integrated Lightbox**: Full-screen inspect modal with zoom, rotation, and file metadata inspection.
 
-### 8. Real-Time Push Events (Server-Sent Events / SSE)
+### 11. Real-Time Push Events (Server-Sent Events / SSE)
 - **Zero-Latency Dispatch**: Replaces aggressive background polling with HTTP/2 Server-Sent Events (`/realtime/stream`), pushing instant ticket mutations, follow-up notes, and role-filtered notification alerts.
 - **Reactive Cache Invalidation**: The Next.js frontend invalidates TanStack Query caches the millisecond a mutation is committed on PostgreSQL.
 - **Live Stream Telemetry**: Dynamic visual indicators in both `/admin` and `/portal` show active socket health (`Live Connected`, `Connecting...`, `Offline`) with exponential reconnect backoff.
-
-### 9. Design System & Display Resilience
-- **Emoji-Free Visual Hierarchy**: Incident priorities and queue health are communicated using calibrated color systems and badge borders (Critical/Urgent in Rose, Triage in Amber, Assigned to Me in Blue, CSAT Score in Gold, Resolved in Emerald).
-- **1280×720 Display Optimization**: Responsive 4-column KPI grid preventing awkward badge overlaps, text wrapping, and viewport cramping on compact displays and laptops.
-- **Jitter-Free Background Polling**: Layout shifts during TanStack Query polling are eliminated with fixed-width action controls (`w-32`) and structural skeleton loaders (`ContextualLoader`).
-- **Prominent Navigation & Dual Sign Out**: System version badge (`v1.0.0`) in the sidebar footer and high-contrast dual sign-out actions in both the profile card and elevated bottom panel.
-
-### 10. Smart Knowledge Base & Ticket Deflection Engine
-- **Proactive Ticket Deflection**: As customers draft a ticket title in `/portal`, the client-side deflection engine instantly matches symptoms against verified troubleshooting articles.
-- **Instant Fix Steps & 1-Click Resolution**: Displays expandable numbered resolution checklists and a "✓ This Solved My Problem" button that increments deflection analytics and safely discards the ticket draft before entering the queue.
-- **Dedicated Self-Service Hub**: Tabbed `/portal` view featuring full-text search, category filtering (`Technical Support` vs `General Scope`), clipboard copy, and helpfulness feedback (`👍 Helpful` / `👎 Not helpful`).
-- **Article Escalation Pre-fill**: Customers unable to resolve issues via self-help can click "Still stuck? Open ticket on this topic" to auto-populate the ticket title and department.
-
-### 11. Customer Portal Dashboard & Overview Metrics
-- **Real-Time KPI Status Header**: 4-card metric summary on `/portal` reporting Active Tickets in queue, Action Needed (awaiting customer reply or CSAT feedback), Resolved inquiries, and Self-Service Deflections.
-- **Modular Tab Architecture**: Seamless navigation between "Tickets & Requests" and "Knowledge Base & FAQs (10 Guides)".
 
 ---
 
@@ -82,33 +97,37 @@ TicketSupport/
 │   ├── web/                     # Next.js 16 (App Router, React 19, Turbopack, Tailwind CSS v4)
 │   │   ├── src/
 │   │   │   ├── app/             # Application routes (/, /portal, /admin)
+│   │   │   ├── proxy.ts         # Edge middleware: server-side route guards & security headers
 │   │   │   ├── hooks/           # useRealtimeEvents SSE hook & cache sync
 │   │   │   ├── components/      # Domain components, modals, UI primitives
-│   │   │   │   ├── admin/       # Service desk console, KPI grid, Reports Studio
-│   │   │   │   ├── forms/       # React Hook Form + Zod ticket composer (dept routing)
+│   │   │   │   ├── admin/       # Service desk console, KPI grid, KB manager, Reports Studio
+│   │   │   │   ├── forms/       # React Hook Form + Zod ticket composer & live deflection
+│   │   │   │   ├── portal/      # Customer portal & self-service knowledge base
 │   │   │   │   └── ui/          # Accessible UI primitives & ContextualLoader
-│   │   │   ├── lib/             # API client, AES encryption, constants, helpers
-│   │   │   └── store/           # Zustand stores (auth, tickets, admin)
+│   │   │   ├── lib/             # API client, transparent refresh interceptor, AES encryption
+│   │   │   └── store/           # Zustand stores (auth, tickets, admin, portal)
 │   │   └── package.json
 │   │
 │   └── api/                     # NestJS 12 (Node.js, Express, Passport JWT, Zod)
 │       ├── prisma/
-│       │   ├── schema.prisma    # PostgreSQL domain entities, Department & Role enums
-│       │   └── migrations/      # Historical SQL migrations (inc. round-robin)
+│       │   ├── schema.prisma    # PostgreSQL entities (User, Ticket, RefreshToken, KnowledgeArticle)
+│       │   └── migrations/      # Historical SQL migrations
 │       ├── prisma.config.ts     # Prisma 7 centralized datasource configuration
 │       ├── src/
-│       │   ├── auth/            # JWT authentication, invite generation & claim
-│       │   ├── tickets/         # Ticket state machines, round-robin dispatch, CSAT
+│       │   ├── auth/            # JWT auth, rotating refresh token lifecycle, staff invites
+│       │   ├── common/          # @Roles() decorator, RolesGuard, RedisThrottlerStorage
+│       │   ├── knowledge-base/  # DB-backed troubleshooting guides, deflection, feedback
+│       │   ├── tickets/         # State machines, round-robin dispatch, CSAT ratings
 │       │   ├── reports/         # Executive reporting KPIs, RFC 4180 CSV export
 │       │   ├── notifications/   # Role-filtered in-app notification service
-│       │   ├── realtime/        # SSE event stream & heartbeat service
+│       │   ├── realtime/        # Scoped SSE event stream & heartbeat service
 │       │   └── database/        # PrismaService using @prisma/adapter-pg
 │       ├── test/
-│       │   ├── unit/            # Vitest unit test suites (136 passing)
-│       │   └── e2e/             # Supertest API integration test suites (25 passing)
+│       │   ├── unit/            # Vitest unit test suites (161 passing)
+│       │   └── e2e/             # Supertest API integration test suites (24 passing)
 │       └── package.json
 │
-├── docker-compose.yml           # PostgreSQL 16 container definition
+├── docker-compose.yml           # PostgreSQL 16 & Redis 7 container definitions
 ├── turbo.json                   # Turborepo build and pipeline cache rules
 └── package.json                 # Monorepo dependencies and workspace scripts
 ```
@@ -133,40 +152,21 @@ TicketSupport/
 | Reopen closed ticket | Yes (Own) | Yes | Yes |
 | Access Data Export & Reporting Studio (`/admin` &rarr; Reports) | No | Yes | Yes |
 | Export incident logs & CSAT feedback as RFC 4180 CSV | No | Yes | Yes |
+| Draft knowledge base troubleshooting articles | No | Yes | Yes |
+| Publish / archive / delete knowledge base articles | No | No | Yes |
 | Generate staff invitations (AGENT/ADMIN) | No | No | Yes |
 | Receive `TICKET_CREATED` notifications | No | No | Yes |
 | Receive assignment & operational alerts | No | Yes | No |
 
 ---
 
-## Design System & 60-30-10 Color Architecture
-
-TicketSupport adopts the **60-30-10 interior color rule** calibrated across both Light and Dark mode variations using the signature Spruce palette:
-
-```
-Midnight Spruce (#092635) · Forest Slate (#1b4242) · Muted Sage (#5c8374) · Seafoam Mint (#9ec8b9)
-```
-
-| Mode | 60% Dominant Canvas | 30% Secondary Structure | 10% Accent Focal Points |
-| :--- | :--- | :--- | :--- |
-| **Dark Mode** | `--color-spruce-950` (`#092635`) deep midnight canvas | `--color-spruce-800` (`#1b4242`) & spruce-900 elevated cards & sidebar | `--color-spruce-300` (`#9ec8b9`) mint buttons, glow & active tabs |
-| **Light Mode** | `--color-spruce-50` (`#eaf1ed`) soft sage-spruce mist canvas | `#ffffff` crisp white cards, spruce-100 panels & sidebar | `--color-spruce-800` (`#1b4242`) forest buttons & spruce-700 left borders |
-
-### Shared Ticket Accordion Architecture
-To prevent fragmentation between Customer Portal and IT Admin Console:
-- **`TicketCardHeader`**: Shared accordion summary header with unified rotate-180 chevron, `#cmv...` font-mono ID, and responsive badges.
-- **Outermost Left Border Only (`border-l-4`)**: Intrusive "New" and "Viewed" badge pills and toggle buttons are eliminated. Unread status is represented cleanly via `border-l-4 border-l-spruce-600 dark:border-l-spruce-400` with bold title text, while needs-info status is represented via `border-l-4 border-l-amber-500`.
-- **`TicketAttachmentPreview` & `TicketCommentThread`**: Shared components handling encrypted attachment inspection, visibility toggling, and chronological timeline threads across all roles.
-
----
-
 ## Technology Stack
 
-- **Frontend**: Next.js 16.4 (Turbopack, App Router, React 19), Tailwind CSS v4, TanStack Query v5, Zustand, Axios, Radix UI.
-- **Backend**: NestJS 12, Node.js (ESM), Passport JWT, nestjs-zod, Zod, bcryptjs.
-- **Database & ORM**: PostgreSQL 16, Prisma ORM 7 (`@prisma/adapter-pg` pool adapter).
+- **Frontend**: Next.js 16.4 (Turbopack, App Router, React 19), Tailwind CSS v4, TanStack Query v5, Zustand, Axios, react-markdown, remark-gfm, Radix UI.
+- **Backend**: NestJS 12, Node.js (ESM), Passport JWT, `@nestjs/throttler`, ioredis, helmet, cookie-parser, nestjs-zod, Zod, bcryptjs.
+- **Database & Cache**: PostgreSQL 16, Redis 7, Prisma ORM 7 (`@prisma/adapter-pg` pool adapter).
 - **Monorepo Tools**: Turborepo 2.4, Docker Compose.
-- **Testing**: Vitest 4, Supertest.
+- **Testing & Verification**: Vitest 4, Supertest, Playwright MCP.
 
 ---
 
@@ -174,7 +174,7 @@ To prevent fragmentation between Customer Portal and IT Admin Console:
 
 ### 1. Prerequisites
 - **Node.js**: v20 or v22 LTS (v24 supported)
-- **Docker Desktop**: for PostgreSQL 16
+- **Docker Desktop**: for PostgreSQL 16 & Redis 7
 - **npm**: v10+
 
 ### 2. Environment Configuration
@@ -188,28 +188,29 @@ Ensure the root `.env` contains the required keys:
 
 ```ini
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ticketsupport?schema=public"
+REDIS_URL="redis://localhost:6379"
 PORT=3001
 NODE_ENV=development
-JWT_SECRET="your-secure-jwt-secret-here"
+JWT_SECRET="your_jwt_secret_min_32_characters_here"
+JWT_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+CORS_ORIGIN=http://localhost:3000
 NEXT_PUBLIC_API_URL="http://localhost:3001"
 ```
 
-### 3. Start Database Service
-Start the PostgreSQL 16 Docker container:
+### 3. Start Database & Cache Services
+Start the PostgreSQL 16 and Redis 7 Docker containers:
 
 ```bash
-npm run db:up
+docker compose up -d
 ```
 
 ### 4. Database Setup & Migrations
 From the project root:
 
 ```bash
-# Push Prisma schema to PostgreSQL and generate client
-cd apps/api
-npx prisma db push
-npx prisma generate
-cd ../..
+npm --prefix apps/api run db:push
+npm --prefix apps/api run db:generate
 ```
 
 ### 5. Launch Development Servers
@@ -228,21 +229,21 @@ npm run dev
 
 ## Testing & Verification
 
-Run all test suites across the monorepo (233 passing tests):
+Run all test suites across the monorepo (250+ passing tests):
 
 ```bash
-# Run all unit test suites across monorepo (API: 148 tests, Web: 60 tests)
+# Run all unit test suites across monorepo (API: 161 tests, Web: 65 tests)
 npm test
 
-# Run backend unit tests specifically (148 tests across 20 suites)
+# Run backend unit tests specifically (161 tests across 23 suites)
 npm --prefix apps/api test
 
-# Run frontend unit tests specifically (60 tests across 6 suites)
+# Run frontend unit tests and strict TypeScript compiler check (65 tests across 7 suites)
 npm --prefix apps/web test
 
-# Run backend end-to-end integration tests (25 tests)
+# Run backend end-to-end integration tests (24 tests)
 npm --prefix apps/api run test:e2e
 
-# Run frontend production build (Turbopack + TypeScript checks)
+# Run frontend production build (Turbopack standalone build)
 npm --prefix apps/web run build
 ```
