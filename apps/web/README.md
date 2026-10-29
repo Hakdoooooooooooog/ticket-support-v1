@@ -13,6 +13,22 @@ The TicketSupport web application is a Next.js customer support portal and IT se
 
 ---
 
+## Technology Stack
+
+| Layer | Technologies |
+|:---|:---|
+| **Framework** | Next.js 16.4 (App Router, Turbopack) |
+| **UI Library** | React 19.3 |
+| **Styling** | Tailwind CSS v4 |
+| **State & Cache** | Zustand 5 & TanStack Query v5 |
+| **API Client** | Orval 8 (generated typed Axios client) |
+| **Form Handling** | React Hook Form & Zod |
+| **Cryptography** | Web Crypto API (AES-GCM 256-bit) |
+| **Icons & Primitives** | Radix UI, Lucide Icons |
+| **Testing** | Vitest 4, strict TypeScript compiler |
+
+---
+
 ## Features
 
 - **Customer Support Portal (`/portal`)**: Self-service workspace for submitting tickets with department routing, tracking resolution progress, submitting follow-up notes, and rating completed service.
@@ -25,6 +41,22 @@ The TicketSupport web application is a Next.js customer support portal and IT se
 - **Server-Side Route Protection**: Next.js Edge proxy route guarding with instant redirection for unauthenticated visitors.
 - **Adaptive Appearance & Theme**: Dark, light, and system theme options with synchronous pre-paint hydration to eliminate theme flicker (FOUC).
 - **Executive Reporting Studio**: Service desk KPI metric cards, agent workload leaderboards, and one-click RFC 4180 CSV exports.
+
+---
+
+## Application Workspaces & Routes
+
+- **`/` (Auth Hub)**: Unified sign in, customer registration, and staff invitation claim flow.
+- **`/portal` (Customer Portal)**: Customer ticket submission, attachment encryption, self-service deflection, and CSAT reviews.
+- **`/admin` (Service Desk Console)**: Incident triage queue, agent auto-assignment, knowledge base management, outage banners, and executive reports.
+- **`src/proxy.ts` (Edge Route Guard)**: Server-side route guard intercepting unauthorized navigation to `/admin` and `/portal`.
+
+---
+
+## Environment Variables
+
+- `NEXT_PUBLIC_API_URL`: Backend API base URL (`http://localhost:3001`).
+- `NEXT_PUBLIC_ATTACHMENT_KEY`: AES-256-GCM secret key used for client attachment transit encryption.
 
 ---
 
