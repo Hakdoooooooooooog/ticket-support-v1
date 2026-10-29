@@ -1,198 +1,43 @@
 # TicketSupport Web Frontend
 
-Modern, high-performance customer support portal and IT service desk console built with **Next.js 16.4 (App Router)**, **React 19**, **Turbopack**, and **Tailwind CSS v4**.
-
-The application provides isolated, role-scoped workspaces for customers and support staff with zero-knowledge encrypted attachments, live notifications, 5-star CSAT ratings, canned response templates, and display layout resilience for desktop and laptop viewports.
+The TicketSupport web application is a Next.js customer support portal and IT service desk console featuring role-scoped workspaces, live push updates, and zero-knowledge client-side encryption.
 
 ---
 
-## Tech Stack
+## Core Purpose
 
-| Layer | Technology |
-|:---|:---|
-| **Framework** | Next.js 16.4 (App Router, Turbopack) |
-| **UI Library** | React 19.3 |
-| **Styling** | Tailwind CSS v4 |
-| **State Management** | Zustand 5 & TanStack Query v5 |
-| **Form Handling** | React Hook Form & Zod |
-| **Cryptography** | Web Crypto API (AES-GCM 256-bit, SHA-256) |
-| **HTTP Client** | Axios |
-| **Icons** | Lucide React |
+- **Isolated Role Workspaces**: Distinct interfaces tailored for end-user customers (`/portal`) and IT support personnel (`/admin`).
+- **Client-Side Security**: Offscreen Canvas compression and AES-GCM 256-bit encryption before file upload to ensure private diagnostic sharing.
+- **Instant Deflection**: Interactive knowledge base suggestions while drafting tickets to deflect recurring support questions.
+- **Flicker-Free Experience**: Server-side route guarding and synchronous inline theme initialization to prevent theme flickering (FOUC).
 
 ---
 
-## Directory Architecture
+## Features
 
-```
-apps/web/src/
-├── app/                                # Next.js App Router routes & layout
-│   ├── layout.tsx                      # Root HTML layout and font configurations
-│   ├── providers.tsx                   # TanStack Query & Toast context providers
-│   ├── globals.css                     # Tailwind CSS v4 configuration & theme tokens
-│   ├── page.tsx                        # Unified Auth Hub (Login, Register, Staff Claim)
-│   ├── portal/
-│   │   └── page.tsx                    # Customer Support Portal workspace
-│   └── admin/
-│       └── page.tsx                    # IT Service Desk Console workspace
-│
-├── hooks/                              # Custom React Hooks
-│   └── use-realtime-events.ts          # Server-Sent Events (SSE) stream listener & cache invalidator
-│
-├── components/                         # Reusable UI & Domain Components
-│   ├── admin/                          # Service desk console, KPI grid, Reports Studio
-│   │   ├── admin-reports.tsx           # Reports & CSAT Analytics Studio (RFC 4180 CSV exports)
-│   │   ├── admin-ticket-filters.tsx    # Queue search, status, priority, and department filters
-│   │   ├── admin-agent-workload.tsx    # Agent queue workload allocation
-│   │   └── admin-kpi-grid.tsx          # Real-time service desk KPI grid
-│   ├── notification-center.tsx         # In-app popover notification feed with unread badges
-│   ├── csat-rating-widget.tsx          # Interactive 5-star customer satisfaction widget
-│   ├── canned-responses-menu.tsx       # Categorized troubleshooting quick-response menu
-│   ├── ticket-list.tsx                 # Expandable ticket table, timeline, & lightbox
-│   ├── forms/
-│   │   └── ticket-form.tsx             # Ticket creation form with department routing & client encryption
-│   └── ui/                             # Base accessible UI primitives
-│       ├── contextual-loader.tsx       # Structural domain-specific skeleton animations
-│       ├── badge.tsx                   # Calibrated status & priority badge variants
-│       ├── button.tsx                  # Standardized button variants with loading states
-│       ├── card.tsx                    # Surface card containers
-│       ├── input.tsx                   # Styled text and search inputs
-│       ├── label.tsx                   # Accessible form labels
-│       └── textarea.tsx                # Multi-line note and description inputs
-│
-├── lib/                                # Utilities & Shared Infrastructure
-│   ├── api-client.ts                   # Axios client instance with Bearer token interceptor
-│   ├── constants.ts                    # Application version (v1.0.0) and API base URL
-│   ├── helpers.ts                      # AES-GCM crypto, Canvas compression, formatting helpers
-│   └── query-client.ts                 # TanStack Query configuration & default options
-│
-└── store/                              # Client State Management (Zustand)
-    ├── auth.store.ts                   # User session, JWT tokens, and role persistence
-    ├── tickets.store.ts                # Ticket filters, active ticket selection, UI state
-    ├── admin.store.ts                  # Admin tab navigation, agent filters, queue states
-    └── index.ts                        # Store barrel exports
-```
+- **Customer Support Portal (`/portal`)**: Self-service workspace for submitting tickets with department routing, tracking resolution progress, submitting follow-up notes, and rating completed service.
+- **IT Service Desk Console (`/admin`)**: Queue triage command center with department filtering, one-click ticket claiming, automated round-robin reassignment, and SLA tracking.
+- **Proactive Ticket Deflection**: Real-time article recommendations scored while drafting ticket titles, allowing customers to self-resolve before entering the queue.
+- **Client-Side Attachment Encryption**: In-browser image compression and AES-GCM 256-bit encryption before upload to keep diagnostic files secure.
+- **Interactive CSAT Rating Widget**: 5-star customer satisfaction reviews with optional feedback text for resolved incidents.
+- **Live Notifications & SSE Sync**: In-app popover notification feed with unread counters and reactive TanStack Query cache invalidation on backend changes.
+- **Categorized Canned Responses**: Integrated template menu for standard troubleshooting, follow-up, and resolution notes.
+- **Server-Side Route Protection**: Next.js Edge proxy route guarding with instant redirection for unauthenticated visitors.
+- **Adaptive Appearance & Theme**: Dark, light, and system theme options with synchronous pre-paint hydration to eliminate theme flicker (FOUC).
+- **Executive Reporting Studio**: Service desk KPI metric cards, agent workload leaderboards, and one-click RFC 4180 CSV exports.
 
 ---
 
-## Application Workspaces & Routes
-
-### 1. Unified Authentication Hub (`/`)
-- **Customer Sign In**: Authenticates existing accounts against `/auth/login` and redirects users to their designated workspace (`/portal` for customers, `/admin` for staff).
-- **Customer Registration**: Self-service onboarding for end-user customers with client-side form validation.
-- **Staff Invitation Claim**: Single-use cryptographic claim flow allowing invited `AGENT` and `ADMIN` personnel to activate their accounts using tokens generated by an administrator.
-- **Persistent Sessions**: JWT Bearer token stored in `localStorage` and validated on boot against `/auth/me`.
-
-### 2. Customer Support Portal (`/portal`)
-- **Ticket Submission with Department Routing**: Create new incident tickets selecting either `Technical Support` or `General Inquiry`, with priority (`LOW`, `MEDIUM`, `HIGH`, `URGENT`) and optional diagnostic screenshots.
-- **Client-Side Attachment Encryption**: Screenshots are compressed on an offscreen HTML Canvas and encrypted in-browser using AES-GCM 256-bit before upload.
-- **Interactive Timeline**: Real-time audit history of status transitions, resolution comments, and follow-up requests.
-- **Customer Amendments**: End users can submit additional diagnostic information and upload supplementary screenshots on open tickets.
-- **Interactive CSAT Rating**: When a ticket is resolved or closed, customers can submit a 1–5 star rating with an optional text review.
-
-### 3. IT Service Desk Console (`/admin`)
-- **Queue Triage Tab**:
-  - Live incident queue with filters for status, priority, department (`Technical Support` vs `General Scope`), and assigned engineer.
-  - One-click ticket claiming ("Assign to Me") and reassignment.
-  - Automated round-robin auto-assignment action ("Auto-assign (Round-Robin)") rotating turns fairly across active support engineers.
-  - Status progression workflow (`OPEN` &rarr; `IN_PROGRESS` &rarr; `RESOLVED` &rarr; `CLOSED`).
-  - Resolution note composer equipped with canned responses and optional screenshot attachments.
-- **Reports & CSAT Studio Tab (`/admin` &rarr; Reports & CSAT)**:
-  - Executive KPI summary cards (Total Volume, Resolution Rate %, Unassigned Backlog, CSAT Average).
-  - Automated department allocation breakdown comparing Technical Support vs General Scope volumes.
-  - CSAT 1–5 star distribution progress telemetry.
-  - Staff round-robin workload & performance leaderboard with assigned volume, resolved counts, average CSAT, and last turn timestamps.
-  - Instant RFC 4180 CSV export download buttons for tickets and CSAT feedback, equipped with department, status, and priority presets.
-- **Canned Responses Tab**:
-  - Dynamic template library with dynamic placeholder interpolation (`{{customer_name}}`, `{{ticket_id}}`, `{{ticket_title}}`, `{{agent_name}}`).
-- **Team & Invites Tab**:
-  - Single-use invitation generator for `AGENT` and `ADMIN` roles.
-  - Active invite management with token status inspection and revocation.
-  - Active staff directory with status badges and role indicators.
-
----
-
-## Core Systems & Components
-
-### Contextual Skeleton Loaders (`ContextualLoader`)
-Replaces generic full-page spinners with structural skeletons matching the exact geometry of the content being fetched:
-- `auth-session` / `portal-auth` / `admin-auth`: Orbital cryptographic shield animation with live status steps.
-- `customer-tickets`: Multi-card skeletons mirroring customer incident records.
-- `admin-kpi`: 4-column metric card skeletons matching SLA telemetry boxes.
-- `admin-queue`: Table and card skeletons aligned with triage items to prevent layout shifts.
-- `ticket-submission`: Multi-step progress pipeline animation for file encryption and database commit.
-
-### Real-Time Event Stream (`useRealtimeEvents`)
-- **Server-Sent Events (SSE)**: Connects to `/realtime/stream?token=<jwt>` to stream live mutations from the NestJS backend.
-- **Zero-Latency Invalidation**: Automatically invalidates `['tickets']` and `['notifications']` TanStack queries whenever tickets are created, claimed, resolved, or amended.
-- **Visual Connectivity Indicator**: Sidebar and portal headers display an animated status dot reflecting true live socket status (`connected` in emerald, `connecting` in amber, `disconnected` in rose).
-- **Incident Triage Banners**: Instant in-app alerts pop up when new incidents arrive in the queue without waiting for background polling intervals.
-
-### Role-Filtered In-App Notifications (`NotificationCenter`)
-- Popover notification feed connected to real-time SSE stream with slow safety fallback polling.
-- Direct-jump routing: Clicking a notification automatically opens the referenced ticket in the triage queue or customer portal.
-- Role-specific event routing:
-  - Administrators receive `TICKET_CREATED` alerts for incoming tickets.
-  - Support engineers receive `TICKET_ASSIGNED` and customer reply alerts.
-  - Customers receive notifications when engineers post notes or resolve tickets.
-
-### Customer Satisfaction Engine (`CsatRatingWidget`)
-- Interactive 5-star rating selector rendered on resolved and closed incidents.
-- Color-calibrated ratings: 1 (Rose / Dissatisfied) to 5 (Emerald / Exceptional Resolution).
-- Client & backend anti-tampering guards: Staff and administrators are blocked from self-rating with `403 Forbidden`.
-
-### Canned Responses Library (`CannedResponsesMenu`)
-- Pre-approved troubleshooting templates embedded in the resolution note composer:
-  - **Troubleshooting**: Hardware power cycle, network/DNS flush, browser cache clear, app reinstall.
-  - **Investigation**: Additional details request, reproduction report, engineering escalation.
-  - **Resolution & Closure**: Verified fix confirmation, documentation reference, inactivity warning.
-
-### Attachment Encryption & Decrypted Lightbox
-- **HTML Canvas Compression**: User-selected images are automatically scaled to a max dimension of 1280px and converted to WebP/JPEG format on an offscreen canvas.
-- **AES-GCM 256-Bit Cryptography**: Compressing and encrypting payloads in-transit ensures zero unencrypted user image data reaches the API server.
-- **Decrypted Lightbox Viewer**: Built-in modal viewer with zoom controls, 90-degree image rotation, and file metadata display for support engineers.
-
----
-
-## Design System & Display Resilience
-
-- **Emoji-Free Hierarchy**: Status and priority indicators rely on calibrated typography, borders, and system colors (Critical in Rose, Triage in Amber, Assigned to Me in Blue, CSAT Score in Gold, Resolved in Emerald).
-- **1280×720 Viewport Optimization**: Structured 4-column KPI grid, balanced flex layouts, and truncated headers prevent horizontal scrollbars and overlapping controls on compact monitors and laptops.
-- **Jitter-Free Polling**: Fixed-width action buttons (`w-32`) and structural skeletons eliminate layout jumping during TanStack Query polling intervals.
-- **Sidebar Footer & Dual Sign-Out**:
-  - System version badge (`v1.0.0`) positioned in the sidebar footer alongside the live connection indicator to protect brand header width.
-  - Prominent dual sign-out actions in both the profile menu and the bottom sidebar panel.
-
----
-
-## Environment Setup
-
-Create an `.env.local` file in `apps/web/`:
-
-```env
-# API Backend URL
-NEXT_PUBLIC_API_URL=http://localhost:3001
-
-# 256-bit transport secret used for client-side AES-GCM attachment encryption
-NEXT_PUBLIC_ATTACHMENT_KEY=ticketsupport-secure-transport-key-2026
-```
-
----
-
-## Development Scripts
+## How to Run
 
 ```bash
-# Run web client in development mode with Turbopack (http://localhost:3000)
+# 1. Generate typed API client hooks and schemas
+npm run codegen
+
+# 2. Launch Next.js with Turbopack
 npm run dev
 
-# Run Next.js production build and TypeScript type-check
-npm run build
-
-# Run Vitest unit tests (48 tests across helpers, security, and state stores)
+# 3. Run unit tests and typecheck validation
 npm test
-
-# Start production server
-npm run start
-
-# Run ESLint validation
-npm run lint
+npm run typecheck
 ```
