@@ -26,6 +26,33 @@ TicketSupport is an enterprise IT service desk and incident triage platform. It 
 
 ---
 
+## Technology Stack
+
+| Layer | Technologies |
+|:---|:---|
+| **Frontend** | Next.js 16 (App Router, Turbopack, React 19), Tailwind CSS v4, TanStack Query v5, Orval, Zustand, Radix UI, Lucide Icons |
+| **Backend** | NestJS 12 (Node.js ESM), Passport JWT, Prisma ORM 7 (`@prisma/adapter-pg`), AWS SDK v3, `@nestjs/throttler`, Zod |
+| **Database & Cache** | PostgreSQL 16, Redis 7 (rate limiting & cache) |
+| **Object Storage** | S3 / MinIO (`pgsty/silo`) for encrypted diagnostic attachments |
+| **Tooling & Monorepo** | Turborepo, Docker Compose, Orval OpenAPI code generator |
+| **Testing & Quality** | Vitest 4, Supertest, ESLint 9, Oxlint, strict TypeScript |
+
+---
+
+## Monorepo Structure
+
+```
+TicketSupport/
+├── apps/
+│   ├── web/                 # Next.js frontend (Customer Portal, Admin Console, Edge Proxy)
+│   └── api/                 # NestJS backend API (Auth, Tickets, Realtime SSE, KB, Reports)
+├── docker-compose.yml       # Local container services (PostgreSQL 16, Redis 7, MinIO/S3)
+├── turbo.json               # Turborepo task pipeline configuration
+└── AGENTS.md                # Repository engineering standards & branch protection rules
+```
+
+---
+
 ## Role Permissions Matrix
 
 | Capability | Customer | Agent | Admin |
@@ -43,6 +70,36 @@ TicketSupport is an enterprise IT service desk and incident triage platform. It 
 | Generate staff invitations (Agent / Admin) | — | — | ✓ |
 | Manage global incident & outage banners | — | — | ✓ |
 | Access executive reports & export CSV data | — | ✓ | ✓ |
+
+---
+
+## Environment Configuration
+
+Copy the sample environment file to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Key environment configurations include:
+
+| Variable | Description | Default / Example |
+|:---|:---|:---|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/ticketsupport?schema=public` |
+| `REDIS_URL` | Redis instance for rate limiting | `redis://localhost:6379` |
+| `JWT_SECRET` | Secret key for signing access tokens (min 32 chars) | Random 32+ character string |
+| `S3_ENDPOINT` | Object storage endpoint for attachments | `http://localhost:9000` (MinIO) |
+| `NEXT_PUBLIC_API_URL` | Backend API URL for frontend client | `http://localhost:3001` |
+| `NEXT_PUBLIC_ATTACHMENT_KEY` | Client transit encryption key for files | 32-character AES key |
+
+---
+
+## API Documentation (Swagger)
+
+All REST API endpoints, request schemas, DTOs, and error responses are documented interactively:
+
+- **Swagger UI**: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
+- **OpenAPI 3.1 Spec**: [http://localhost:3001/api-json](http://localhost:3001/api-json)
 
 ---
 
@@ -85,6 +142,10 @@ npm run dev
 
 ### 5. Running Tests
 ```bash
-# Run all test suites across the monorepo
+# Run all unit and integration test suites across monorepo
 npm test
+
+# Typecheck and lint validation
+npm run typecheck
+npm run lint
 ```

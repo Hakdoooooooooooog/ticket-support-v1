@@ -13,6 +13,21 @@ The TicketSupport API is a NestJS enterprise backend powering authentication, ti
 
 ---
 
+## Technology Stack
+
+| Layer | Technologies |
+|:---|:---|
+| **Framework** | NestJS 12 (Node.js ESM) |
+| **Authentication** | Passport JWT, rotating refresh cookies, bcryptjs |
+| **ORM & Database** | Prisma ORM 7 (`@prisma/adapter-pg`), PostgreSQL 16 |
+| **Cache & Throttling** | Redis 7, `@nestjs/throttler`, ioredis |
+| **Storage SDK** | AWS SDK v3 (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`) |
+| **Validation** | Zod, nestjs-zod |
+| **Documentation** | Swagger OpenAPI 3.1.0 |
+| **Testing** | Vitest 4, Supertest |
+
+---
+
 ## Features
 
 - **Authentication & Authorization**: Passport JWT authentication with rotating refresh token cookies, SHA-256 token family reuse detection, and role-based guards (`ADMIN`, `AGENT`, `CUSTOMER`).
@@ -26,6 +41,29 @@ The TicketSupport API is a NestJS enterprise backend powering authentication, ti
 - **Reporting & Data Export**: Department KPIs, SLA metrics, and RFC 4180 CSV export endpoints for incident logs and customer satisfaction feedback.
 - **S3 & Object Storage Integration**: Pre-signed direct upload and proxy streaming endpoints for client-encrypted file attachments.
 - **Security & Hygiene**: Redis-backed rate limiting, Helmet HTTP security headers, CORS verification, and automatic PII redaction on sensitive logs.
+
+---
+
+## API Documentation (Swagger)
+
+All backend endpoints, payloads, query parameters, and response schemas are documented interactively:
+
+- **Swagger UI**: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
+- **OpenAPI 3.1 Spec**: [http://localhost:3001/api-json](http://localhost:3001/api-json)
+
+---
+
+## Environment Variables
+
+The backend relies on the root `.env` configuration:
+
+- `DATABASE_URL`: PostgreSQL connection string.
+- `REDIS_URL`: Redis connection URL for throttler storage.
+- `JWT_SECRET`: Secret key for access token signing (min 32 characters).
+- `JWT_EXPIRES_IN`: Access token validity duration (`15m`).
+- `REFRESH_TOKEN_EXPIRES_IN`: Refresh token cookie lifespan (`7d`).
+- `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET_NAME`: S3/MinIO attachment storage parameters.
+- `CORS_ORIGIN`: Allowed frontend origin (`http://localhost:3000`).
 
 ---
 
