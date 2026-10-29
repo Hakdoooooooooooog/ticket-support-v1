@@ -1,18 +1,48 @@
+import { apiClient } from './api-client';
+
+export type ArticleStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
 export interface KnowledgeArticle {
   id: string;
   slug: string;
   title: string;
   department: 'TECHNICAL_SUPPORT' | 'GENERAL';
-  category: string;
+  category?: string;
   summary: string;
-  readTime: string;
+  body?: string;
+  readTime?: string;
   tags: string[];
   steps: string[];
   keywords: string[];
+  status?: ArticleStatus;
+  authorId?: string;
+  authorName?: string;
+  publishedById?: string | null;
+  publishedAt?: string | null;
   helpfulCount: number;
   unhelpfulCount: number;
   deflectionCount: number;
+  createdAt?: string;
   updatedAt: string;
+}
+
+export interface KnowledgeBaseStats {
+  totalArticles: number;
+  technicalArticles: number;
+  generalArticles: number;
+  totalHelpfulVotes: number;
+  totalDeflections: number;
+}
+
+export interface CreateKnowledgeArticleInput {
+  title: string;
+  summary: string;
+  body?: string;
+  steps?: string[];
+  department: 'TECHNICAL_SUPPORT' | 'GENERAL';
+  category?: string;
+  tags?: string[];
+  keywords?: string[];
 }
 
 export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
@@ -291,4 +321,68 @@ export function searchKnowledgeBaseArticles(
   }
 
   return scored.sort((a, b) => b.score - a.score);
+}
+
+export async function fetchKnowledgeBaseArticles(params?: {
+  department?: string;
+  status?: string;
+  search?: string;
+}): Promise<KnowledgeArticle[]> {
+  const res = await apiClient.get<KnowledgeArticle[]>('/knowledge-base', { params });
+  return res.data;
+}
+
+export async function fetchKnowledgeBaseStats(): Promise<KnowledgeBaseStats> {
+  const res = await apiClient.get<KnowledgeBaseStats>('/knowledge-base/stats');
+  return res.data;
+}
+
+export async function createKnowledgeArticle(
+  input: CreateKnowledgeArticleInput,
+): Promise<KnowledgeArticle> {
+  const res = await apiClient.post<KnowledgeArticle>('/knowledge-base', input);
+  return res.data;
+}
+
+export async function updateKnowledgeArticle(
+  id: string,
+  input: Partial<CreateKnowledgeArticleInput>,
+): Promise<KnowledgeArticle> {
+  const res = await apiClient.patch<KnowledgeArticle>(`/knowledge-base/${id}`, input);
+  return res.data;
+}
+
+export async function publishKnowledgeArticle(id: string): Promise<KnowledgeArticle> {
+  const res = await apiClient.post<KnowledgeArticle>(`/knowledge-base/${id}/publish`);
+  return res.data;
+}
+
+export async function archiveKnowledgeArticle(id: string): Promise<KnowledgeArticle> {
+  const res = await apiClient.post<KnowledgeArticle>(`/knowledge-base/${id}/archive`);
+  return res.data;
+}
+
+export async function deleteKnowledgeArticle(id: string): Promise<{ success: boolean }> {
+  const res = await apiClient.delete<{ success: boolean }>(`/knowledge-base/${id}`);
+  return res.data;
+}
+
+export async function submitArticleFeedback(
+  id: string,
+  helpful: boolean,
+): Promise<{ helpfulCount: number; unhelpfulCount: number }> {
+  const res = await apiClient.post<{ helpfulCount: number; unhelpfulCount: number }>(
+    `/knowledge-base/${id}/feedback`,
+    { helpful },
+  );
+  return res.data;
+}
+
+export async function recordArticleDeflection(
+  id: string,
+): Promise<{ deflectionCount: number }> {
+  const res = await apiClient.post<{ deflectionCount: number }>(
+    `/knowledge-base/${id}/deflection`,
+  );
+  return res.data;
 }

@@ -195,6 +195,24 @@ export function AdminMobileNav({
                 <button
                   type="button"
                   onClick={() => {
+                    onSelectSection('KNOWLEDGE_BASE');
+                    onClose();
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
+                    activeSection === 'KNOWLEDGE_BASE'
+                      ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
+                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                  }`}
+                >
+                  <span>Knowledge Base</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300">
+                    Articles
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
                     onSelectSection('REPORTS');
                     onClose();
                   }}

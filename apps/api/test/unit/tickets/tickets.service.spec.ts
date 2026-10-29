@@ -157,34 +157,13 @@ describe('TicketsService', () => {
       expect(result.id).toBe('ticket-1');
     });
 
-    it('should upsert fallback demo customer if creatorId is not provided', async () => {
-      prisma.user.upsert.mockResolvedValue({
-        id: 'demo-user-id',
-        email: 'demo@ticketsupport.com',
-        fullName: 'Demo Customer',
-        role: 'CUSTOMER',
-      });
-      prisma.ticket.create.mockResolvedValue({
-        ...mockDbTicket,
-        creatorId: 'demo-user-id',
-      });
-
+    it('should reject ticket creation with BadRequestException if creatorId is not provided or user not found', async () => {
       const dto = {
         title: 'Anonymous Ticket Creation',
         description: 'Detailed description of an anonymous ticket',
       };
 
-      await service.create(dto as any);
-
-      expect(prisma.user.upsert).toHaveBeenCalledWith({
-        where: { email: 'demo@ticketsupport.com' },
-        update: {},
-        create: expect.objectContaining({ email: 'demo@ticketsupport.com' }),
-      });
-      expect(prisma.ticket.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ creatorId: 'demo-user-id' }),
-        include: expect.any(Object),
-      });
+      await expect(service.create(dto as any)).rejects.toThrow(BadRequestException);
     });
 
     it('should automatically assign incoming ticket via round-robin to eligible department agent', async () => {

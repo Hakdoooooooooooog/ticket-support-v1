@@ -34,9 +34,7 @@ export class CannedResponsesController {
   @Post()
   @ApiOperation({ summary: 'Create a new canned response template (Admin only)' })
   async create(@Body() dto: CreateCannedResponseDto, @Request() req: any) {
-    if (req.user?.role !== 'ADMIN') {
-      throw new ForbiddenException('Only IT Administrators can create organization canned responses.');
-    }
+    this.assertAdminRole(req.user?.role, 'create');
     return this.cannedResponsesService.create(dto, req.user?.id);
   }
 
@@ -47,18 +45,23 @@ export class CannedResponsesController {
     @Body() dto: UpdateCannedResponseDto,
     @Request() req: any,
   ) {
-    if (req.user?.role !== 'ADMIN') {
-      throw new ForbiddenException('Only IT Administrators can modify organization canned responses.');
-    }
+    this.assertAdminRole(req.user?.role, 'modify');
     return this.cannedResponsesService.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a canned response template (Admin only)' })
   async delete(@Param('id') id: string, @Request() req: any) {
-    if (req.user?.role !== 'ADMIN') {
-      throw new ForbiddenException('Only IT Administrators can delete organization canned responses.');
-    }
+    this.assertAdminRole(req.user?.role, 'delete');
     return this.cannedResponsesService.delete(id);
+  }
+
+  /**
+   * Enforces role requirement for administrative canned response operations.
+   */
+  private assertAdminRole(role?: string, action = 'manage'): void {
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException(`Only IT Administrators can ${action} organization canned responses.`);
+    }
   }
 }

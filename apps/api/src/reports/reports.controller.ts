@@ -8,18 +8,21 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { OptionalJwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
 import { ReportsService } from './reports.service.js';
 import { TicketActorContext } from '../tickets/tickets.service.js';
 
 interface AuthenticatedRequest {
-  user?: TicketActorContext | null;
+  user: TicketActorContext;
 }
 
 @ApiTags('Reports')
 @ApiBearerAuth()
 @Controller('reports')
-@UseGuards(OptionalJwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN', 'AGENT')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 

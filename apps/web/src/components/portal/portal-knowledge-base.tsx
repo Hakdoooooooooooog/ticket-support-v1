@@ -1,6 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@ui/card';
 import { Input } from '@ui/input';
 import { Button } from '@ui/button';
@@ -8,6 +11,8 @@ import { Badge } from '@ui/badge';
 import {
   KNOWLEDGE_BASE_ARTICLES,
   searchKnowledgeBaseArticles,
+  fetchKnowledgeBaseArticles,
+  submitArticleFeedback,
   KnowledgeArticle,
 } from '@lib/knowledge-base';
 import { usePortalStore, PortalDepartmentFilter } from '@store/portal.store';
@@ -27,8 +32,24 @@ export function PortalKnowledgeBase() {
 
   const [copiedArticleId, setCopiedArticleId] = React.useState<string | null>(null);
 
+  const { data: serverArticles } = useQuery({
+    queryKey: ['knowledge-base-articles'],
+    queryFn: async () => {
+      try {
+        const list = await fetchKnowledgeBaseArticles();
+        return list && list.length > 0 ? list : KNOWLEDGE_BASE_ARTICLES;
+      } catch {
+        return KNOWLEDGE_BASE_ARTICLES;
+      }
+    },
+    placeholderData: KNOWLEDGE_BASE_ARTICLES,
+    staleTime: 60 * 1000,
+  });
+
+  const allArticles = serverArticles ?? KNOWLEDGE_BASE_ARTICLES;
+
   const filteredArticles = React.useMemo(() => {
-    let list = KNOWLEDGE_BASE_ARTICLES;
+    let list = allArticles;
 
     if (departmentFilter !== 'ALL') {
       list = list.filter((a) => a.department === departmentFilter);
@@ -40,12 +61,14 @@ export function PortalKnowledgeBase() {
     }
 
     return list;
-  }, [departmentFilter, knowledgeSearchQuery]);
+  }, [allArticles, departmentFilter, knowledgeSearchQuery]);
 
   const handleCopySteps = async (article: KnowledgeArticle) => {
-    const text = `${article.title}\n\nSteps:\n${article.steps
-      .map((step, idx) => `${idx + 1}. ${step}`)
-      .join('\n')}`;
+    const stepsText = article.steps && article.steps.length > 0
+      ? `\n\nSteps:\n${article.steps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}`
+      : '';
+    const bodyText = article.body ? `\n\n${article.body}` : '';
+    const text = `${article.title}${bodyText}${stepsText}`;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -56,13 +79,22 @@ export function PortalKnowledgeBase() {
     }
   };
 
+  const handleFeedback = async (articleId: string, isHelpful: boolean) => {
+    rateArticleHelpful(articleId, isHelpful);
+    try {
+      await submitArticleFeedback(articleId, isHelpful);
+    } catch {
+      // Local optimistic feedback preserved in store
+    }
+  };
+
   const techCount = React.useMemo(
-    () => KNOWLEDGE_BASE_ARTICLES.filter((a) => a.department === 'TECHNICAL_SUPPORT').length,
-    [],
+    () => allArticles.filter((a) => a.department === 'TECHNICAL_SUPPORT').length,
+    [allArticles],
   );
   const generalCount = React.useMemo(
-    () => KNOWLEDGE_BASE_ARTICLES.filter((a) => a.department === 'GENERAL').length,
-    [],
+    () => allArticles.filter((a) => a.department === 'GENERAL').length,
+    [allArticles],
   );
 
   return (
@@ -218,24 +250,36 @@ export function PortalKnowledgeBase() {
                   </div>
                 </div>
 
-                {/* Expanded Troubleshooting Steps */}
+                {/* Expanded Troubleshooting Steps and Guide Content */}
                 {isExpanded && (
                   <div className="border-t border-spruce-100 dark:border-spruce-800 bg-spruce-50/50 dark:bg-spruce-950/40 p-4 sm:p-6 space-y-4">
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-spruce-800 dark:text-spruce-200">
-                        Resolution Steps:
-                      </h4>
-                      <ol className="space-y-2.5 text-xs sm:text-sm text-spruce-800 dark:text-spruce-200">
-                        {article.steps.map((step, idx) => (
-                          <li key={idx} className="flex items-start gap-2.5 leading-relaxed">
-                            <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold bg-spruce-200 dark:bg-spruce-800 text-spruce-900 dark:text-spruce-100 border border-spruce-300 dark:border-spruce-700">
-                              {idx + 1}
-                            </span>
-                            <span className="flex-1 pt-0.5">{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
+                    {/* Markdown Body */}
+                    {article.body && (
+                      <div className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm text-spruce-800 dark:text-spruce-200 border-b border-spruce-200/60 dark:border-spruce-800 pb-3 mb-2">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {article.body}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+
+                    {/* Step-by-Step Resolution */}
+                    {article.steps && article.steps.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-spruce-800 dark:text-spruce-200">
+                          Resolution Steps:
+                        </h4>
+                        <ol className="space-y-2.5 text-xs sm:text-sm text-spruce-800 dark:text-spruce-200">
+                          {article.steps.map((step, idx) => (
+                            <li key={idx} className="flex items-start gap-2.5 leading-relaxed">
+                              <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold bg-spruce-200 dark:bg-spruce-800 text-spruce-900 dark:text-spruce-100 border border-spruce-300 dark:border-spruce-700">
+                                {idx + 1}
+                              </span>
+                              <span className="flex-1 pt-0.5">{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
 
                     {/* Actions and Feedback Bar */}
                     <div className="pt-4 border-t border-spruce-200/80 dark:border-spruce-800 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -274,14 +318,14 @@ export function PortalKnowledgeBase() {
                             </span>
                             <button
                               type="button"
-                              onClick={() => rateArticleHelpful(article.id, true)}
+                              onClick={() => handleFeedback(article.id, true)}
                               className="px-2 py-1 rounded bg-spruce-100 hover:bg-spruce-200 dark:bg-spruce-800 dark:hover:bg-spruce-700 text-spruce-800 dark:text-spruce-200 text-xs font-medium cursor-pointer"
                             >
                               👍 Yes
                             </button>
                             <button
                               type="button"
-                              onClick={() => rateArticleHelpful(article.id, false)}
+                              onClick={() => handleFeedback(article.id, false)}
                               className="px-2 py-1 rounded bg-spruce-100 hover:bg-spruce-200 dark:bg-spruce-800 dark:hover:bg-spruce-700 text-spruce-800 dark:text-spruce-200 text-xs font-medium cursor-pointer"
                             >
                               👎 No

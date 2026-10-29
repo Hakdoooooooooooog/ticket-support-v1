@@ -508,9 +508,11 @@ export class TicketsService implements OnModuleInit {
       }
 
       if (this.realtimeService) {
+        const creatorId = (existingTicket as any).creatorId;
         this.realtimeService.emit({
           type: 'COMMENT_ADDED',
-          recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
+          recipientRoles: ['ADMIN', 'AGENT'],
+          recipientUserIds: creatorId ? [creatorId] : [],
           payload: {
             id: ticketId,
             ticketId,
@@ -787,9 +789,11 @@ export class TicketsService implements OnModuleInit {
       }
 
       if (this.realtimeService) {
+        const creatorId = (existingTicket as any).creatorId;
         this.realtimeService.emit({
           type: 'TICKET_UPDATED',
-          recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
+          recipientRoles: ['ADMIN', 'AGENT'],
+          recipientUserIds: creatorId ? [creatorId] : [],
           payload: {
             id,
             ticketId: id,
@@ -1015,9 +1019,11 @@ export class TicketsService implements OnModuleInit {
       });
 
       if (this.realtimeService) {
+        const creatorId = (existingTicket as any).creatorId;
         this.realtimeService.emit({
           type: 'TICKET_DELETED',
-          recipientRoles: ['ADMIN', 'AGENT', 'CUSTOMER'],
+          recipientRoles: ['ADMIN', 'AGENT'],
+          recipientUserIds: creatorId ? [creatorId] : [],
           payload: {
             id,
             ticketId: id,
@@ -1030,7 +1036,7 @@ export class TicketsService implements OnModuleInit {
 
   /**
    * Resolves the author/creator User model within the active transaction.
-   * If not found or omitted, creates or retrieves a safe fallback demo customer.
+   * Throws BadRequestException if no valid user is found.
    */
   protected async resolveCreatorUser(
     creatorId?: string,
@@ -1041,16 +1047,7 @@ export class TicketsService implements OnModuleInit {
       if (user) return user;
     }
 
-    return tx.user.upsert({
-      where: { email: 'demo@ticketsupport.com' },
-      update: {},
-      create: {
-        email: 'demo@ticketsupport.com',
-        fullName: 'Demo Customer',
-        passwordHash: 'demohash',
-        role: 'CUSTOMER',
-      },
-    });
+    throw new BadRequestException('A valid authenticated user is required');
   }
 
   /**

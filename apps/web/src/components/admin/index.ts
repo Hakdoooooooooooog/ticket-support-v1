@@ -8,4 +8,5 @@ export { AdminCannedResponses } from './admin-canned-responses';
 export { AdminTeamManagement, type StaffInviteRecord } from './admin-team-management';
 export { AdminTicketAccordionItem } from './admin-ticket-accordion-item';
 export { AdminReports } from './admin-reports';
+export { AdminKnowledgeBase } from './admin-knowledge-base';
 

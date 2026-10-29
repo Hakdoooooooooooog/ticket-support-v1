@@ -68,4 +68,42 @@ describe('RealtimeService', () => {
 
     expect(receivedOtherEvents).toHaveLength(0);
   });
+
+  it('delivers ticket events to staff roles and only the owning customer (union of roles and user IDs)', () => {
+    const agent = { id: 'agent-1', role: 'AGENT' as const };
+    const owner = { id: 'cust-owner', role: 'CUSTOMER' as const };
+    const otherCustomer = { id: 'cust-other', role: 'CUSTOMER' as const };
+
+    const received: Record<string, any[]> = { agent: [], owner: [], other: [] };
+    const subs = [
+      service.getUserStream(agent).subscribe((m) => received.agent.push(m)),
+      service.getUserStream(owner).subscribe((m) => received.owner.push(m)),
+      service.getUserStream(otherCustomer).subscribe((m) => received.other.push(m)),
+    ];
+
+    service.emit({
+      type: 'COMMENT_ADDED',
+      recipientRoles: ['ADMIN', 'AGENT'],
+      recipientUserIds: ['cust-owner'],
+      payload: { ticketId: 't-1', preview: 'private note' },
+    });
+
+    subs.forEach((s) => s.unsubscribe());
+
+    expect(received.agent).toHaveLength(1);
+    expect(received.owner).toHaveLength(1);
+    expect(received.other).toHaveLength(0);
+  });
+
+  it('denies delivery by default when an event declares no recipients', () => {
+    const received: any[] = [];
+    const sub = service
+      .getUserStream({ id: 'cust-1', role: 'CUSTOMER' as const })
+      .subscribe((m) => received.push(m));
+
+    service.emit({ type: 'TICKET_UPDATED', payload: { id: 't-1' } });
+    sub.unsubscribe();
+
+    expect(received).toHaveLength(0);
+  });
 });

@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service.js';
-import { OptionalJwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { ZodSerializerInterceptor } from '../common/interceptors/zod-serializer.interceptor.js';
 import { Serialize } from '../common/decorators/zod-serializer.decorator.js';
 import {
@@ -31,7 +31,7 @@ interface AuthenticatedRequest {
 @ApiTags('Notifications')
 @ApiBearerAuth()
 @Controller('notifications')
-@UseGuards(OptionalJwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 @UseInterceptors(ZodSerializerInterceptor)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}

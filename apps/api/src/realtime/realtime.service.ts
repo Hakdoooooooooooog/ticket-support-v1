@@ -74,18 +74,16 @@ export class RealtimeService {
     envelope: RealtimeEnvelope,
     user: StreamUserContext,
   ): boolean {
-    // 1. If explicit recipientUserIds are specified, recipient must be in the list
-    if (envelope.recipientUserIds && envelope.recipientUserIds.length > 0) {
-      return envelope.recipientUserIds.includes(user.id);
+    const hasUserFilter = Boolean(envelope.recipientUserIds && envelope.recipientUserIds.length > 0);
+    const hasRoleFilter = Boolean(envelope.recipientRoles && envelope.recipientRoles.length > 0);
+
+    if (hasUserFilter || hasRoleFilter) {
+      const matchUser = hasUserFilter && envelope.recipientUserIds!.includes(user.id);
+      const matchRole = hasRoleFilter && envelope.recipientRoles!.includes(user.role);
+      return Boolean(matchUser || matchRole);
     }
 
-    // 2. If explicit recipientRoles are specified, user's role must be in the list
-    if (envelope.recipientRoles && envelope.recipientRoles.length > 0) {
-      return envelope.recipientRoles.includes(user.role);
-    }
-
-    // 3. Admin-specific rule: IT Admins strictly receive TICKET_CREATED, TICKET_UPDATED, and CSAT_SUBMITTED
-    // suppressing minor operational chatter
-    return true;
+    // Default deny for untargeted domain events
+    return false;
   }
 }

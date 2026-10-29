@@ -255,6 +255,32 @@ export async function verifyPassportSession(
   }
 }
 
+export async function refreshPassportSession(): Promise<AuthSession | null> {
+  try {
+    const res = await apiClient.post<{ accessToken: string; user: AuthUser }>('/auth/refresh');
+    if (res.data?.accessToken && res.data?.user) {
+      const sanitized = sanitizeAuthUser(res.data.user);
+      if (sanitized) {
+        return {
+          accessToken: res.data.accessToken,
+          user: sanitized,
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function logoutPassportSession(): Promise<void> {
+  try {
+    await apiClient.post('/auth/logout');
+  } catch {
+    // Ignore network errors during logout
+  }
+}
+
 export function getWorkspacePathForRole(
   role?: AuthUser['role'],
 ): '/admin' | '/portal' {

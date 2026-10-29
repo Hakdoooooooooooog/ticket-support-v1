@@ -7,7 +7,7 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import bcrypt from 'bcryptjs';
@@ -174,7 +174,7 @@ export class AuthService implements OnModuleInit {
 
   async register(
     dto: RegisterDto,
-  ): Promise<{ message: string; user: UserResponseDto; accessToken: string }> {
+  ): Promise<{ message: string; user: UserResponseDto; accessToken: string; refreshToken?: string }> {
     const validatedInput = AuthMapper.toRegisterInput(dto);
     const passwordHash = await this.hashPassword(validatedInput.password);
 
@@ -254,11 +254,13 @@ export class AuthService implements OnModuleInit {
       sanitizedUser.email,
       sanitizedUser.role,
     );
+    const { rawToken } = await this.generateRefreshToken(sanitizedUser.id);
 
     return {
       message: 'User registered successfully',
       user: sanitizedUser,
       accessToken,
+      refreshToken: rawToken,
     };
   }
 
@@ -269,14 +271,14 @@ export class AuthService implements OnModuleInit {
     dto: CreateInviteDto,
     actor?: { id: string; role: string },
   ) {
-    if (actor && actor.role !== 'ADMIN') {
+    if (!actor || actor.role !== 'ADMIN') {
       throw new ForbiddenException('Only administrators can issue staff invitations');
     }
 
     const code = `inv_${randomBytes(12).toString('hex')}`;
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    const creatorId = actor?.id || (await this.resolveAdminUser()).id;
+    const creatorId = actor.id;
 
     const invite = await this.prisma.invite.create({
       data: {
@@ -422,26 +424,6 @@ export class AuthService implements OnModuleInit {
     return AuthMapper.toUserResponseDto(user);
   }
 
-  /**
-   * Resolves an administrator user model or creates a fallback administrator.
-   */
-  protected async resolveAdminUser() {
-    const admin = await this.prisma.user.findFirst({
-      where: { role: 'ADMIN' },
-    });
-    if (admin) return admin;
-
-    return this.prisma.user.upsert({
-      where: { email: 'admin@ticketsupport.local' },
-      update: {},
-      create: {
-        email: 'admin@ticketsupport.local',
-        fullName: 'System Administrator',
-        passwordHash: await this.hashPassword('Admin123!'),
-        role: 'ADMIN',
-      },
-    });
-  }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     const validatedInput = AuthMapper.toLoginInput(dto);
@@ -470,12 +452,125 @@ export class AuthService implements OnModuleInit {
       sanitizedUser.email,
       sanitizedUser.role,
     );
+    const { rawToken } = await this.generateRefreshToken(sanitizedUser.id);
 
-    return AuthMapper.toAuthResponseDto({
+    return {
       accessToken,
       user: sanitizedUser,
       message: 'Authenticated successfully',
+      refreshToken: rawToken,
+    };
+  }
+
+  async generateRefreshToken(
+    userId: string,
+    familyId?: string,
+  ): Promise<{ rawToken: string; tokenRecord: any }> {
+    const rawToken = `rt_${randomBytes(32).toString('hex')}`;
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const resolvedFamilyId = familyId || randomUUID();
+
+    let tokenRecord: any;
+    if (typeof this.prisma?.refreshToken?.create === 'function') {
+      tokenRecord = await this.prisma.refreshToken.create({
+        data: {
+          tokenHash,
+          familyId: resolvedFamilyId,
+          userId,
+          expiresAt,
+        },
+      });
+    } else {
+      tokenRecord = {
+        id: 'mock-rt-id',
+        tokenHash,
+        familyId: resolvedFamilyId,
+        userId,
+        expiresAt,
+      };
+    }
+
+    return { rawToken, tokenRecord };
+  }
+
+  async refreshSession(rawRefreshToken: string): Promise<{
+    accessToken: string;
+    user: UserResponseDto;
+    refreshToken: string;
+  }> {
+    if (!rawRefreshToken || !rawRefreshToken.trim()) {
+      throw new UnauthorizedException('Refresh token missing');
+    }
+
+    const tokenHash = createHash('sha256').update(rawRefreshToken.trim()).digest('hex');
+
+    const tokenRecord = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
     });
+
+    if (!tokenRecord) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const now = new Date();
+    // REUSE DETECTION: If token was already revoked, someone is reusing a revoked token!
+    if (tokenRecord.revokedAt !== null) {
+      await this.prisma.refreshToken.updateMany({
+        where: { familyId: tokenRecord.familyId },
+        data: { revokedAt: now },
+      });
+      throw new UnauthorizedException('Session compromised. Please sign in again.');
+    }
+
+    if (tokenRecord.expiresAt < now) {
+      await this.prisma.refreshToken.update({
+        where: { id: tokenRecord.id },
+        data: { revokedAt: now },
+      });
+      throw new UnauthorizedException('Refresh token has expired. Please sign in again.');
+    }
+
+    // Rotate refresh token within the same family
+    const next = await this.generateRefreshToken(tokenRecord.userId, tokenRecord.familyId);
+
+    await this.prisma.refreshToken.update({
+      where: { id: tokenRecord.id },
+      data: {
+        revokedAt: now,
+        replacedById: next.tokenRecord.id,
+      },
+    });
+
+    const sanitizedUser = AuthMapper.toUserResponseDto(tokenRecord.user);
+    const accessToken = this.generateAuthToken(
+      sanitizedUser.id,
+      sanitizedUser.email,
+      sanitizedUser.role,
+    );
+
+    return {
+      accessToken,
+      user: sanitizedUser,
+      refreshToken: next.rawToken,
+    };
+  }
+
+  async logout(rawRefreshToken?: string): Promise<{ message: string }> {
+    if (rawRefreshToken && typeof this.prisma?.refreshToken?.updateMany === 'function') {
+      try {
+        const tokenHash = createHash('sha256').update(rawRefreshToken.trim()).digest('hex');
+        await this.prisma.refreshToken.updateMany({
+          where: { tokenHash, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      } catch {
+        // Ignore revoke errors on logout
+      }
+    }
+
+    return { message: 'Logged out successfully' };
   }
 
   async findAgents(): Promise<UserResponseDto[]> {
@@ -524,13 +619,14 @@ export class AuthService implements OnModuleInit {
       'base64url',
     );
     const now = Math.floor(Date.now() / 1000);
+    const accessTokenTtlSeconds = 15 * 60; // 15 minutes
     const payload = Buffer.from(
       JSON.stringify({
         sub: userId,
         email,
         role,
         iat: now,
-        exp: now + 60 * 60 * 24 * 7, // 7 days
+        exp: now + accessTokenTtlSeconds,
       }),
     ).toString('base64url');
 

@@ -14,6 +14,7 @@ export const authResponseSchema = z.object({
   accessToken: z.string().default(''),
   user: userResponseSchema,
   message: z.string().optional().default('Success'),
+  refreshToken: z.string().optional(),
 });
 
 export class UserResponseDto extends createZodDto(userResponseSchema) {}

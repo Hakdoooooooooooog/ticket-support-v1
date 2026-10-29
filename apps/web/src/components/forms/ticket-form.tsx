@@ -27,6 +27,7 @@ import { usePortalStore } from '@store/portal.store';
 import {
   KNOWLEDGE_BASE_ARTICLES,
   searchKnowledgeBaseArticles,
+  recordArticleDeflection,
   KnowledgeArticle,
 } from '@lib/knowledge-base';
 
@@ -105,8 +106,13 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
     return null;
   }, [watchedTitle, watchedDepartment, dismissedSuggestionId]);
 
-  const handleSolveIssue = (article: KnowledgeArticle) => {
+  const handleSolveIssue = async (article: KnowledgeArticle) => {
     recordDeflection(article.title);
+    try {
+      await recordArticleDeflection(article.id);
+    } catch {
+      // Offline fallback
+    }
     reset();
     clearAttachment();
     setDismissedSuggestionId(null);

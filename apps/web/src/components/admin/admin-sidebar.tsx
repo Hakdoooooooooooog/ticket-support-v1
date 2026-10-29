@@ -165,6 +165,28 @@ export function AdminSidebar({
           </span>
         </button>
 
+        {/* Knowledge Base & FAQs Manager (Available to Staff & Admins) */}
+        <button
+          type="button"
+          onClick={() => onSelectSection('KNOWLEDGE_BASE')}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
+            activeSection === 'KNOWLEDGE_BASE'
+              ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
+              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+          }`}
+        >
+          <span>Knowledge Base</span>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              activeSection === 'KNOWLEDGE_BASE'
+                ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
+                : 'bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300'
+            }`}
+          >
+            Articles
+          </span>
+        </button>
+
         {/* Reports & CSAT Studio */}
         <button
           type="button"

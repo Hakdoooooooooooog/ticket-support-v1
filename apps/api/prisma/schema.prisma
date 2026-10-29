@@ -41,6 +41,12 @@ enum Department {
   GENERAL
 }
 
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model User {
   id              String         @id @default(cuid())
   email           String         @unique
@@ -52,15 +58,35 @@ model User {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  createdTickets  Ticket[]       @relation("CreatedTickets")
-  assignedTickets Ticket[]       @relation("AssignedTickets")
-  comments        Comment[]
-  createdInvites  Invite[]       @relation("CreatedInvites")
-  notifications   Notification[] @relation("UserNotifications")
-  cannedResponses CannedResponse[] @relation("CreatedCannedResponses")
+  createdTickets    Ticket[]            @relation("CreatedTickets")
+  assignedTickets   Ticket[]            @relation("AssignedTickets")
+  comments          Comment[]
+  createdInvites    Invite[]            @relation("CreatedInvites")
+  notifications     Notification[]      @relation("UserNotifications")
+  cannedResponses   CannedResponse[]    @relation("CreatedCannedResponses")
+  refreshTokens     RefreshToken[]
+  authoredArticles  KnowledgeArticle[]  @relation("AuthoredArticles")
+  publishedArticles KnowledgeArticle[]  @relation("PublishedArticles")
+  articleFeedback   ArticleFeedback[]
+  deflections       ArticleDeflection[]
 
   @@index([role, fullName])
   @@map("users")
+}
+
+model RefreshToken {
+  id           String    @id @default(cuid())
+  tokenHash    String    @unique
+  familyId     String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, familyId, expiresAt])
+  @@map("refresh_tokens")
 }
 
 model Invite {
@@ -182,4 +208,58 @@ model CannedResponse {
 
   @@index([category, label])
   @@map("canned_responses")
+}
+
+model KnowledgeArticle {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  summary         String
+  body            String          @default("")
+  steps           String[]        @default([])
+  department      Department      @default(TECHNICAL_SUPPORT)
+  tags            String[]        @default([])
+  keywords        String[]        @default([])
+  status          ArticleStatus   @default(DRAFT)
+  authorId        String
+  author          User            @relation("AuthoredArticles", fields: [authorId], references: [id], onDelete: Cascade)
+  publishedById   String?
+  publishedBy     User?           @relation("PublishedArticles", fields: [publishedById], references: [id], onDelete: SetNull)
+  publishedAt     DateTime?
+  helpfulCount    Int             @default(0)
+  unhelpfulCount  Int             @default(0)
+  deflectionCount Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  feedback        ArticleFeedback[]
+  deflections     ArticleDeflection[]
+
+  @@index([status, department])
+  @@map("knowledge_articles")
+}
+
+model ArticleFeedback {
+  articleId String
+  article   KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  helpful   Boolean
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@id([articleId, userId])
+  @@map("article_feedback")
+}
+
+model ArticleDeflection {
+  id        String           @id @default(cuid())
+  articleId String
+  article   KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime         @default(now())
+
+  @@index([articleId, createdAt])
+  @@map("article_deflections")
 }

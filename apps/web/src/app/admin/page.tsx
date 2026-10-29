@@ -40,6 +40,7 @@ import {
   AdminTeamManagement,
   AdminTicketAccordionItem,
   AdminReports,
+  AdminKnowledgeBase,
   type StaffInviteRecord,
 } from '@components/admin';
 
@@ -746,6 +747,7 @@ export default function AdminDashboardPage() {
                 {activeSection === 'CANNED_RESPONSES' && 'Canned Responses & Templates'}
                 {activeSection === 'TEAM_MANAGEMENT' && 'IT Support Team & Staff Invitations'}
                 {activeSection === 'REPORTS' && 'Reports & CSAT Analytics Studio'}
+                {activeSection === 'KNOWLEDGE_BASE' && 'Knowledge Base & Troubleshooting Guides'}
               </h1>
               <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-400 mt-1 max-w-xl leading-relaxed">
                 {activeSection === 'DASHBOARD' &&
@@ -760,6 +762,8 @@ export default function AdminDashboardPage() {
                   'Invite-only access: invite support engineers, generate secure claim links, and manage staff accounts.'}
                 {activeSection === 'REPORTS' &&
                   'Executive service desk metrics, technical support vs general department volumes, customer satisfaction (CSAT), and RFC 4180 CSV exports.'}
+                {activeSection === 'KNOWLEDGE_BASE' &&
+                  'Author, preview in Markdown, publish self-service deflection guides, and monitor helpful ratings across departments.'}
               </p>
             </div>
 
@@ -1018,6 +1022,11 @@ export default function AdminDashboardPage() {
           {/* SECTION 6: REPORTS & CSAT ANALYTICS STUDIO */}
           {activeSection === 'REPORTS' && (
             <AdminReports />
+          )}
+
+          {/* SECTION 7: KNOWLEDGE BASE MANAGER */}
+          {activeSection === 'KNOWLEDGE_BASE' && (
+            <AdminKnowledgeBase user={user} />
           )}
         </main>
       </div>

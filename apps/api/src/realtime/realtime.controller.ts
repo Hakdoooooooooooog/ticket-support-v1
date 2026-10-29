@@ -1,5 +1,6 @@
 import { Controller, Sse, UseGuards, Req, MessageEvent } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Observable } from 'rxjs';
 import { RealtimeService } from './realtime.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -10,6 +11,7 @@ export class RealtimeController {
   constructor(private readonly realtimeService: RealtimeService) {}
 
   @Sse('stream')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({

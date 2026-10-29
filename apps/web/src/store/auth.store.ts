@@ -9,9 +9,14 @@ import {
   setStoredSession,
   clearStoredSession,
   verifyPassportSession,
+  refreshPassportSession,
+  logoutPassportSession,
   sanitizeAuthUser,
 } from '@lib/helpers';
-import { registerAuthTokenGetter } from '@lib/api-client';
+import {
+  registerAuthTokenGetter,
+  registerAuthSessionHandler,
+} from '@lib/api-client';
 
 export interface AuthState {
   user: AuthUser | null;
@@ -53,6 +58,7 @@ export const useAuthStore = create<AuthState>()(
 
       clearSession: () => {
         clearStoredSession();
+        void logoutPassportSession();
         set({
           user: null,
           accessToken: null,
@@ -73,17 +79,7 @@ export const useAuthStore = create<AuthState>()(
         const token = state.accessToken || stored?.accessToken || null;
         const cachedUser = state.user || (stored?.user ? sanitizeAuthUser(stored.user) : null);
 
-        if (!token) {
-          set({
-            user: null,
-            accessToken: null,
-            isSessionVerified: false,
-            isVerifyingSession: false,
-          });
-          return null;
-        }
-
-        if (cachedUser && !state.user) {
+        if (cachedUser && !state.user && token) {
           set({ user: cachedUser, accessToken: token });
         }
 
@@ -93,32 +89,63 @@ export const useAuthStore = create<AuthState>()(
 
         set({ isVerifyingSession: true });
 
-        inFlightVerification = verifyPassportSession(token)
-          .then((verifiedUser) => {
-            if (verifiedUser) {
-              const sanitized = sanitizeAuthUser(verifiedUser)!;
-              setStoredSession({ accessToken: token, user: sanitized });
+        inFlightVerification = (async () => {
+          try {
+            // 1. If an access token exists, verify it with /auth/me
+            if (token) {
+              const verifiedUser = await verifyPassportSession(token);
+              if (verifiedUser) {
+                const sanitized = sanitizeAuthUser(verifiedUser)!;
+                setStoredSession({ accessToken: token, user: sanitized });
+                set({
+                  user: sanitized,
+                  accessToken: token,
+                  isSessionVerified: true,
+                  isVerifyingSession: false,
+                });
+                return sanitized;
+              }
+            }
+
+            // 2. Access token is absent or expired: attempt silent refresh via httpOnly rt cookie
+            const refreshed = await refreshPassportSession();
+            if (refreshed) {
+              const sanitized = sanitizeAuthUser(refreshed.user)!;
+              setStoredSession({
+                accessToken: refreshed.accessToken,
+                user: sanitized,
+              });
               set({
                 user: sanitized,
-                accessToken: token,
+                accessToken: refreshed.accessToken,
                 isSessionVerified: true,
                 isVerifyingSession: false,
               });
               return sanitized;
-            } else {
-              clearStoredSession();
-              set({
-                user: null,
-                accessToken: null,
-                isSessionVerified: false,
-                isVerifyingSession: false,
-              });
-              return null;
             }
-          })
-          .finally(() => {
+
+            // 3. Unauthenticated or session completely expired
+            clearStoredSession();
+            set({
+              user: null,
+              accessToken: null,
+              isSessionVerified: false,
+              isVerifyingSession: false,
+            });
+            return null;
+          } catch {
+            clearStoredSession();
+            set({
+              user: null,
+              accessToken: null,
+              isSessionVerified: false,
+              isVerifyingSession: false,
+            });
+            return null;
+          } finally {
             inFlightVerification = null;
-          });
+          }
+        })();
 
         return inFlightVerification;
       },
@@ -155,3 +182,20 @@ export const useAuthStore = create<AuthState>()(
 registerAuthTokenGetter(() => {
   return useAuthStore.getState().accessToken || getStoredSession()?.accessToken || null;
 });
+
+// Register session refresh handler to update store automatically when axios interceptor rotates tokens
+registerAuthSessionHandler(
+  (session) => {
+    if (session.user) {
+      useAuthStore.getState().setSession({
+        accessToken: session.accessToken,
+        user: session.user,
+      });
+    } else {
+      useAuthStore.setState({ accessToken: session.accessToken });
+    }
+  },
+  () => {
+    useAuthStore.getState().clearSession();
+  },
+);
