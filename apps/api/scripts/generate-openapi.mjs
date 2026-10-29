@@ -4,6 +4,10 @@ import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { AppModule } from '../dist/app.module.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function generate() {
   process.env.JWT_SECRET = process.env.JWT_SECRET || 'a-very-long-dummy-jwt-secret-for-openapi-generation-32-chars';
@@ -19,7 +23,8 @@ async function generate() {
   cleanupOpenApiDoc(document);
   document.openapi = '3.1.0';
 
-  const outputPath = path.resolve(process.cwd(), 'openapi.json');
+  const rootDir = path.resolve(__dirname, '../../..');
+  const outputPath = path.resolve(rootDir, 'openapi.json');
   fs.writeFileSync(outputPath, JSON.stringify(document, null, 2));
   console.log(`OpenAPI schema generated successfully at: ${outputPath}`);
   await app.close();

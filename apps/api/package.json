@@ -17,6 +17,7 @@
     "start:prod": "node dist/main",
     "lint": "oxlint src/ test/",
     "typecheck": "tsc --noEmit",
+    "openapi:dump": "node scripts/generate-openapi.mjs",
     "db:migrate": "prisma migrate deploy --config=prisma.config.ts",
     "db:migrate:dev": "prisma migrate dev --config=prisma.config.ts",
     "db:studio": "prisma studio --config=prisma.config.ts",
