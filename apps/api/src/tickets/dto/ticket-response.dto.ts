@@ -15,6 +15,7 @@ export const userSummarySchema = z.object({
 export const commentResponseSchema = z.object({
   id: z.string().default(''),
   content: z.string().default(''),
+  isInternal: z.boolean().default(false),
   createdAt: dateToIsoString.default(() => new Date().toISOString()),
   author: userSummarySchema.nullable().default(null),
   hasAttachment: z.boolean().default(false),

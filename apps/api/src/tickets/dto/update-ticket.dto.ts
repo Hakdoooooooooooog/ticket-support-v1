@@ -80,6 +80,10 @@ export const createCommentSchema = z.object({
     .string()
     .optional()
     .describe('Optional author User ID'),
+  isInternal: z
+    .boolean()
+    .optional()
+    .describe('When true, the note is only visible to staff (ADMIN/AGENT)'),
   encryptedAttachment: encryptedAttachmentSchema
     .optional()
     .describe('Optional image attachment for this comment'),

@@ -340,14 +340,17 @@ export default function AdminDashboardPage() {
       ticketId,
       content,
       encryptedAttachment,
+      isInternal,
     }: {
       ticketId: string;
       content: string;
       encryptedAttachment?: EncryptedAttachmentPayload;
+      isInternal?: boolean;
     }) => {
       const res = (await ticketsControllerAddComment(ticketId, {
         content,
         authorId: user?.id,
+        ...(isInternal ? { isInternal: true } : {}),
         ...(encryptedAttachment
           ? { encryptedAttachment: encryptedAttachment as any }
           : {}),
@@ -531,7 +534,11 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handlePostResolutionNote = async (ticketId: string, e: FormEvent) => {
+  const handlePostResolutionNote = async (
+    ticketId: string,
+    e: FormEvent,
+    isInternal = false,
+  ) => {
     e.preventDefault();
     setActionErrors((prev) => ({ ...prev, [ticketId]: "" }));
     const text = sanitizeText(commentDrafts[ticketId] || "");
@@ -547,6 +554,7 @@ export default function AdminDashboardPage() {
         ticketId,
         content: text || "Attached reference screenshot.",
         encryptedAttachment,
+        isInternal,
       });
     } catch (err: unknown) {
       const message =
