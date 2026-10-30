@@ -23,6 +23,8 @@
     "db:studio": "prisma studio --config=prisma.config.ts",
     "db:push": "prisma db push --config=prisma.config.ts",
     "db:generate": "prisma generate --config=prisma.config.ts",
+    "db:seed": "node scripts/seed-local-users.mjs",
+    "db:setup": "prisma migrate deploy --config=prisma.config.ts && node scripts/seed-local-users.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",

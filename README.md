@@ -123,9 +123,13 @@ docker compose up -d
 # Install dependencies across monorepo
 npm install
 
-# Initialize database schema and Prisma Client
-npm --prefix apps/api run db:push
-npm --prefix apps/api run db:generate
+# Apply database migrations and seed default dev accounts, Philippine calendar, and SLAs
+npm run db:setup
+
+# (Optional) Individual migration and seed commands:
+# npm run db:migrate       # Apply pending migrations
+# npm run db:migrate:dev   # Create/apply migrations in development
+# npm run db:seed          # Seed dev accounts & calendar
 
 # Generate typed API client hooks (Orval + TanStack Query v5)
 npm run codegen

@@ -16,6 +16,9 @@
     "db:down": "docker compose down",
     "db:studio": "npm run db:studio --workspace=api",
     "db:migrate": "npm run db:migrate --workspace=api",
+    "db:migrate:dev": "npm run db:migrate:dev --workspace=api",
+    "db:seed": "npm run db:seed --workspace=api",
+    "db:setup": "npm run db:migrate && npm run db:seed",
     "generate:api": "npm run generate:api --workspace=web",
     "openapi:dump": "npm run openapi:dump --workspace=api",
     "codegen": "npm run openapi:dump && npm run generate:api"
