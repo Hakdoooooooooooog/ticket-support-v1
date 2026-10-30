@@ -71,6 +71,7 @@ model User {
   articleFeedback   ArticleFeedback[]
   deflections       ArticleDeflection[]
   createdIncidentBanners IncidentBanner[] @relation("CreatedIncidentBanners")
+  auditLogs         AuditLog[]          @relation("UserAuditLogs")
 
   @@index([role, fullName])
   @@map("users")
@@ -290,4 +291,35 @@ model IncidentBanner {
 
   @@index([isActive, createdAt])
   @@map("incident_banners")
+}
+
+model AuditSettings {
+  id            String   @id @default("singleton")
+  retentionDays Int?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  @@map("audit_settings")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+
+  actorId    String?
+  actor      User?    @relation("UserAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+  actorEmail String
+  actorRole  Role
+
+  action     String
+  entityType String
+  entityId   String
+  summary    String
+  changes    Json?
+  ip         String?
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
 }

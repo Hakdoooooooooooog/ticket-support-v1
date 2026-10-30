@@ -62,6 +62,7 @@ import {
   AdminReports,
   AdminKnowledgeBase,
   AdminIncidentBanners,
+  AdminAuditLogs,
   type StaffInviteRecord,
 } from "@components/admin";
 import { GlobalIncidentBanner } from "@components/incident-banner";
@@ -1126,6 +1127,9 @@ export default function AdminDashboardPage() {
 
           {/* SECTION 8: GLOBAL INCIDENT OUTAGE BANNERS */}
           {activeSection === "INCIDENT_BANNERS" && <AdminIncidentBanners />}
+
+          {/* SECTION 9: AUDIT LOGS */}
+          {activeSection === "AUDIT_LOGS" && user?.role === "ADMIN" && <AdminAuditLogs />}
         </main>
       </div>
 

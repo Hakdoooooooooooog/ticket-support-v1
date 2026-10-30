@@ -11,3 +11,4 @@ export { AdminReports } from './admin-reports';
 export { AdminKnowledgeBase } from './admin-knowledge-base';
 export { AdminIncidentBanners } from './admin-incident-banners';
 
+export { AdminAuditLogs } from './admin-audit-logs';

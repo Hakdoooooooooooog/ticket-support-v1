@@ -1,4 +1,5 @@
 export * from './app/app';
+export * from './audit/audit';
 export * from './authentication/authentication';
 export * from './canned-responses/canned-responses';
 export * from './incident-banners/incident-banners';

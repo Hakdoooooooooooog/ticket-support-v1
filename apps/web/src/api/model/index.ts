@@ -45,3 +45,5 @@ export * from './updateTicketDtoEncryptedAttachmentStorageType';
 export * from './updateTicketDtoPriority';
 export * from './updateTicketDtoStatus';
 export * from './uploadFallbackDto';
+export * from './auditControllerFindAllParams';
+export * from './updateAuditSettingsDto';

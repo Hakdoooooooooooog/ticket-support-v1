@@ -15,6 +15,7 @@ import { ReportsModule } from './reports/reports.module.js';
 import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { IncidentBannersModule } from './incident-banners/incident-banners.module.js';
+import { AuditModule } from './audit/audit.module.js';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storage.js';
 
 @Module({
@@ -43,6 +44,7 @@ import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storag
       }),
     }),
     PrismaModule,
+    AuditModule,
     RealtimeModule,
     NotificationsModule,
     TicketsModule,
