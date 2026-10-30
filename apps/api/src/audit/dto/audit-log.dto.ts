@@ -23,6 +23,9 @@ export const auditActionEnum = z.enum([
   'AUTH_REFRESH_TOKEN_REUSE',
   'AUDIT_SETTINGS_UPDATED',
   'AUDIT_LOGS_PURGED',
+  'SLA_POLICY_UPDATED',
+  'SLA_WARNING_TRIGGERED',
+  'SLA_BREACH_TRIGGERED',
 ]);
 
 export const auditEntityTypeEnum = z.enum([
@@ -34,6 +37,7 @@ export const auditEntityTypeEnum = z.enum([
   'BANNER',
   'AUTH',
   'SETTINGS',
+  'SLA',
 ]);
 
 export const auditLogFilterSchema = z.object({

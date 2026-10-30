@@ -17,13 +17,13 @@ import {
 import { TicketMapper } from './mappers/ticket.mapper.js';
 import {
   decompressAndEncryptAttachment,
-  EncryptedAttachmentInput,
   OnDemandAttachmentResponse,
 } from './attachment-crypto.util.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
 import { StorageService } from '../storage/storage.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { SlaService } from '../sla/sla.service.js';
 
 export interface TicketActorContext {
   id: string;
@@ -46,6 +46,7 @@ export class TicketsService implements OnModuleInit {
     @Optional() private readonly realtimeService?: RealtimeService,
     @Optional() private readonly storageService?: StorageService,
     @Optional() private readonly auditService?: AuditService,
+    @Optional() private readonly slaService?: SlaService,
   ) {}
 
   /**
@@ -387,6 +388,18 @@ export class TicketsService implements OnModuleInit {
         }
       }
 
+      if (this.slaService) {
+        const slaDueDates = await this.slaService.calculateTicketDueDates(
+          new Date(),
+          (createData as any).priority || 'MEDIUM',
+          (createData as any).department,
+        );
+        if (slaDueDates) {
+          (createData as any).firstResponseDueAt = slaDueDates.firstResponseDueAt;
+          (createData as any).resolutionDueAt = slaDueDates.resolutionDueAt;
+        }
+      }
+
       const record = await tx.ticket.create({
         data: createData,
         include: this.standardTicketInclude,
@@ -614,6 +627,14 @@ export class TicketsService implements OnModuleInit {
         },
       });
 
+      if (!isInternal && (author.role === 'ADMIN' || author.role === 'AGENT') && this.slaService) {
+        await this.slaService.handleStaffPublicComment(
+          ticketId,
+          (existingTicket as any).firstRespondedAt,
+          tx,
+        );
+      }
+
       const updatedTicket = await tx.ticket.findUnique({
         where: { id: ticketId },
         include: this.standardTicketInclude,
@@ -825,11 +846,40 @@ export class TicketsService implements OnModuleInit {
         });
       }
 
-      const updated = await tx.ticket.update({
+      let updated = await tx.ticket.update({
         where: { id },
         data: updateData as any,
         include: this.standardTicketInclude,
       });
+
+      if (this.slaService) {
+        const newStatus = (updateData.status as any) || (dto.status as any);
+        if (newStatus && newStatus !== (existingTicket as any).status) {
+          const slaUpdated = await this.slaService.handleStatusChange(
+            id,
+            (existingTicket as any).status,
+            newStatus,
+            existingTicket as any,
+            tx,
+          );
+          if (slaUpdated) {
+            updated = { ...updated, ...slaUpdated };
+          }
+        }
+
+        if (dto.priority && dto.priority !== (existingTicket as any).priority) {
+          const reprioritized = await this.slaService.applySlaToTicket(
+            id,
+            dto.priority as any,
+            (existingTicket as any).department,
+            (existingTicket as any).createdAt,
+            tx,
+          );
+          if (reprioritized) {
+            updated = { ...updated, ...reprioritized };
+          }
+        }
+      }
 
       if (this.auditService) {
         const changes: Record<string, { from: unknown; to: unknown }> = {};

@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Badge } from '@ui/badge';
 import { Button } from '@ui/button';
 import {

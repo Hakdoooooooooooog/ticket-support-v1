@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Card, CardContent, CardHeader } from '@ui/card';
 
 export interface ContextualLoaderProps {

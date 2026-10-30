@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Card, CardContent } from '@ui/card';
 import { Button } from '@ui/button';
 import { Input } from '@ui/input';

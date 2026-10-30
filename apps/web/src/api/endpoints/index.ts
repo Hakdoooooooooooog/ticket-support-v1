@@ -7,5 +7,6 @@ export * from './knowledge-base/knowledge-base';
 export * from './notifications/notifications';
 export * from './realtime/realtime';
 export * from './reports/reports';
+export * from './sla/sla';
 export * from './storage/storage';
 export * from './tickets/tickets';

@@ -52,6 +52,15 @@ export const ticketResponseSchema = z.object({
   csatRating: z.number().int().min(1).max(5).nullable().optional().default(null),
   csatComment: z.string().nullable().optional().default(null),
   csatRatedAt: dateToIsoString.nullable().optional().default(null),
+  firstResponseDueAt: dateToIsoString.nullable().optional().default(null),
+  resolutionDueAt: dateToIsoString.nullable().optional().default(null),
+  firstRespondedAt: dateToIsoString.nullable().optional().default(null),
+  resolvedAt: dateToIsoString.nullable().optional().default(null),
+  slaPausedAt: dateToIsoString.nullable().optional().default(null),
+  firstResponseWarnedAt: dateToIsoString.nullable().optional().default(null),
+  resolutionWarnedAt: dateToIsoString.nullable().optional().default(null),
+  firstResponseBreachedAt: dateToIsoString.nullable().optional().default(null),
+  resolutionBreachedAt: dateToIsoString.nullable().optional().default(null),
 });
 
 export class TicketResponseDto extends createZodDto(ticketResponseSchema) {}

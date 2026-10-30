@@ -63,6 +63,7 @@ import {
   AdminKnowledgeBase,
   AdminIncidentBanners,
   AdminAuditLogs,
+  AdminSlaPolicies,
   type StaffInviteRecord,
 } from "@components/admin";
 import { GlobalIncidentBanner } from "@components/incident-banner";
@@ -1130,6 +1131,9 @@ export default function AdminDashboardPage() {
 
           {/* SECTION 9: AUDIT LOGS */}
           {activeSection === "AUDIT_LOGS" && user?.role === "ADMIN" && <AdminAuditLogs />}
+
+          {/* SECTION 10: SLA POLICIES & CALENDARS */}
+          {activeSection === "SLA_POLICIES" && user?.role === "ADMIN" && <AdminSlaPolicies />}
         </main>
       </div>
 

@@ -1,4 +1,3 @@
-import * as React from "react";
 import { cn } from "@lib/helpers";
 import { forwardRef, TextareaHTMLAttributes } from "react";
 

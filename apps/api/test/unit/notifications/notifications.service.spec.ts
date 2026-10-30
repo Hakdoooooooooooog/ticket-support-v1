@@ -121,7 +121,10 @@ describe('NotificationsService', () => {
 
     expect(mockPrisma.notification.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: 'admin-1', type: 'TICKET_CREATED' },
+        where: {
+          userId: 'admin-1',
+          type: { in: ['TICKET_CREATED', 'SLA_WARNING', 'SLA_BREACHED'] },
+        },
       }),
     );
   });

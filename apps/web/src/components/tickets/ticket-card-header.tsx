@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useMemo } from 'react';
 import { CardHeader, CardTitle } from '@ui/card';
 import { Badge } from '@ui/badge';
 import {
@@ -52,6 +52,17 @@ export function getTicketCardBorderClasses({
   return 'border-spruce-200/80 dark:border-spruce-800/80 border-l-4 border-l-transparent bg-white/70 dark:bg-spruce-950/40 hover:bg-white dark:hover:bg-spruce-900/50';
 }
 
+function getRelativeTimeDisplay(targetIso: string): string {
+  const diffMs = new Date(targetIso).getTime() - Date.now();
+  if (diffMs <= 0) return 'overdue';
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ${mins % 60}m`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
+}
+
 export function TicketCardHeader({
   ticket,
   isExpanded,
@@ -62,6 +73,67 @@ export function TicketCardHeader({
 }: TicketCardHeaderProps) {
   const commentCount = ticket.comments?.length || 0;
   const attachmentCount = countTicketAttachments(ticket);
+
+  const slaBadge = useMemo(() => {
+    if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+      if (ticket.resolutionBreachedAt) {
+        return {
+          label: 'SLA Breached',
+          className: 'border-rose-400 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-semibold',
+          title: 'Resolution SLA was breached',
+        };
+      }
+      return {
+        label: 'SLA Met',
+        className: 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-medium',
+        title: 'Resolved within SLA target',
+      };
+    }
+
+    if (ticket.status === 'NEEDS_INFO') {
+      return {
+        label: '⏸ SLA Paused',
+        className: 'border-amber-400 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-medium',
+        title: 'SLA timer paused awaiting customer information',
+      };
+    }
+
+    if (ticket.firstResponseBreachedAt || ticket.resolutionBreachedAt) {
+      return {
+        label: '⚠ SLA Breached',
+        className: 'border-rose-500 bg-rose-600 text-white font-bold animate-pulse',
+        title: 'Ticket has breached an SLA target deadline',
+      };
+    }
+
+    if (ticket.firstResponseWarnedAt || ticket.resolutionWarnedAt) {
+      return {
+        label: '⏱ SLA Warning',
+        className: 'border-amber-400 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 font-semibold',
+        title: 'Ticket is approaching its SLA target deadline',
+      };
+    }
+
+    if (!ticket.firstRespondedAt && ticket.firstResponseDueAt) {
+      const rel = getRelativeTimeDisplay(ticket.firstResponseDueAt);
+      return {
+        label: `Resp: ${rel}`,
+        className: 'border-spruce-300 dark:border-spruce-700 bg-spruce-100/80 dark:bg-spruce-800/80 text-spruce-800 dark:text-spruce-200',
+        title: `First response target: ${new Date(ticket.firstResponseDueAt).toLocaleString()}`,
+      };
+    }
+
+    if (!ticket.resolvedAt && ticket.resolutionDueAt) {
+      const rel = getRelativeTimeDisplay(ticket.resolutionDueAt);
+      return {
+        label: `Resolve: ${rel}`,
+        className: 'border-spruce-300 dark:border-spruce-700 bg-spruce-100/80 dark:bg-spruce-800/80 text-spruce-800 dark:text-spruce-200',
+        title: `Resolution target: ${new Date(ticket.resolutionDueAt).toLocaleString()}`,
+      };
+    }
+
+    return null;
+  }, [ticket]);
 
   return (
     <CardHeader className="p-0">
@@ -180,6 +252,16 @@ export function TicketCardHeader({
               ⚡ AUTO-ESCALATED
             </Badge>
           )}
+
+          {slaBadge && (
+            <span
+              className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${slaBadge.className}`}
+              title={slaBadge.title}
+            >
+              {slaBadge.label}
+            </span>
+          )}
+
           <Badge
             variant="outline"
             className={`text-[11px] font-semibold ${

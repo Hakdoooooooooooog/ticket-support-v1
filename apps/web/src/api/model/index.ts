@@ -6,10 +6,14 @@
  * OpenAPI spec version: 1.0
  */
 
+export * from './addHolidayDto';
 export * from './adminCreateUserDto';
 export * from './adminCreateUserDtoRole';
 export * from './articleFeedbackDto';
+export * from './auditControllerFindAllParams';
 export * from './createArticleDto';
+export * from './createBusinessCalendarDto';
+export * from './createBusinessCalendarDtoWorkingWindowsItem';
 export * from './createCannedResponseDto';
 export * from './createCommentDto';
 export * from './createCommentDtoEncryptedAttachment';
@@ -35,9 +39,13 @@ export * from './storageControllerPresignDownloadParams';
 export * from './storageControllerStreamAttachmentParams';
 export * from './ticketsControllerFindAllParams';
 export * from './updateArticleDto';
+export * from './updateAuditSettingsDto';
+export * from './updateBusinessCalendarDto';
+export * from './updateBusinessCalendarDtoWorkingWindowsItem';
 export * from './updateCannedResponseDto';
 export * from './updateIncidentBannerDto';
 export * from './updateIncidentBannerDtoSeverity';
+export * from './updateSlaPolicyDto';
 export * from './updateTicketDto';
 export * from './updateTicketDtoDepartment';
 export * from './updateTicketDtoEncryptedAttachment';
@@ -45,5 +53,3 @@ export * from './updateTicketDtoEncryptedAttachmentStorageType';
 export * from './updateTicketDtoPriority';
 export * from './updateTicketDtoStatus';
 export * from './uploadFallbackDto';
-export * from './auditControllerFindAllParams';
-export * from './updateAuditSettingsDto';
