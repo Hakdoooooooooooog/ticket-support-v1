@@ -117,8 +117,14 @@ export class AuthService implements OnModuleInit {
   protected loadLocalSeedAccounts(): SeedAccountConfig[] {
     const accounts: SeedAccountConfig[] = [];
 
-    const localSeedPath = resolve(process.cwd(), 'seed.local.json');
-    if (existsSync(localSeedPath)) {
+    const candidatePaths = [
+      resolve(process.cwd(), 'seed.local.json'),
+      resolve(process.cwd(), 'apps/api/seed.local.json'),
+      resolve(process.cwd(), '../api/seed.local.json'),
+    ];
+
+    const localSeedPath = candidatePaths.find((p) => existsSync(p));
+    if (localSeedPath && existsSync(localSeedPath)) {
       try {
         const parsed = JSON.parse(readFileSync(localSeedPath, 'utf-8'));
         if (Array.isArray(parsed)) {
