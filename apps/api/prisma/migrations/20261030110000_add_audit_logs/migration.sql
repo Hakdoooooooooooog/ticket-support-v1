@@ -39,9 +39,22 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actorId_fkey" FOREIGN KEY ("
 
 -- Immutability & Purge Protection Trigger
 CREATE OR REPLACE FUNCTION protect_audit_logs()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $func$
 BEGIN
     IF TG_OP = 'UPDATE' THEN
+        -- Allow foreign-key SET NULL action when referenced user is deleted
+        IF OLD."actorId" IS NOT NULL AND NEW."actorId" IS NULL
+           AND OLD.id = NEW.id
+           AND OLD."actorEmail" = NEW."actorEmail"
+           AND OLD."actorRole" = NEW."actorRole"
+           AND OLD.action = NEW.action
+           AND OLD."entityType" = NEW."entityType"
+           AND OLD."entityId" = NEW."entityId"
+           AND OLD.summary = NEW.summary
+           AND OLD."createdAt" = NEW."createdAt" THEN
+            RETURN NEW;
+        END IF;
+
         RAISE EXCEPTION 'Audit log records are immutable and cannot be updated';
     ELSIF TG_OP = 'DELETE' THEN
         -- Allow deletion ONLY when executed within authorized retention purge session
@@ -52,7 +65,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$func$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_protect_audit_logs ON "audit_logs";
 CREATE TRIGGER trg_protect_audit_logs
