@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Card, CardContent } from '@ui/card';
-import { Button } from '@ui/button';
-import { Badge } from '@ui/badge';
-import { Input } from '@ui/input';
-import { CannedResponsesMenu } from '@components/canned-responses-menu';
-import type { Ticket } from '@components/ticket-list';
+import * as React from "react";
+import { Card, CardContent } from "@ui/card";
+import { Button } from "@ui/button";
+import { Badge } from "@ui/badge";
+import { Input } from "@ui/input";
+import { CannedResponsesMenu } from "@components/canned-responses-menu";
+import type { Ticket } from "@components/ticket-list";
 import {
   AuthUser,
   DecryptedAttachmentResult,
@@ -14,10 +14,14 @@ import {
   computeTicketSlaStatus,
   formatByteSize,
   formatTicketDateTime,
-} from '@lib/helpers';
-import { TicketCardHeader, getTicketCardBorderClasses } from '@components/tickets/ticket-card-header';
-import { TicketAttachmentPreview } from '@components/tickets/ticket-attachment-preview';
-import { TicketCommentThread } from '@components/tickets/ticket-comment-thread';
+} from "@lib/helpers";
+import {
+  TicketCardHeader,
+  getTicketCardBorderClasses,
+} from "@components/tickets/ticket-card-header";
+import { TicketAttachmentPreview } from "@components/tickets/ticket-attachment-preview";
+import { TicketCommentThread } from "@components/tickets/ticket-comment-thread";
+import { FormEvent } from "react";
 
 interface AdminTicketAccordionItemProps {
   ticket: Ticket;
@@ -28,8 +32,8 @@ interface AdminTicketAccordionItemProps {
   isViewed: boolean;
   onToggleViewed?: (id: string) => void;
   highlighted: boolean;
-  onUpdateStatus: (id: string, status: Ticket['status']) => void;
-  onUpdatePriority: (id: string, priority: Ticket['priority']) => void;
+  onUpdateStatus: (id: string, status: Ticket["status"]) => void;
+  onUpdatePriority: (id: string, priority: Ticket["priority"]) => void;
   onUpdateAssignee: (id: string, assigneeId: string | null) => void;
   onAutoAssignTicket?: (id: string) => void;
   onClaimTicket: (id: string) => void;
@@ -48,7 +52,7 @@ interface AdminTicketAccordionItemProps {
   onUpdateDraft: (id: string, val: string) => void;
   commentAttachment?: File | null;
   onSetCommentAttachment: (id: string, file: File | null) => void;
-  onPostNote: (id: string, e: React.FormEvent) => void;
+  onPostNote: (id: string, e: FormEvent) => void;
   isPostingNote: boolean;
   isFollowUpOpen: boolean;
   followUpPrompt: string;
@@ -102,26 +106,32 @@ export function AdminTicketAccordionItem({
   const sla = computeTicketSlaStatus(ticket);
   const assigneeId = resolveTicketAssigneeId(ticket);
   const isTicketAssigned = Boolean(assigneeId);
-  const isClosed = ticket.status === 'CLOSED';
-  const isAdmin = user?.role === 'ADMIN';
+  const isClosed = ticket.status === "CLOSED";
+  const isAdmin = user?.role === "ADMIN";
   const isAssignedToMe = Boolean(user?.id && assigneeId === user.id);
-  const isAssignedToOther = Boolean(assigneeId && user?.id && assigneeId !== user.id);
+  const isAssignedToOther = Boolean(
+    assigneeId && user?.id && assigneeId !== user.id,
+  );
   const canManageTicket = isAdmin || isAssignedToMe;
 
   const initialAttachmentKey = `ticket:${ticket.id}`;
   const decryptedTicketImg = decryptedAttachments[initialAttachmentKey];
-  const isLoadingTicketImg = Boolean(loadingAttachmentKeys[initialAttachmentKey]);
+  const isLoadingTicketImg = Boolean(
+    loadingAttachmentKeys[initialAttachmentKey],
+  );
   const isTicketImgHidden = Boolean(hiddenAttachmentKeys[initialAttachmentKey]);
 
   return (
     <Card
       key={ticket.id}
       id={`ticket-${ticket.id}`}
-      className={`overflow-hidden transition-all duration-150 ${getTicketCardBorderClasses({
-        isHighlighted: highlighted,
-        isViewed,
-        status: ticket.status,
-      })}`}
+      className={`overflow-hidden transition-all duration-150 ${getTicketCardBorderClasses(
+        {
+          isHighlighted: highlighted,
+          isViewed,
+          status: ticket.status,
+        },
+      )}`}
     >
       <TicketCardHeader
         ticket={ticket}
@@ -143,7 +153,8 @@ export function AdminTicketAccordionItem({
                   ⚡ PRIORITY AUTO-ESCALATED
                 </span>
                 <span>
-                  {ticket.escalationReason || 'System auto-escalated this incident to URGENT based on critical outage keywords.'}
+                  {ticket.escalationReason ||
+                    "System auto-escalated this incident to URGENT based on critical outage keywords."}
                 </span>
               </div>
             </div>
@@ -157,7 +168,8 @@ export function AdminTicketAccordionItem({
                   Closed &amp; Archived
                 </span>
                 <span className="text-spruce-600 dark:text-spruce-300">
-                  This ticket is closed. It cannot be modified by staff unless the customer reopens it from the portal.
+                  This ticket is closed. It cannot be modified by staff unless
+                  the customer reopens it from the portal.
                 </span>
               </div>
               {isAdmin && (
@@ -190,7 +202,10 @@ export function AdminTicketAccordionItem({
                     id={`priority-${ticket.id}`}
                     value={ticket.priority}
                     onChange={(e) =>
-                      onUpdatePriority(ticket.id, e.target.value as Ticket['priority'])
+                      onUpdatePriority(
+                        ticket.id,
+                        e.target.value as Ticket["priority"],
+                      )
                     }
                     className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                   >
@@ -211,8 +226,10 @@ export function AdminTicketAccordionItem({
                     </label>
                     <select
                       id={`assignee-${ticket.id}`}
-                      value={assigneeId || ''}
-                      onChange={(e) => onUpdateAssignee(ticket.id, e.target.value || null)}
+                      value={assigneeId || ""}
+                      onChange={(e) =>
+                        onUpdateAssignee(ticket.id, e.target.value || null)
+                      }
                       className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                     >
                       <option value="">Unassigned</option>
@@ -276,21 +293,21 @@ export function AdminTicketAccordionItem({
             <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-spruce-50/90 dark:bg-spruce-900/60 border border-spruce-200/70 dark:border-spruce-800">
               <div className="flex flex-wrap items-center gap-3 text-xs">
                 <span className="text-spruce-600 dark:text-spruce-300">
-                  Assigned to:{' '}
+                  Assigned to:{" "}
                   <strong className="font-semibold text-spruce-900 dark:text-spruce-100">
-                    {ticket.assignee?.fullName || 'Another Agent'}
+                    {ticket.assignee?.fullName || "Another Agent"}
                   </strong>
                 </span>
                 <span className="text-spruce-400 dark:text-spruce-600">•</span>
                 <span className="text-spruce-600 dark:text-spruce-300">
-                  Status:{' '}
+                  Status:{" "}
                   <strong className="text-spruce-900 dark:text-spruce-100">
-                    {ticket.status.replace('_', ' ')}
+                    {ticket.status.replace("_", " ")}
                   </strong>
                 </span>
                 <span className="text-spruce-400 dark:text-spruce-600">•</span>
                 <span className="text-spruce-600 dark:text-spruce-300">
-                  Priority:{' '}
+                  Priority:{" "}
                   <strong className="text-spruce-900 dark:text-spruce-100">
                     {ticket.priority}
                   </strong>
@@ -323,7 +340,10 @@ export function AdminTicketAccordionItem({
                     id={`status-${ticket.id}`}
                     value={ticket.status}
                     onChange={(e) =>
-                      onUpdateStatus(ticket.id, e.target.value as Ticket['status'])
+                      onUpdateStatus(
+                        ticket.id,
+                        e.target.value as Ticket["status"],
+                      )
                     }
                     className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                   >
@@ -346,7 +366,10 @@ export function AdminTicketAccordionItem({
                     id={`priority-${ticket.id}`}
                     value={ticket.priority}
                     onChange={(e) =>
-                      onUpdatePriority(ticket.id, e.target.value as Ticket['priority'])
+                      onUpdatePriority(
+                        ticket.id,
+                        e.target.value as Ticket["priority"],
+                      )
                     }
                     className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                   >
@@ -367,8 +390,10 @@ export function AdminTicketAccordionItem({
                     </label>
                     <select
                       id={`assignee-${ticket.id}`}
-                      value={assigneeId || ''}
-                      onChange={(e) => onUpdateAssignee(ticket.id, e.target.value || null)}
+                      value={assigneeId || ""}
+                      onChange={(e) =>
+                        onUpdateAssignee(ticket.id, e.target.value || null)
+                      }
                       className="h-8 rounded-md border border-spruce-300 bg-white px-2.5 text-xs font-medium text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                     >
                       <option value="">Unassigned</option>
@@ -381,9 +406,11 @@ export function AdminTicketAccordionItem({
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-spruce-700 dark:text-spruce-300">Assignee:</span>
+                    <span className="font-semibold text-spruce-700 dark:text-spruce-300">
+                      Assignee:
+                    </span>
                     <span className="font-medium text-spruce-800 dark:text-spruce-200">
-                      {ticket.assignee?.fullName || 'Assigned to You'}
+                      {ticket.assignee?.fullName || "Assigned to You"}
                     </span>
                     <Button
                       type="button"
@@ -401,12 +428,14 @@ export function AdminTicketAccordionItem({
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
-                  variant={isFollowUpOpen ? 'default' : 'secondary'}
+                  variant={isFollowUpOpen ? "default" : "secondary"}
                   size="sm"
                   onClick={() => onToggleFollowUp(ticket.id)}
                   className="h-8 text-xs"
                 >
-                  {isFollowUpOpen ? 'Cancel Follow-Up' : 'Request Info / Follow-Up'}
+                  {isFollowUpOpen
+                    ? "Cancel Follow-Up"
+                    : "Request Info / Follow-Up"}
                 </Button>
 
                 {isAdmin && (
@@ -432,83 +461,90 @@ export function AdminTicketAccordionItem({
           )}
 
           {/* Inline Follow-Up Request Composer */}
-          {isTicketAssigned && !isClosed && canManageTicket && isFollowUpOpen && (
-            <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
-                  Request Customer Follow-Up / Additional Info
-                </span>
-                <div className="flex items-center gap-2">
-                  <CannedResponsesMenu
-                    buttonLabel="Quick Templates"
-                    context={{
-                      customerName: ticket.creator?.fullName || 'Customer',
-                      ticketId: ticket.id,
-                      ticketTitle: ticket.title,
-                      agentName: user?.fullName || 'IT Support',
-                    }}
-                    onSelect={(snippet) =>
-                      onSetFollowUpPrompt(
-                        followUpPrompt ? `${followUpPrompt} ${snippet}` : snippet,
-                      )
-                    }
-                  />
-                  <span className="text-[11px] text-amber-600/80 dark:text-amber-300/80">
-                    Sets status to NEEDS INFO
+          {isTicketAssigned &&
+            !isClosed &&
+            canManageTicket &&
+            isFollowUpOpen && (
+              <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
+                    Request Customer Follow-Up / Additional Info
                   </span>
-                </div>
-              </div>
-
-              <textarea
-                rows={2}
-                value={followUpPrompt}
-                onChange={(e) => onSetFollowUpPrompt(e.target.value)}
-                placeholder="Describe what details, steps, or screenshot you need from the customer..."
-                className="flex w-full rounded-md border border-amber-500/40 bg-white dark:bg-spruce-950 px-3 py-2 text-xs shadow-sm text-spruce-900 dark:text-spruce-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
-              />
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    onChange={(e) => onSetFollowUpAttachment(e.target.files?.[0] || null)}
-                    className="text-xs h-8 max-w-xs cursor-pointer"
-                  />
-                  {followUpAttachment && (
-                    <span className="text-[11px] text-spruce-500">
-                      ({formatByteSize(followUpAttachment.size)})
+                  <div className="flex items-center gap-2">
+                    <CannedResponsesMenu
+                      buttonLabel="Quick Templates"
+                      context={{
+                        customerName: ticket.creator?.fullName || "Customer",
+                        ticketId: ticket.id,
+                        ticketTitle: ticket.title,
+                        agentName: user?.fullName || "IT Support",
+                      }}
+                      onSelect={(snippet) =>
+                        onSetFollowUpPrompt(
+                          followUpPrompt
+                            ? `${followUpPrompt} ${snippet}`
+                            : snippet,
+                        )
+                      }
+                    />
+                    <span className="text-[11px] text-amber-600/80 dark:text-amber-300/80">
+                      Sets status to NEEDS INFO
                     </span>
-                  )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onToggleFollowUp(ticket.id)}
-                    className="h-8 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={isUpdating}
-                    onClick={() => onSendFollowUp(ticket)}
-                    className="h-8 text-xs"
-                  >
-                    {isUpdating ? 'Sending...' : 'Send Follow-Up Request'}
-                  </Button>
+                <textarea
+                  rows={2}
+                  value={followUpPrompt}
+                  onChange={(e) => onSetFollowUpPrompt(e.target.value)}
+                  placeholder="Describe what details, steps, or screenshot you need from the customer..."
+                  className="flex w-full rounded-md border border-amber-500/40 bg-white dark:bg-spruce-950 px-3 py-2 text-xs shadow-sm text-spruce-900 dark:text-spruce-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
+                />
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={(e) =>
+                        onSetFollowUpAttachment(e.target.files?.[0] || null)
+                      }
+                      className="text-xs h-8 max-w-xs cursor-pointer"
+                    />
+                    {followUpAttachment && (
+                      <span className="text-[11px] text-spruce-500">
+                        ({formatByteSize(followUpAttachment.size)})
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onToggleFollowUp(ticket.id)}
+                      className="h-8 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isUpdating}
+                      onClick={() => onSendFollowUp(ticket)}
+                      className="h-8 text-xs"
+                    >
+                      {isUpdating ? "Sending..." : "Send Follow-Up Request"}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Customer Satisfaction Feedback Section */}
-          {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
-            typeof ticket.csatRating === 'number' ? (
+          {(ticket.status === "RESOLVED" || ticket.status === "CLOSED") &&
+            (typeof ticket.csatRating === "number" ? (
               <div className="p-3.5 rounded-lg border border-amber-200 dark:border-amber-700/50 bg-amber-50/60 dark:bg-amber-950/30 text-xs space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -517,12 +553,12 @@ export function AdminTicketAccordionItem({
                     </span>
                     <span className="font-semibold text-spruce-800 dark:text-spruce-200">
                       {ticket.csatRating === 5
-                        ? 'Exceptional Resolution'
+                        ? "Exceptional Resolution"
                         : ticket.csatRating === 4
-                        ? 'Satisfied'
-                        : ticket.csatRating === 3
-                        ? 'Neutral'
-                        : 'Dissatisfied'}
+                          ? "Satisfied"
+                          : ticket.csatRating === 3
+                            ? "Neutral"
+                            : "Dissatisfied"}
                     </span>
                   </div>
                   {ticket.csatRatedAt && (
@@ -544,15 +580,15 @@ export function AdminTicketAccordionItem({
                     CSAT Pending
                   </span>
                   <span className="text-spruce-700 dark:text-spruce-300">
-                    Awaiting feedback from customer ({ticket.creator?.fullName || 'Customer'})
+                    Awaiting feedback from customer (
+                    {ticket.creator?.fullName || "Customer"})
                   </span>
                 </div>
                 <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-spruce-200 dark:bg-spruce-800 text-spruce-800 dark:text-spruce-300">
                   Pending Rating
                 </span>
               </div>
-            )
-          )}
+            ))}
 
           {/* 2. Initial Ticket Report Section */}
           <div className="space-y-2">
@@ -573,7 +609,9 @@ export function AdminTicketAccordionItem({
                   decryptedImage={decryptedTicketImg}
                   isLoading={isLoadingTicketImg}
                   isHidden={isTicketImgHidden}
-                  onToggleVisibility={() => onToggleAttachmentVisibility(initialAttachmentKey)}
+                  onToggleVisibility={() =>
+                    onToggleAttachmentVisibility(initialAttachmentKey)
+                  }
                   onClickPreview={onOpenLightbox}
                 />
               )}
@@ -619,7 +657,7 @@ export function AdminTicketAccordionItem({
                   disabled={isPostingNote}
                   className="h-9 text-xs shrink-0"
                 >
-                  {isPostingNote ? 'Posting...' : 'Post Note'}
+                  {isPostingNote ? "Posting..." : "Post Note"}
                 </Button>
               </div>
 
@@ -631,7 +669,12 @@ export function AdminTicketAccordionItem({
                   <Input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
-                    onChange={(e) => onSetCommentAttachment(ticket.id, e.target.files?.[0] || null)}
+                    onChange={(e) =>
+                      onSetCommentAttachment(
+                        ticket.id,
+                        e.target.files?.[0] || null,
+                      )
+                    }
                     className="text-xs h-8 max-w-xs cursor-pointer"
                   />
                   {commentAttachment && (
@@ -650,10 +693,10 @@ export function AdminTicketAccordionItem({
                   direction="up"
                   align="right"
                   context={{
-                    customerName: ticket.creator?.fullName || 'Customer',
+                    customerName: ticket.creator?.fullName || "Customer",
                     ticketId: ticket.id,
                     ticketTitle: ticket.title,
-                    agentName: user?.fullName || 'IT Support',
+                    agentName: user?.fullName || "IT Support",
                   }}
                   onSelect={(snippet) =>
                     onUpdateDraft(
@@ -669,11 +712,12 @@ export function AdminTicketAccordionItem({
           {/* Informative message for non-admin agents viewing someone else's active ticket */}
           {!isClosed && isAssignedToOther && !isAdmin && (
             <div className="p-3 rounded-md bg-spruce-100/70 dark:bg-spruce-900/50 text-xs text-spruce-600 dark:text-spruce-400 text-center border border-spruce-200/50 dark:border-spruce-800">
-              This ticket is currently assigned to{' '}
+              This ticket is currently assigned to{" "}
               <strong className="text-spruce-800 dark:text-spruce-200">
                 {ticket.assignee?.fullName}
               </strong>
-              . Click &quot;Take Over &amp; Reassign to Me&quot; above to post resolution notes or request customer info.
+              . Click &quot;Take Over &amp; Reassign to Me&quot; above to post
+              resolution notes or request customer info.
             </div>
           )}
         </CardContent>

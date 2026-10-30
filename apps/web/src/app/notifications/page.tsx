@@ -1,27 +1,27 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   notificationsControllerGetMyNotifications,
   notificationsControllerMarkRead,
   notificationsControllerMarkAllRead,
-} from '@api';
+} from "@api";
 import {
   AppNotification,
   NotificationListResponse,
   getStoredSession,
-} from '@lib/helpers';
-import { APP_VERSION } from '@lib/constants';
-import { ContextualLoader } from '@ui/contextual-loader';
-import { AppHeader } from '@components/navigation/app-header';
-import { NotificationHeader } from '@components/notifications/notification-header';
-import { NotificationFilters } from '@components/notifications/notification-filters';
-import { NotificationItem } from '@components/notifications/notification-item';
-import { useAuthStore } from '@store/auth.store';
-import { useTicketsStore } from '@store/tickets.store';
-import { useRealtimeEvents } from '@hooks/use-realtime-events';
+} from "@lib/helpers";
+import { APP_VERSION } from "@lib/constants";
+import { ContextualLoader } from "@ui/contextual-loader";
+import { AppHeader } from "@components/navigation/app-header";
+import { NotificationHeader } from "@components/notifications/notification-header";
+import { NotificationFilters } from "@components/notifications/notification-filters";
+import { NotificationItem } from "@components/notifications/notification-item";
+import { useAuthStore } from "@store/auth.store";
+import { useTicketsStore } from "@store/tickets.store";
+import { useRealtimeEvents } from "@hooks/use-realtime-events";
+import { useState, useEffect, useMemo } from "react";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -30,35 +30,36 @@ export default function NotificationsPage() {
   const { user, clearSession, ensureSessionVerified } = useAuthStore();
   const { highlightTicket } = useTicketsStore();
 
-  const [activeFilter, setActiveFilter] = React.useState<'ALL' | 'UNREAD'>('ALL');
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [activeFilter, setActiveFilter] = useState<"ALL" | "UNREAD">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     const stored = getStoredSession();
     if (!stored?.accessToken && !user) {
-      router.replace('/');
+      router.replace("/");
       return;
     }
     ensureSessionVerified().then((verified) => {
-      if (!verified) router.replace('/');
+      if (!verified) router.replace("/");
     });
   }, [user, ensureSessionVerified, router]);
 
-  const { data, isLoading, refetch, isFetching } = useQuery<NotificationListResponse>({
-    queryKey: ['notifications', 'full-list'],
-    queryFn: async () => {
-      const res = (await notificationsControllerGetMyNotifications()) as any;
-      return res;
-    },
-    refetchInterval: 15000,
-  });
+  const { data, isLoading, refetch, isFetching } =
+    useQuery<NotificationListResponse>({
+      queryKey: ["notifications", "full-list"],
+      queryFn: async () => {
+        const res = (await notificationsControllerGetMyNotifications()) as any;
+        return res;
+      },
+      refetchInterval: 15000,
+    });
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
       await notificationsControllerMarkRead(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
@@ -67,16 +68,16 @@ export default function NotificationsPage() {
       await notificationsControllerMarkAllRead();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
   const allNotifications = data?.notifications || [];
   const unreadCount = data?.unreadCount || 0;
 
-  const filteredNotifications = React.useMemo(() => {
+  const filteredNotifications = useMemo(() => {
     return allNotifications.filter((n) => {
-      if (activeFilter === 'UNREAD' && n.read) return false;
+      if (activeFilter === "UNREAD" && n.read) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = n.title.toLowerCase().includes(q);
@@ -93,7 +94,7 @@ export default function NotificationsPage() {
       markReadMutation.mutate(notif.id);
     }
     highlightTicket(notif.ticketId);
-    if (user?.role === 'ADMIN' || user?.role === 'AGENT') {
+    if (user?.role === "ADMIN" || user?.role === "AGENT") {
       router.push(`/admin?ticketId=${notif.ticketId}`);
     } else {
       router.push(`/portal?ticketId=${notif.ticketId}`);
@@ -102,11 +103,15 @@ export default function NotificationsPage() {
 
   const handleSignOut = () => {
     clearSession();
-    router.replace('/');
+    router.replace("/");
   };
 
-  const backUrl = user?.role === 'ADMIN' || user?.role === 'AGENT' ? '/admin' : '/portal';
-  const backLabel = user?.role === 'ADMIN' || user?.role === 'AGENT' ? 'Back to Admin Console' : 'Back to Portal';
+  const backUrl =
+    user?.role === "ADMIN" || user?.role === "AGENT" ? "/admin" : "/portal";
+  const backLabel =
+    user?.role === "ADMIN" || user?.role === "AGENT"
+      ? "Back to Admin Console"
+      : "Back to Portal";
 
   return (
     <div className="min-h-screen flex flex-col bg-spruce-50 dark:bg-spruce-950 text-spruce-950 dark:text-spruce-50">
@@ -145,7 +150,12 @@ export default function NotificationsPage() {
           ) : filteredNotifications.length === 0 ? (
             <div className="p-12 text-center rounded-xl border border-spruce-200 bg-white dark:border-spruce-800 dark:bg-spruce-900/40 space-y-3">
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-spruce-100 text-spruce-600 dark:bg-spruce-800 dark:text-spruce-400">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -155,12 +165,14 @@ export default function NotificationsPage() {
                 </svg>
               </div>
               <h3 className="text-sm font-semibold text-spruce-900 dark:text-white">
-                {activeFilter === 'UNREAD' ? 'No unread notifications' : 'No notifications found'}
+                {activeFilter === "UNREAD"
+                  ? "No unread notifications"
+                  : "No notifications found"}
               </h3>
               <p className="text-xs text-spruce-500 max-w-sm mx-auto">
                 {searchQuery
-                  ? 'Try searching with a different keyword or ticket reference.'
-                  : 'You are all caught up! New ticket assignment and response alerts will appear here.'}
+                  ? "Try searching with a different keyword or ticket reference."
+                  : "You are all caught up! New ticket assignment and response alerts will appear here."}
               </p>
             </div>
           ) : (
@@ -181,7 +193,9 @@ export default function NotificationsPage() {
       <footer className="border-t border-spruce-200 dark:border-spruce-800 py-6 px-4 sm:px-6 lg:px-8 text-xs text-spruce-500">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>TicketSupport Helpdesk Platform &bull; Realtime Notifications</p>
-          <p className="font-mono text-[11px] text-spruce-500">Version {APP_VERSION}</p>
+          <p className="font-mono text-[11px] text-spruce-500">
+            Version {APP_VERSION}
+          </p>
         </div>
       </footer>
     </div>

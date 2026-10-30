@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { CardContent, CardFooter } from '@ui/card';
-import { Input } from '@ui/input';
-import { Label } from '@ui/label';
-import { Button } from '@ui/button';
+import { CardContent, CardFooter } from "@ui/card";
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import { Button } from "@ui/button";
+import { FormEvent, ReactNode } from "react";
 
 export interface LoginFormProps {
   email: string;
@@ -13,8 +13,8 @@ export interface LoginFormProps {
   setPassword: (val: string) => void;
   error: string | null;
   isSubmitting: boolean;
-  onSubmit: (e: React.FormEvent) => void;
-  children?: React.ReactNode;
+  onSubmit: (e: FormEvent) => void;
+  children?: ReactNode;
 }
 
 export function LoginForm({
@@ -65,7 +65,7 @@ export function LoginForm({
 
       <CardFooter className="flex flex-col gap-4">
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Authenticating...' : 'Sign In'}
+          {isSubmitting ? "Authenticating..." : "Sign In"}
         </Button>
         {children}
       </CardFooter>

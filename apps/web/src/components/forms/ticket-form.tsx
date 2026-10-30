@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@ui/card';
-import { Input } from '@ui/input';
-import { Textarea } from '@ui/textarea';
-import { Label } from '@ui/label';
-import { Badge } from '@ui/badge';
-import { ContextualLoader } from '@ui/contextual-loader';
-import { ticketsControllerCreate } from '../../api/endpoints/tickets/tickets';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@ui/button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@ui/card";
+import { Input } from "@ui/input";
+import { Textarea } from "@ui/textarea";
+import { Label } from "@ui/label";
+import { Badge } from "@ui/badge";
+import { ContextualLoader } from "@ui/contextual-loader";
+import { ticketsControllerCreate } from "../../api/endpoints/tickets/tickets";
 import {
   getStoredSession,
   formatShortTicketId,
@@ -20,47 +26,51 @@ import {
   compressAndEncryptImageFile,
   formatByteSize,
   EncryptedAttachmentPayload,
-} from '@lib/helpers';
-import { useAuthStore } from '@store/auth.store';
-import { useTicketsStore } from '@store/tickets.store';
-import { usePortalStore } from '@store/portal.store';
+} from "@lib/helpers";
+import { useAuthStore } from "@store/auth.store";
+import { useTicketsStore } from "@store/tickets.store";
+import { usePortalStore } from "@store/portal.store";
 import {
   KNOWLEDGE_BASE_ARTICLES,
   searchKnowledgeBaseArticles,
   recordArticleDeflection,
   KnowledgeArticle,
-} from '@lib/knowledge-base';
+} from "@lib/knowledge-base";
+import { useState, useRef, useEffect, useMemo, ChangeEvent } from "react";
 
 const ticketSchema = z.object({
   title: z
     .string()
-    .min(5, { message: 'Title must be at least 5 characters long' })
-    .max(100, { message: 'Title cannot exceed 100 characters' }),
-  description: z
-    .string()
-    .min(10, { message: 'Please provide a detailed description (at least 10 characters)' }),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
-  department: z.enum(['TECHNICAL_SUPPORT', 'GENERAL']),
+    .min(5, { message: "Title must be at least 5 characters long" })
+    .max(100, { message: "Title cannot exceed 100 characters" }),
+  description: z.string().min(10, {
+    message: "Please provide a detailed description (at least 10 characters)",
+  }),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+  department: z.enum(["TECHNICAL_SUPPORT", "GENERAL"]),
 });
 
 type TicketFormValues = z.infer<typeof ticketSchema>;
 
 export function TicketForm({ creatorId }: { creatorId?: string }) {
-  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [encryptedAttachment, setEncryptedAttachment] =
-    React.useState<EncryptedAttachmentPayload | null>(null);
-  const [isEncryptingImage, setIsEncryptingImage] = React.useState(false);
-  const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+    useState<EncryptedAttachmentPayload | null>(null);
+  const [isEncryptingImage, setIsEncryptingImage] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { upsertTicket } = useTicketsStore();
-  const { prefillDraft, clearPrefillDraft, recordDeflection } = usePortalStore();
+  const { prefillDraft, clearPrefillDraft, recordDeflection } =
+    usePortalStore();
 
-  const [dismissedSuggestionId, setDismissedSuggestionId] = React.useState<string | null>(null);
-  const [showSuggestionSteps, setShowSuggestionSteps] = React.useState(false);
-  const [deflectionNotice, setDeflectionNotice] = React.useState<string | null>(null);
+  const [dismissedSuggestionId, setDismissedSuggestionId] = useState<
+    string | null
+  >(null);
+  const [showSuggestionSteps, setShowSuggestionSteps] = useState(false);
+  const [deflectionNotice, setDeflectionNotice] = useState<string | null>(null);
 
   const {
     register,
@@ -72,27 +82,27 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
   } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
     defaultValues: {
-      title: '',
-      description: '',
-      priority: 'MEDIUM',
-      department: 'TECHNICAL_SUPPORT',
+      title: "",
+      description: "",
+      priority: "MEDIUM",
+      department: "TECHNICAL_SUPPORT",
     },
   });
 
-  const watchedTitle = watch('title') || '';
-  const watchedDepartment = watch('department') || 'TECHNICAL_SUPPORT';
+  const watchedTitle = watch("title") || "";
+  const watchedDepartment = watch("department") || "TECHNICAL_SUPPORT";
 
   // Handle prefill from Knowledge Base article "Still stuck? Open ticket on this topic"
-  React.useEffect(() => {
+  useEffect(() => {
     if (prefillDraft) {
-      setValue('title', prefillDraft.title, { shouldValidate: true });
-      setValue('department', prefillDraft.department, { shouldValidate: true });
+      setValue("title", prefillDraft.title, { shouldValidate: true });
+      setValue("department", prefillDraft.department, { shouldValidate: true });
       clearPrefillDraft();
     }
   }, [prefillDraft, setValue, clearPrefillDraft]);
 
   // Real-time deflection suggestion matching
-  const suggestedArticle = React.useMemo(() => {
+  const suggestedArticle = useMemo(() => {
     if (watchedTitle.trim().length < 3) return null;
     const matches = searchKnowledgeBaseArticles(
       KNOWLEDGE_BASE_ARTICLES,
@@ -128,7 +138,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
     setShowSuggestionSteps(false);
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setAttachmentError(null);
     if (!file) {
@@ -136,8 +146,10 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      setAttachmentError('Please select a valid image file (PNG, JPG, WebP, GIF).');
+    if (!file.type.startsWith("image/")) {
+      setAttachmentError(
+        "Please select a valid image file (PNG, JPG, WebP, GIF).",
+      );
       return;
     }
 
@@ -146,7 +158,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
       const payload = await compressAndEncryptImageFile(file);
       setEncryptedAttachment(payload);
     } catch {
-      setAttachmentError('Could not attach the selected image.');
+      setAttachmentError("Could not attach the selected image.");
       setEncryptedAttachment(null);
     } finally {
       setIsEncryptingImage(false);
@@ -157,7 +169,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
     setEncryptedAttachment(null);
     setAttachmentError(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -168,16 +180,20 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
       const response = (await ticketsControllerCreate({
         ...values,
         ...(activeCreatorId ? { creatorId: activeCreatorId } : {}),
-        ...(encryptedAttachment ? { encryptedAttachment: encryptedAttachment as any } : {}),
+        ...(encryptedAttachment
+          ? { encryptedAttachment: encryptedAttachment as any }
+          : {}),
       } as any)) as any;
       return response;
     },
     onSuccess: (data) => {
       upsertTicket(data);
-      setSuccessMessage(`Ticket ${formatShortTicketId(data.id)} created successfully!`);
+      setSuccessMessage(
+        `Ticket ${formatShortTicketId(data.id)} created successfully!`,
+      );
       reset();
       clearAttachment();
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
       setTimeout(() => setSuccessMessage(null), 5000);
     },
   });
@@ -191,7 +207,8 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
       <CardHeader>
         <CardTitle>Submit Support Ticket</CardTitle>
         <CardDescription>
-          Fill in details below. Our support engineering team will respond shortly.
+          Fill in details below. Our support engineering team will respond
+          shortly.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -219,7 +236,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
             <div className="p-3 text-sm rounded-md bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800">
               {extractApiErrorMessage(
                 createTicketMutation.error,
-                'Unable to submit your ticket right now. Please try again shortly.',
+                "Unable to submit your ticket right now. Please try again shortly.",
               )}
             </div>
           )}
@@ -229,10 +246,12 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
             <Input
               id="title"
               placeholder="e.g. Inability to generate billing invoice report"
-              {...register('title')}
+              {...register("title")}
             />
             {errors.title && (
-              <p className="text-xs text-red-500 font-medium">{errors.title.message}</p>
+              <p className="text-xs text-red-500 font-medium">
+                {errors.title.message}
+              </p>
             )}
           </div>
 
@@ -274,14 +293,23 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
                   onClick={() => setShowSuggestionSteps((prev) => !prev)}
                   className="text-xs font-semibold text-spruce-800 dark:text-spruce-200 hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <span>{showSuggestionSteps ? 'Hide resolution steps' : 'View instant fix steps'}</span>
-                  <span className="text-[10px]">{showSuggestionSteps ? '▲' : '▼'}</span>
+                  <span>
+                    {showSuggestionSteps
+                      ? "Hide resolution steps"
+                      : "View instant fix steps"}
+                  </span>
+                  <span className="text-[10px]">
+                    {showSuggestionSteps ? "▲" : "▼"}
+                  </span>
                 </button>
 
                 {showSuggestionSteps && (
                   <ol className="mt-2.5 space-y-2 text-xs bg-white/90 dark:bg-spruce-900/90 p-3 rounded-lg border border-amber-200 dark:border-amber-800/60 shadow-xs">
                     {suggestedArticle.steps.map((step, idx) => (
-                      <li key={idx} className="flex items-start gap-2.5 text-spruce-900 dark:text-spruce-100 leading-relaxed">
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2.5 text-spruce-900 dark:text-spruce-100 leading-relaxed"
+                      >
                         <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-700/80">
                           {idx + 1}
                         </span>
@@ -320,14 +348,16 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               <select
                 id="department"
                 defaultValue="TECHNICAL_SUPPORT"
-                {...register('department')}
+                {...register("department")}
                 className="flex h-10 w-full rounded-lg border border-spruce-300/90 bg-white dark:bg-spruce-950/70 px-3 py-2 text-xs sm:text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-spruce-500/20 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300/30 dark:focus-visible:border-spruce-300 cursor-pointer"
               >
                 <option value="TECHNICAL_SUPPORT">Technical Support</option>
                 <option value="GENERAL">General Inquiries</option>
               </select>
               {errors.department && (
-                <p className="text-xs text-red-500 font-medium">{errors.department.message}</p>
+                <p className="text-xs text-red-500 font-medium">
+                  {errors.department.message}
+                </p>
               )}
             </div>
 
@@ -336,7 +366,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               <select
                 id="priority"
                 defaultValue="MEDIUM"
-                {...register('priority')}
+                {...register("priority")}
                 className="flex h-10 w-full rounded-lg border border-spruce-300/90 bg-white dark:bg-spruce-950/70 px-3 py-2 text-xs sm:text-sm text-spruce-950 dark:text-spruce-100 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-spruce-500/20 dark:border-spruce-700/80 dark:focus-visible:ring-spruce-300/30 dark:focus-visible:border-spruce-300 cursor-pointer"
               >
                 <option value="LOW">Low (Query / Request)</option>
@@ -345,7 +375,9 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
                 <option value="URGENT">Urgent (Outage)</option>
               </select>
               {errors.priority && (
-                <p className="text-xs text-red-500 font-medium">{errors.priority.message}</p>
+                <p className="text-xs text-red-500 font-medium">
+                  {errors.priority.message}
+                </p>
               )}
             </div>
           </div>
@@ -356,17 +388,21 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               id="description"
               rows={4}
               placeholder="Provide step-by-step reproduction details, expected results, and actual behavior..."
-              {...register('description')}
+              {...register("description")}
             />
             {errors.description && (
-              <p className="text-xs text-red-500 font-medium">{errors.description.message}</p>
+              <p className="text-xs text-red-500 font-medium">
+                {errors.description.message}
+              </p>
             )}
           </div>
 
           {/* Optional Image Attachment (Encrypted In-Transit + Brotli Compressed at Rest) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="attachment">Screenshot / Image Attachment (Optional)</Label>
+              <Label htmlFor="attachment">
+                Screenshot / Image Attachment (Optional)
+              </Label>
             </div>
             <Input
               ref={fileInputRef}
@@ -382,7 +418,9 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
               </p>
             )}
             {attachmentError && (
-              <p className="text-xs text-red-500 font-medium">{attachmentError}</p>
+              <p className="text-xs text-red-500 font-medium">
+                {attachmentError}
+              </p>
             )}
             {encryptedAttachment && !isEncryptingImage && (
               <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 text-xs">
@@ -421,7 +459,7 @@ export function TicketForm({ creatorId }: { creatorId?: string }) {
             type="submit"
             disabled={createTicketMutation.isPending || isEncryptingImage}
           >
-            {createTicketMutation.isPending ? 'Submitting...' : 'Submit Ticket'}
+            {createTicketMutation.isPending ? "Submitting..." : "Submit Ticket"}
           </Button>
         </CardFooter>
       </form>

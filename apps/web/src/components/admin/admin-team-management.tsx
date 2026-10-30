@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@ui/card';
-import { Button } from '@ui/button';
-import { Input } from '@ui/input';
-import { Badge } from '@ui/badge';
-import { AuthUser, resolveTicketAssigneeId } from '@lib/helpers';
-import type { Ticket } from '@components/ticket-list';
+import { Card, CardHeader, CardTitle, CardContent } from "@ui/card";
+import { Button } from "@ui/button";
+import { Input } from "@ui/input";
+import { Badge } from "@ui/badge";
+import { AuthUser, resolveTicketAssigneeId } from "@lib/helpers";
+import type { Ticket } from "@components/ticket-list";
+import { useState, FormEvent } from "react";
 
 export interface StaffInviteRecord {
   id: string;
   code: string;
   email: string;
-  role: 'AGENT' | 'ADMIN';
+  role: "AGENT" | "ADMIN";
   expiresAt: string;
   accepted: boolean;
   acceptedAt?: string | null;
@@ -22,10 +22,10 @@ export interface StaffInviteRecord {
 interface AdminTeamManagementProps {
   agents: AuthUser[];
   tickets: Ticket[];
-  subtab: 'MEMBERS' | 'INVITE' | 'PROVISION';
-  onSelectSubtab: (subtab: 'MEMBERS' | 'INVITE' | 'PROVISION') => void;
+  subtab: "MEMBERS" | "INVITE" | "PROVISION";
+  onSelectSubtab: (subtab: "MEMBERS" | "INVITE" | "PROVISION") => void;
   invites: StaffInviteRecord[];
-  onCreateInvite: (data: { email: string; role: 'AGENT' | 'ADMIN' }) => void;
+  onCreateInvite: (data: { email: string; role: "AGENT" | "ADMIN" }) => void;
   isCreatingInvite: boolean;
   inviteSuccessMessage: string | null;
   inviteError: string | null;
@@ -37,7 +37,7 @@ interface AdminTeamManagementProps {
     fullName: string;
     email: string;
     password: string;
-    role: 'AGENT' | 'ADMIN';
+    role: "AGENT" | "ADMIN";
   }) => void;
   isProvisioning: boolean;
   provisionSuccessMessage: string | null;
@@ -64,21 +64,23 @@ export function AdminTeamManagement({
   provisionError,
 }: AdminTeamManagementProps) {
   // Form states
-  const [inviteEmail, setInviteEmail] = React.useState('');
-  const [inviteRole, setInviteRole] = React.useState<'AGENT' | 'ADMIN'>('AGENT');
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"AGENT" | "ADMIN">("AGENT");
 
-  const [provisionFullName, setProvisionFullName] = React.useState('');
-  const [provisionEmail, setProvisionEmail] = React.useState('');
-  const [provisionPassword, setProvisionPassword] = React.useState('');
-  const [provisionRole, setProvisionRole] = React.useState<'AGENT' | 'ADMIN'>('AGENT');
+  const [provisionFullName, setProvisionFullName] = useState("");
+  const [provisionEmail, setProvisionEmail] = useState("");
+  const [provisionPassword, setProvisionPassword] = useState("");
+  const [provisionRole, setProvisionRole] = useState<"AGENT" | "ADMIN">(
+    "AGENT",
+  );
 
-  const handleInviteSubmit = (e: React.FormEvent) => {
+  const handleInviteSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!inviteEmail) return;
     onCreateInvite({ email: inviteEmail, role: inviteRole });
   };
 
-  const handleProvisionSubmit = (e: React.FormEvent) => {
+  const handleProvisionSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!provisionFullName || !provisionEmail || !provisionPassword) return;
     onProvisionUser({
@@ -96,8 +98,8 @@ export function AdminTeamManagement({
         <Button
           type="button"
           size="sm"
-          variant={subtab === 'MEMBERS' ? 'default' : 'outline'}
-          onClick={() => onSelectSubtab('MEMBERS')}
+          variant={subtab === "MEMBERS" ? "default" : "outline"}
+          onClick={() => onSelectSubtab("MEMBERS")}
           className="text-xs font-semibold"
         >
           IT Staff Members ({agents.length})
@@ -105,8 +107,8 @@ export function AdminTeamManagement({
         <Button
           type="button"
           size="sm"
-          variant={subtab === 'INVITE' ? 'default' : 'outline'}
-          onClick={() => onSelectSubtab('INVITE')}
+          variant={subtab === "INVITE" ? "default" : "outline"}
+          onClick={() => onSelectSubtab("INVITE")}
           className="text-xs font-semibold"
         >
           Generate Staff Invitation
@@ -114,8 +116,8 @@ export function AdminTeamManagement({
         <Button
           type="button"
           size="sm"
-          variant={subtab === 'PROVISION' ? 'default' : 'outline'}
-          onClick={() => onSelectSubtab('PROVISION')}
+          variant={subtab === "PROVISION" ? "default" : "outline"}
+          onClick={() => onSelectSubtab("PROVISION")}
           className="text-xs font-semibold"
         >
           Direct Provision Account
@@ -123,12 +125,14 @@ export function AdminTeamManagement({
       </div>
 
       {/* SUBTAB 1: TEAM MEMBERS */}
-      {subtab === 'MEMBERS' && (
+      {subtab === "MEMBERS" && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {agents.map((agent) => {
               const assignedCount = tickets.filter(
-                (t) => resolveTicketAssigneeId(t) === agent.id && t.status !== 'CLOSED',
+                (t) =>
+                  resolveTicketAssigneeId(t) === agent.id &&
+                  t.status !== "CLOSED",
               ).length;
               return (
                 <Card
@@ -150,11 +154,16 @@ export function AdminTeamManagement({
                       </div>
                     </div>
                     <div className="text-right shrink-0 space-y-1">
-                      <Badge variant={agent.role === 'ADMIN' ? 'default' : 'secondary'}>
+                      <Badge
+                        variant={
+                          agent.role === "ADMIN" ? "default" : "secondary"
+                        }
+                      >
                         {agent.role}
                       </Badge>
                       <p className="text-[11px] text-spruce-700 dark:text-spruce-200 font-medium">
-                        {assignedCount} active {assignedCount === 1 ? 'ticket' : 'tickets'}
+                        {assignedCount} active{" "}
+                        {assignedCount === 1 ? "ticket" : "tickets"}
                       </p>
                     </div>
                   </CardContent>
@@ -166,7 +175,7 @@ export function AdminTeamManagement({
       )}
 
       {/* SUBTAB 2: GENERATE STAFF INVITATION */}
-      {subtab === 'INVITE' && (
+      {subtab === "INVITE" && (
         <div className="space-y-6">
           <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 shadow-sm">
             <CardHeader>
@@ -174,9 +183,10 @@ export function AdminTeamManagement({
                 Issue Staff Invitation Link / Code
               </CardTitle>
               <p className="text-xs text-spruce-600 dark:text-spruce-300 leading-relaxed">
-                Generate a secure invitation link for new Support Engineers or Administrators. Public
-                registration only creates customer accounts; staff members must redeem this
-                invitation to activate engineer permissions.
+                Generate a secure invitation link for new Support Engineers or
+                Administrators. Public registration only creates customer
+                accounts; staff members must redeem this invitation to activate
+                engineer permissions.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -191,7 +201,10 @@ export function AdminTeamManagement({
                 </div>
               )}
 
-              <form onSubmit={handleInviteSubmit} className="space-y-4 max-w-xl">
+              <form
+                onSubmit={handleInviteSubmit}
+                className="space-y-4 max-w-xl"
+              >
                 <div className="space-y-1.5">
                   <label
                     htmlFor="invite-email"
@@ -221,7 +234,7 @@ export function AdminTeamManagement({
                     id="invite-role"
                     value={inviteRole}
                     onChange={(e) =>
-                      setInviteRole(e.target.value as 'AGENT' | 'ADMIN')
+                      setInviteRole(e.target.value as "AGENT" | "ADMIN")
                     }
                     className="flex h-9 w-full rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
                   >
@@ -236,7 +249,9 @@ export function AdminTeamManagement({
                   disabled={isCreatingInvite || !inviteEmail}
                   className="text-xs"
                 >
-                  {isCreatingInvite ? 'Generating...' : 'Generate Invitation Link'}
+                  {isCreatingInvite
+                    ? "Generating..."
+                    : "Generate Invitation Link"}
                 </Button>
               </form>
 
@@ -249,7 +264,7 @@ export function AdminTeamManagement({
                     <Input
                       readOnly
                       value={
-                        typeof window !== 'undefined'
+                        typeof window !== "undefined"
                           ? `${window.location.origin}?invite=${generatedInviteCode}`
                           : generatedInviteCode
                       }
@@ -262,11 +277,12 @@ export function AdminTeamManagement({
                       onClick={() => onCopyInviteLink(generatedInviteCode)}
                       className="text-xs shrink-0 bg-spruce-800 hover:bg-spruce-900 text-white dark:bg-spruce-300 dark:hover:bg-spruce-200 dark:text-spruce-950 font-semibold"
                     >
-                      {copiedLink ? 'Copied to Clipboard!' : 'Copy Invite Link'}
+                      {copiedLink ? "Copied to Clipboard!" : "Copy Invite Link"}
                     </Button>
                   </div>
                   <p className="text-[11px] text-spruce-600 dark:text-spruce-300">
-                    The recipient can open this link to register their staff account directly.
+                    The recipient can open this link to register their staff
+                    account directly.
                   </p>
                 </div>
               )}
@@ -300,7 +316,11 @@ export function AdminTeamManagement({
                               {invite.email}
                             </strong>
                             <Badge
-                              variant={invite.role === 'ADMIN' ? 'default' : 'secondary'}
+                              variant={
+                                invite.role === "ADMIN"
+                                  ? "default"
+                                  : "secondary"
+                              }
                             >
                               {invite.role}
                             </Badge>
@@ -319,11 +339,12 @@ export function AdminTeamManagement({
                             )}
                           </div>
                           <p className="text-[11px] text-spruce-600 dark:text-spruce-300 font-mono">
-                            Code:{' '}
+                            Code:{" "}
                             <span className="font-semibold text-spruce-900 dark:text-spruce-100">
                               {invite.code}
-                            </span>{' '}
-                            • Expires {new Date(invite.expiresAt).toLocaleDateString()}
+                            </span>{" "}
+                            • Expires{" "}
+                            {new Date(invite.expiresAt).toLocaleDateString()}
                           </p>
                         </div>
 
@@ -360,14 +381,15 @@ export function AdminTeamManagement({
       )}
 
       {/* SUBTAB 3: DIRECT PROVISIONING */}
-      {subtab === 'PROVISION' && (
+      {subtab === "PROVISION" && (
         <Card className="border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900/60 shadow-sm max-w-xl">
           <CardHeader>
             <CardTitle className="text-base font-bold text-spruce-950 dark:text-white">
               Directly Provision Staff Account
             </CardTitle>
             <p className="text-xs text-spruce-600 dark:text-spruce-300 leading-relaxed">
-              Create an IT Support Engineer or Administrator account immediately with an initial password.
+              Create an IT Support Engineer or Administrator account immediately
+              with an initial password.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -447,7 +469,7 @@ export function AdminTeamManagement({
                   id="provision-role"
                   value={provisionRole}
                   onChange={(e) =>
-                    setProvisionRole(e.target.value as 'AGENT' | 'ADMIN')
+                    setProvisionRole(e.target.value as "AGENT" | "ADMIN")
                   }
                   className="flex h-9 w-full rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-1 focus:ring-spruce-500 dark:border-spruce-700/80 dark:bg-spruce-950 dark:text-spruce-100 dark:focus:ring-spruce-300"
                 >
@@ -462,7 +484,7 @@ export function AdminTeamManagement({
                 disabled={isProvisioning}
                 className="text-xs"
               >
-                {isProvisioning ? 'Provisioning...' : 'Provision Staff Account'}
+                {isProvisioning ? "Provisioning..." : "Provision Staff Account"}
               </Button>
             </form>
           </CardContent>

@@ -1,54 +1,68 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardContent } from '@ui/card';
-import { Button } from '@ui/button';
-import { Input } from '@ui/input';
-import { Badge } from '@ui/badge';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardHeader, CardTitle, CardContent } from "@ui/card";
+import { Button } from "@ui/button";
+import { Input } from "@ui/input";
+import { Badge } from "@ui/badge";
 import {
   cannedResponsesControllerFindAll,
   cannedResponsesControllerCreate,
   cannedResponsesControllerUpdate,
   cannedResponsesControllerDelete,
-} from '../../api/endpoints/canned-responses/canned-responses';
+} from "../../api/endpoints/canned-responses/canned-responses";
 import {
   CANNED_RESPONSES,
   CannedResponseTemplate,
   interpolateCannedResponse,
   extractApiErrorMessage,
-} from '@lib/helpers';
+} from "@lib/helpers";
+import { useState, useRef, FormEvent, useMemo } from "react";
 
 interface AdminCannedResponsesProps {
   currentStaffName?: string;
 }
 
 const VARIABLE_PILLS = [
-  { token: '{{customer_name}}', label: 'Customer Name', sample: 'Sarah Connor' },
-  { token: '{{ticket_id}}', label: 'Ticket ID', sample: '#TK-482109' },
-  { token: '{{ticket_title}}', label: 'Ticket Title', sample: 'VPN connection failure' },
-  { token: '{{agent_name}}', label: 'Staff Name', sample: 'Alex Mercer' },
+  {
+    token: "{{customer_name}}",
+    label: "Customer Name",
+    sample: "Sarah Connor",
+  },
+  { token: "{{ticket_id}}", label: "Ticket ID", sample: "#TK-482109" },
+  {
+    token: "{{ticket_title}}",
+    label: "Ticket Title",
+    sample: "VPN connection failure",
+  },
+  { token: "{{agent_name}}", label: "Staff Name", sample: "Alex Mercer" },
 ];
 
-export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminCannedResponsesProps) {
+export function AdminCannedResponses({
+  currentStaffName = "IT Support",
+}: AdminCannedResponsesProps) {
   const queryClient = useQueryClient();
-  const [activeCategory, setActiveCategory] = React.useState<string>('ALL');
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [activeCategory, setActiveCategory] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Form state
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [formCategory, setFormCategory] = React.useState('Troubleshooting');
-  const [formLabel, setFormLabel] = React.useState('');
-  const [formContent, setFormContent] = React.useState('');
-  const [formError, setFormError] = React.useState<string | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formCategory, setFormCategory] = useState("Troubleshooting");
+  const [formLabel, setFormLabel] = useState("");
+  const [formContent, setFormContent] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 1. Fetch templates
-  const { data: templates = CANNED_RESPONSES, isLoading, refetch } = useQuery<CannedResponseTemplate[]>({
-    queryKey: ['canned-responses'],
+  const {
+    data: templates = CANNED_RESPONSES,
+    isLoading,
+    refetch,
+  } = useQuery<CannedResponseTemplate[]>({
+    queryKey: ["canned-responses"],
     queryFn: async () => {
       try {
         const res = (await cannedResponsesControllerFindAll()) as any;
@@ -61,31 +75,56 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
 
   // 2. Create mutation
   const createMutation = useMutation({
-    mutationFn: async (payload: { category: string; label: string; content: string }) => {
-      const res = (await cannedResponsesControllerCreate(payload as any)) as any;
+    mutationFn: async (payload: {
+      category: string;
+      label: string;
+      content: string;
+    }) => {
+      const res = (await cannedResponsesControllerCreate(
+        payload as any,
+      )) as any;
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['canned-responses'] });
+      queryClient.invalidateQueries({ queryKey: ["canned-responses"] });
       resetForm();
     },
     onError: (err) => {
-      setFormError(extractApiErrorMessage(err, 'Failed to create canned response template.'));
+      setFormError(
+        extractApiErrorMessage(
+          err,
+          "Failed to create canned response template.",
+        ),
+      );
     },
   });
 
   // 3. Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: { category?: string; label?: string; content?: string } }) => {
-      const res = (await cannedResponsesControllerUpdate(id, payload as any)) as any;
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: { category?: string; label?: string; content?: string };
+    }) => {
+      const res = (await cannedResponsesControllerUpdate(
+        id,
+        payload as any,
+      )) as any;
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['canned-responses'] });
+      queryClient.invalidateQueries({ queryKey: ["canned-responses"] });
       resetForm();
     },
     onError: (err) => {
-      setFormError(extractApiErrorMessage(err, 'Failed to update canned response template.'));
+      setFormError(
+        extractApiErrorMessage(
+          err,
+          "Failed to update canned response template.",
+        ),
+      );
     },
   });
 
@@ -96,20 +135,20 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['canned-responses'] });
+      queryClient.invalidateQueries({ queryKey: ["canned-responses"] });
       setDeleteConfirmId(null);
     },
     onError: (err) => {
-      setFormError(extractApiErrorMessage(err, 'Failed to delete template.'));
+      setFormError(extractApiErrorMessage(err, "Failed to delete template."));
     },
   });
 
   const resetForm = () => {
     setIsFormOpen(false);
     setEditingId(null);
-    setFormCategory('Troubleshooting');
-    setFormLabel('');
-    setFormContent('');
+    setFormCategory("Troubleshooting");
+    setFormLabel("");
+    setFormContent("");
     setFormError(null);
   };
 
@@ -120,7 +159,7 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
     setFormContent(template.content);
     setFormError(null);
     setIsFormOpen(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleInsertToken = (token: string) => {
@@ -131,7 +170,8 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
     const el = textareaRef.current;
     const start = el.selectionStart;
     const end = el.selectionEnd;
-    const nextContent = formContent.substring(0, start) + token + formContent.substring(end);
+    const nextContent =
+      formContent.substring(0, start) + token + formContent.substring(end);
     setFormContent(nextContent);
     setTimeout(() => {
       el.focus();
@@ -139,14 +179,14 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
     }, 0);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!formLabel.trim()) {
-      setFormError('Please provide a descriptive template title/label.');
+      setFormError("Please provide a descriptive template title/label.");
       return;
     }
     if (!formContent.trim() || formContent.trim().length < 5) {
-      setFormError('Template content must be at least 5 characters long.');
+      setFormError("Template content must be at least 5 characters long.");
       return;
     }
 
@@ -169,16 +209,17 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
   };
 
   // Categories list
-  const categories = React.useMemo(() => {
+  const categories = useMemo(() => {
     const set = new Set<string>();
     templates.forEach((t) => set.add(t.category));
-    return ['ALL', ...Array.from(set)];
+    return ["ALL", ...Array.from(set)];
   }, [templates]);
 
   // Filtered templates
-  const filteredTemplates = React.useMemo(() => {
+  const filteredTemplates = useMemo(() => {
     return templates.filter((t) => {
-      const matchesCategory = activeCategory === 'ALL' || t.category === activeCategory;
+      const matchesCategory =
+        activeCategory === "ALL" || t.category === activeCategory;
       const matchesSearch =
         !searchQuery.trim() ||
         t.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -189,11 +230,11 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
   }, [templates, activeCategory, searchQuery]);
 
   // Live preview interpolated
-  const livePreview = React.useMemo(() => {
+  const livePreview = useMemo(() => {
     return interpolateCannedResponse(formContent, {
-      customerName: 'Sarah Connor',
-      ticketId: '482109',
-      ticketTitle: 'VPN connection failure',
+      customerName: "Sarah Connor",
+      ticketId: "482109",
+      ticketTitle: "VPN connection failure",
       agentName: currentStaffName,
     });
   }, [formContent, currentStaffName]);
@@ -207,7 +248,8 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
             Canned Responses &amp; Quick Reply Management
           </h2>
           <p className="text-xs text-spruce-600 dark:text-spruce-400 mt-0.5">
-            Create and maintain organization-wide standard response macros with dynamic customer, ticket, and staff placeholders.
+            Create and maintain organization-wide standard response macros with
+            dynamic customer, ticket, and staff placeholders.
           </p>
         </div>
 
@@ -242,7 +284,9 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
         <Card className="border-spruce-300 dark:border-spruce-700 bg-spruce-50/70 dark:bg-spruce-900/60 shadow-md">
           <CardHeader className="p-4 pb-2 border-b border-spruce-200 dark:border-spruce-800 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold text-spruce-950 dark:text-white">
-              {editingId ? 'Edit Canned Response Template' : 'Create New Canned Response Template'}
+              {editingId
+                ? "Edit Canned Response Template"
+                : "Create New Canned Response Template"}
             </CardTitle>
             <Button
               type="button"
@@ -277,18 +321,21 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
                     className="w-full h-9 rounded-md border border-spruce-300 bg-white px-3 py-1 text-xs shadow-sm text-spruce-900 focus:outline-none focus:ring-2 focus:ring-spruce-500 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
                   />
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {['Troubleshooting', 'Information Request', 'Status & Escalation', 'Resolution'].map(
-                      (cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => setFormCategory(cat)}
-                          className="text-[10px] px-2 py-0.5 rounded border border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900 text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-800"
-                        >
-                          {cat}
-                        </button>
-                      ),
-                    )}
+                    {[
+                      "Troubleshooting",
+                      "Information Request",
+                      "Status & Escalation",
+                      "Resolution",
+                    ].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setFormCategory(cat)}
+                        className="text-[10px] px-2 py-0.5 rounded border border-spruce-200 dark:border-spruce-800 bg-white dark:bg-spruce-900 text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-800"
+                      >
+                        {cat}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -324,9 +371,13 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
                       onClick={() => handleInsertToken(pill.token)}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono font-medium border border-spruce-300 dark:border-spruce-700 bg-white dark:bg-spruce-900 hover:bg-spruce-200/80 dark:hover:bg-spruce-800 text-spruce-800 dark:text-spruce-200 transition-colors shadow-2xs"
                     >
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">+</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        +
+                      </span>
                       <span>{pill.token}</span>
-                      <span className="text-[10px] text-spruce-500 font-sans">({pill.label})</span>
+                      <span className="text-[10px] text-spruce-500 font-sans">
+                        ({pill.label})
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -373,14 +424,16 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                   className="text-xs font-semibold bg-spruce-800 hover:bg-spruce-900 text-white dark:bg-spruce-300 dark:hover:bg-spruce-200 dark:text-spruce-950"
                 >
                   {createMutation.isPending || updateMutation.isPending
-                    ? 'Saving...'
+                    ? "Saving..."
                     : editingId
-                    ? 'Update Template'
-                    : 'Save New Template'}
+                      ? "Update Template"
+                      : "Save New Template"}
                 </Button>
               </div>
             </form>
@@ -396,7 +449,7 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
               key={cat}
               type="button"
               size="sm"
-              variant={activeCategory === cat ? 'default' : 'outline'}
+              variant={activeCategory === cat ? "default" : "outline"}
               onClick={() => setActiveCategory(cat)}
               className="text-xs h-8"
             >
@@ -433,11 +486,17 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
                         {template.label}
                       </span>
                       {template.isSystem ? (
-                        <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-spruce-100 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300">
+                        <Badge
+                          variant="secondary"
+                          className="text-[9px] py-0 px-1 bg-spruce-100 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300"
+                        >
                           System
                         </Badge>
                       ) : (
-                        <Badge variant="default" className="text-[9px] py-0 px-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-none">
+                        <Badge
+                          variant="default"
+                          className="text-[9px] py-0 px-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-none"
+                        >
                           Custom
                         </Badge>
                       )}
@@ -500,7 +559,10 @@ export function AdminCannedResponses({ currentStaffName = 'IT Support' }: AdminC
 
                   <div className="pt-2 border-t border-spruce-50 dark:border-spruce-800/50 flex items-center justify-between text-[10px] text-spruce-400">
                     <span>
-                      Variables: {template.content.includes('{{') ? 'Interpolated' : 'Static'}
+                      Variables:{" "}
+                      {template.content.includes("{{")
+                        ? "Interpolated"
+                        : "Static"}
                     </span>
                     <span className="font-mono text-[9px]">
                       {template.content.length} chars

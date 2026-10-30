@@ -1,21 +1,27 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@ui/card';
-import { Input } from '@ui/input';
-import { Button } from '@ui/button';
-import { Badge } from '@ui/badge';
+import { useQuery } from "@tanstack/react-query";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@ui/card";
+import { Input } from "@ui/input";
+import { Button } from "@ui/button";
+import { Badge } from "@ui/badge";
 import {
   KNOWLEDGE_BASE_ARTICLES,
   searchKnowledgeBaseArticles,
   fetchKnowledgeBaseArticles,
   submitArticleFeedback,
   KnowledgeArticle,
-} from '@lib/knowledge-base';
-import { usePortalStore, PortalDepartmentFilter } from '@store/portal.store';
+} from "@lib/knowledge-base";
+import { usePortalStore, PortalDepartmentFilter } from "@store/portal.store";
+import { useState, useMemo } from "react";
 
 export function PortalKnowledgeBase() {
   const {
@@ -30,10 +36,10 @@ export function PortalKnowledgeBase() {
     prefillTicketFromArticle,
   } = usePortalStore();
 
-  const [copiedArticleId, setCopiedArticleId] = React.useState<string | null>(null);
+  const [copiedArticleId, setCopiedArticleId] = useState<string | null>(null);
 
   const { data: serverArticles } = useQuery({
-    queryKey: ['knowledge-base-articles'],
+    queryKey: ["knowledge-base-articles"],
     queryFn: async () => {
       try {
         const list = await fetchKnowledgeBaseArticles();
@@ -48,15 +54,19 @@ export function PortalKnowledgeBase() {
 
   const allArticles = serverArticles ?? KNOWLEDGE_BASE_ARTICLES;
 
-  const filteredArticles = React.useMemo(() => {
+  const filteredArticles = useMemo(() => {
     let list = allArticles;
 
-    if (departmentFilter !== 'ALL') {
+    if (departmentFilter !== "ALL") {
       list = list.filter((a) => a.department === departmentFilter);
     }
 
     if (knowledgeSearchQuery.trim()) {
-      const scored = searchKnowledgeBaseArticles(list, knowledgeSearchQuery, departmentFilter);
+      const scored = searchKnowledgeBaseArticles(
+        list,
+        knowledgeSearchQuery,
+        departmentFilter,
+      );
       return scored.map((item) => item.article);
     }
 
@@ -64,10 +74,11 @@ export function PortalKnowledgeBase() {
   }, [allArticles, departmentFilter, knowledgeSearchQuery]);
 
   const handleCopySteps = async (article: KnowledgeArticle) => {
-    const stepsText = article.steps && article.steps.length > 0
-      ? `\n\nSteps:\n${article.steps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}`
-      : '';
-    const bodyText = article.body ? `\n\n${article.body}` : '';
+    const stepsText =
+      article.steps && article.steps.length > 0
+        ? `\n\nSteps:\n${article.steps.map((step, idx) => `${idx + 1}. ${step}`).join("\n")}`
+        : "";
+    const bodyText = article.body ? `\n\n${article.body}` : "";
     const text = `${article.title}${bodyText}${stepsText}`;
 
     try {
@@ -88,12 +99,13 @@ export function PortalKnowledgeBase() {
     }
   };
 
-  const techCount = React.useMemo(
-    () => allArticles.filter((a) => a.department === 'TECHNICAL_SUPPORT').length,
+  const techCount = useMemo(
+    () =>
+      allArticles.filter((a) => a.department === "TECHNICAL_SUPPORT").length,
     [allArticles],
   );
-  const generalCount = React.useMemo(
-    () => allArticles.filter((a) => a.department === 'GENERAL').length,
+  const generalCount = useMemo(
+    () => allArticles.filter((a) => a.department === "GENERAL").length,
     [allArticles],
   );
 
@@ -108,7 +120,8 @@ export function PortalKnowledgeBase() {
                 Self-Service Knowledge Base & FAQs
               </h2>
               <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-300 mt-0.5">
-                Instant troubleshooting guides for technical support inquiries and general IT requests.
+                Instant troubleshooting guides for technical support inquiries
+                and general IT requests.
               </p>
             </div>
 
@@ -124,7 +137,7 @@ export function PortalKnowledgeBase() {
               {knowledgeSearchQuery && (
                 <button
                   type="button"
-                  onClick={() => setKnowledgeSearchQuery('')}
+                  onClick={() => setKnowledgeSearchQuery("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 text-xs"
                 >
                   ✕
@@ -140,33 +153,33 @@ export function PortalKnowledgeBase() {
             </span>
             <button
               type="button"
-              onClick={() => setDepartmentFilter('ALL')}
+              onClick={() => setDepartmentFilter("ALL")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                departmentFilter === 'ALL'
-                  ? 'bg-spruce-800 text-white dark:bg-spruce-200 dark:text-spruce-950 font-bold'
-                  : 'bg-spruce-100 text-spruce-700 hover:bg-spruce-200 dark:bg-spruce-800 dark:text-spruce-300 dark:hover:bg-spruce-700'
+                departmentFilter === "ALL"
+                  ? "bg-spruce-800 text-white dark:bg-spruce-200 dark:text-spruce-950 font-bold"
+                  : "bg-spruce-100 text-spruce-700 hover:bg-spruce-200 dark:bg-spruce-800 dark:text-spruce-300 dark:hover:bg-spruce-700"
               }`}
             >
               All Guides ({KNOWLEDGE_BASE_ARTICLES.length})
             </button>
             <button
               type="button"
-              onClick={() => setDepartmentFilter('TECHNICAL_SUPPORT')}
+              onClick={() => setDepartmentFilter("TECHNICAL_SUPPORT")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                departmentFilter === 'TECHNICAL_SUPPORT'
-                  ? 'bg-spruce-800 text-white dark:bg-spruce-200 dark:text-spruce-950 font-bold'
-                  : 'bg-spruce-100 text-spruce-700 hover:bg-spruce-200 dark:bg-spruce-800 dark:text-spruce-300 dark:hover:bg-spruce-700'
+                departmentFilter === "TECHNICAL_SUPPORT"
+                  ? "bg-spruce-800 text-white dark:bg-spruce-200 dark:text-spruce-950 font-bold"
+                  : "bg-spruce-100 text-spruce-700 hover:bg-spruce-200 dark:bg-spruce-800 dark:text-spruce-300 dark:hover:bg-spruce-700"
               }`}
             >
               Technical Support ({techCount})
             </button>
             <button
               type="button"
-              onClick={() => setDepartmentFilter('GENERAL')}
+              onClick={() => setDepartmentFilter("GENERAL")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                departmentFilter === 'GENERAL'
-                  ? 'bg-spruce-800 text-white dark:bg-spruce-200 dark:text-spruce-950 font-bold'
-                  : 'bg-spruce-100 text-spruce-700 hover:bg-spruce-200 dark:bg-spruce-800 dark:text-spruce-300 dark:hover:bg-spruce-700'
+                departmentFilter === "GENERAL"
+                  ? "bg-spruce-800 text-white dark:bg-spruce-200 dark:text-spruce-950 font-bold"
+                  : "bg-spruce-100 text-spruce-700 hover:bg-spruce-200 dark:bg-spruce-800 dark:text-spruce-300 dark:hover:bg-spruce-700"
               }`}
             >
               General Scope ({generalCount})
@@ -182,12 +195,13 @@ export function PortalKnowledgeBase() {
             No matching guides found for &quot;{knowledgeSearchQuery}&quot;
           </p>
           <p className="text-xs text-spruce-600 dark:text-spruce-400 mt-1">
-            Try broadening your search term or switch to the tickets tab to file a direct support request.
+            Try broadening your search term or switch to the tickets tab to file
+            a direct support request.
           </p>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setKnowledgeSearchQuery('')}
+            onClick={() => setKnowledgeSearchQuery("")}
             className="mt-4"
           >
             Clear Search Filter
@@ -213,12 +227,14 @@ export function PortalKnowledgeBase() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${
-                          article.department === 'TECHNICAL_SUPPORT'
-                            ? 'bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-200'
-                            : 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-200'
+                          article.department === "TECHNICAL_SUPPORT"
+                            ? "bg-spruce-100 text-spruce-800 dark:bg-spruce-800 dark:text-spruce-200"
+                            : "bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-200"
                         }`}
                       >
-                        {article.department === 'TECHNICAL_SUPPORT' ? 'Technical Support' : 'General Scope'}
+                        {article.department === "TECHNICAL_SUPPORT"
+                          ? "Technical Support"
+                          : "General Scope"}
                       </span>
                       <span className="text-[11px] font-mono text-spruce-500 dark:text-spruce-400">
                         {article.readTime}
@@ -240,10 +256,14 @@ export function PortalKnowledgeBase() {
                   <div className="shrink-0 flex items-center gap-2 pt-1">
                     <button
                       type="button"
-                      aria-label={isExpanded ? 'Collapse guide' : 'Expand guide'}
+                      aria-label={
+                        isExpanded ? "Collapse guide" : "Expand guide"
+                      }
                       className="text-spruce-500 dark:text-spruce-400 hover:text-spruce-900 dark:hover:text-white p-1"
                     >
-                      <span className={`inline-block transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                      <span
+                        className={`inline-block transform transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                      >
                         ▼
                       </span>
                     </button>
@@ -270,7 +290,10 @@ export function PortalKnowledgeBase() {
                         </h4>
                         <ol className="space-y-2.5 text-xs sm:text-sm text-spruce-800 dark:text-spruce-200">
                           {article.steps.map((step, idx) => (
-                            <li key={idx} className="flex items-start gap-2.5 leading-relaxed">
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2.5 leading-relaxed"
+                            >
                               <span className="shrink-0 flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold bg-spruce-200 dark:bg-spruce-800 text-spruce-900 dark:text-spruce-100 border border-spruce-300 dark:border-spruce-700">
                                 {idx + 1}
                               </span>
@@ -292,13 +315,20 @@ export function PortalKnowledgeBase() {
                           onClick={() => handleCopySteps(article)}
                           className="h-8 text-xs"
                         >
-                          {copiedArticleId === article.id ? '✓ Copied to Clipboard' : 'Copy Solution Steps'}
+                          {copiedArticleId === article.id
+                            ? "✓ Copied to Clipboard"
+                            : "Copy Solution Steps"}
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => prefillTicketFromArticle(article.title, article.department)}
+                          onClick={() =>
+                            prefillTicketFromArticle(
+                              article.title,
+                              article.department,
+                            )
+                          }
                           className="h-8 text-xs text-spruce-700 hover:text-spruce-950 dark:text-spruce-300 dark:hover:text-white"
                         >
                           Still stuck? Open ticket on this topic &rarr;

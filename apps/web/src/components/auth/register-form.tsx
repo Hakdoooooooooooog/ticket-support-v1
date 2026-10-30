@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { CardContent, CardFooter } from '@ui/card';
-import { Input } from '@ui/input';
-import { Label } from '@ui/label';
-import { Button } from '@ui/button';
-import { Badge } from '@ui/badge';
+import { CardContent, CardFooter } from "@ui/card";
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import { Button } from "@ui/button";
+import { Badge } from "@ui/badge";
+import { FormEvent } from "react";
 
 export interface VerifiedInviteInfo {
   valid: boolean;
   email?: string;
-  role?: 'AGENT' | 'ADMIN';
+  role?: "AGENT" | "ADMIN";
   invitedBy?: string;
   message?: string;
 }
@@ -32,7 +32,7 @@ export interface RegisterFormProps {
   onVerifyInvite: (code: string) => void;
   error: string | null;
   isSubmitting: boolean;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: FormEvent) => void;
 }
 
 export function RegisterForm({
@@ -67,21 +67,25 @@ export function RegisterForm({
           <div
             className={`p-3 rounded-lg border text-xs space-y-1 ${
               inviteInfo.valid
-                ? 'bg-spruce-500/15 border-spruce-400/30 text-spruce-800 dark:text-spruce-200'
-                : 'bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                ? "bg-spruce-500/15 border-spruce-400/30 text-spruce-800 dark:text-spruce-200"
+                : "bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-200"
             }`}
           >
             {inviteInfo.valid ? (
               <div className="flex items-center justify-between gap-2">
                 <span>
-                  <strong>Staff Invitation Detected:</strong> Role:{' '}
+                  <strong>Staff Invitation Detected:</strong> Role:{" "}
                   <Badge variant="default" className="ml-1 text-[10px]">
-                    {inviteInfo.role === 'ADMIN' ? 'Administrator' : 'Support Engineer'}
+                    {inviteInfo.role === "ADMIN"
+                      ? "Administrator"
+                      : "Support Engineer"}
                   </Badge>
                 </span>
               </div>
             ) : (
-              <span>{inviteInfo.message || 'Invalid or expired invitation code.'}</span>
+              <span>
+                {inviteInfo.message || "Invalid or expired invitation code."}
+              </span>
             )}
           </div>
         )}
@@ -137,14 +141,17 @@ export function RegisterForm({
           ) : (
             <div className="space-y-2 p-3.5 rounded-lg bg-spruce-50 dark:bg-spruce-950/80 border border-spruce-200 dark:border-spruce-800">
               <div className="flex items-center justify-between">
-                <Label htmlFor="register-inviteCode" className="text-xs font-semibold text-spruce-900 dark:text-spruce-200">
+                <Label
+                  htmlFor="register-inviteCode"
+                  className="text-xs font-semibold text-spruce-900 dark:text-spruce-200"
+                >
                   Staff Invitation Code
                 </Label>
                 <button
                   type="button"
                   onClick={() => {
                     setShowInviteInput(false);
-                    setInviteCode('');
+                    setInviteCode("");
                     setInviteInfo(null);
                   }}
                   className="text-[11px] text-spruce-400 hover:text-spruce-600 dark:text-spruce-400 dark:hover:text-spruce-200 cursor-pointer"
@@ -168,11 +175,12 @@ export function RegisterForm({
                   disabled={isVerifyingInvite || !inviteCode.trim()}
                   className="text-xs h-8 shrink-0"
                 >
-                  {isVerifyingInvite ? 'Checking...' : 'Apply'}
+                  {isVerifyingInvite ? "Checking..." : "Apply"}
                 </Button>
               </div>
               <p className="text-[11px] text-spruce-500 dark:text-spruce-400">
-                IT Support Engineers and Administrators must be invited by an IT Administrator.
+                IT Support Engineers and Administrators must be invited by an IT
+                Administrator.
               </p>
             </div>
           )}
@@ -182,10 +190,10 @@ export function RegisterForm({
       <CardFooter className="flex flex-col gap-4">
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting
-            ? 'Creating Account...'
+            ? "Creating Account..."
             : inviteInfo?.valid
-              ? 'Activate Staff Account'
-              : 'Create Customer Account'}
+              ? "Activate Staff Account"
+              : "Create Customer Account"}
         </Button>
       </CardFooter>
     </form>

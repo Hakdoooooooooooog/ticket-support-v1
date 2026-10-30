@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import React from 'react';
+
 import { DemoAccountsBar } from '../src/components/auth/demo-accounts-bar';
+import { isValidElement } from 'react';
 
 describe('Demo Accounts Production Security Guard', () => {
   const originalEnv = process.env.NODE_ENV;
@@ -19,6 +20,6 @@ describe('Demo Accounts Production Security Guard', () => {
     (process.env as Record<string, string | undefined>).NODE_ENV = 'development';
     const element = DemoAccountsBar({ onSelectAccount: () => {} });
     expect(element).not.toBeNull();
-    expect(React.isValidElement(element)).toBe(true);
+    expect( isValidElement(element)).toBe(true);
   });
 });
