@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Card, CardContent } from '@ui/card';
 import { ContextualLoader } from '@ui/contextual-loader';
 

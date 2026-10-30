@@ -13,7 +13,8 @@ export type AdminSection =
   | 'REPORTS'
   | 'KNOWLEDGE_BASE'
   | 'INCIDENT_BANNERS'
-  | 'AUDIT_LOGS';
+  | 'AUDIT_LOGS'
+  | 'SLA_POLICIES';
 
 export interface AdminState {
   agents: AuthUser[];

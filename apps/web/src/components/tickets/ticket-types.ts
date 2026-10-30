@@ -56,5 +56,14 @@ export interface Ticket {
   csatRating?: number | null;
   csatComment?: string | null;
   csatRatedAt?: string | null;
+  firstResponseDueAt?: string | null;
+  resolutionDueAt?: string | null;
+  firstRespondedAt?: string | null;
+  resolvedAt?: string | null;
+  slaPausedAt?: string | null;
+  firstResponseWarnedAt?: string | null;
+  resolutionWarnedAt?: string | null;
+  firstResponseBreachedAt?: string | null;
+  resolutionBreachedAt?: string | null;
   updatedAt?: string;
 }

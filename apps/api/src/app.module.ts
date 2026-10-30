@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import path from 'path';
@@ -16,10 +17,12 @@ import { KnowledgeBaseModule } from './knowledge-base/knowledge-base.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { IncidentBannersModule } from './incident-banners/incident-banners.module.js';
 import { AuditModule } from './audit/audit.module.js';
+import { SlaModule } from './sla/sla.module.js';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storage.js';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
@@ -45,6 +48,7 @@ import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storag
     }),
     PrismaModule,
     AuditModule,
+    SlaModule,
     RealtimeModule,
     NotificationsModule,
     TicketsModule,

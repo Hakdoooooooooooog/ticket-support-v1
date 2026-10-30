@@ -17,7 +17,9 @@ export interface CreateNotificationParams {
     | 'TICKET_CUSTOMER_AMENDED'
     | 'TICKET_NOTE_POSTED'
     | 'TICKET_ASSIGNED'
-    | 'TICKET_STATUS_CHANGED';
+    | 'TICKET_STATUS_CHANGED'
+    | 'SLA_WARNING'
+    | 'SLA_BREACHED';
   title: string;
   message: string;
 }
@@ -38,10 +40,10 @@ export class NotificationsService {
           })
         : null;
 
-    // Administrators strictly receive TICKET_CREATED notifications. All other operational noise is omitted.
+    // Administrators receive TICKET_CREATED, SLA_WARNING, and SLA_BREACHED notifications.
     const whereClause: any = { userId };
     if (user?.role === 'ADMIN') {
-      whereClause.type = 'TICKET_CREATED';
+      whereClause.type = { in: ['TICKET_CREATED', 'SLA_WARNING', 'SLA_BREACHED'] };
     }
 
     const [notifications, unreadCount] = await Promise.all([
@@ -151,7 +153,7 @@ export class NotificationsService {
     try {
       // If the notification is NOT a new ticket creation, verify that the recipient is not an administrator.
       // Administrators should strictly receive new ticket notifications, not agent-level operational noise.
-      if (params.type !== 'TICKET_CREATED') {
+      if (params.type !== 'TICKET_CREATED' && params.type !== 'SLA_WARNING' && params.type !== 'SLA_BREACHED') {
         const recipient =
           typeof this.prisma?.user?.findUnique === 'function'
             ? await this.prisma.user.findUnique({

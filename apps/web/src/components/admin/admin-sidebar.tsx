@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
@@ -257,7 +256,7 @@ export function AdminSidebar({
           </button>
         )}
 
-                {/* Admin Exclusive: Audit Logs & Security History */}
+        {/* Admin Exclusive: Audit Logs & Security History */}
         {user?.role === "ADMIN" && (
           <button
             type="button"
@@ -277,6 +276,30 @@ export function AdminSidebar({
               }`}
             >
               Audit
+            </span>
+          </button>
+        )}
+
+        {/* SLA Policies & Working Hours Calendar */}
+        {user?.role === "ADMIN" && (
+          <button
+            type="button"
+            onClick={() => onSelectSection("SLA_POLICIES")}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
+              activeSection === "SLA_POLICIES"
+                ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+                : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
+            }`}
+          >
+            <span>SLA &amp; Calendars</span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wider ${
+                activeSection === "SLA_POLICIES"
+                  ? "bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950"
+                  : "bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300"
+              }`}
+            >
+              SLA
             </span>
           </button>
         )}

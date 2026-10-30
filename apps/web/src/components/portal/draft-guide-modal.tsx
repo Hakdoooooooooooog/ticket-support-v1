@@ -1,4 +1,3 @@
-import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -17,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { KnowledgeArticle } from "@lib/knowledge-base";
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState, useEffect } from "react";
 
 export interface Article {
   id?: string;
@@ -47,7 +46,7 @@ export function DraftGuideModal({
   onSuccess,
 }: DraftGuideModalProps) {
   // Form State
-  const [title, setTitle] = React.useState("");
+  const [title, setTitle] = useState("");
   const [department, setDepartment] = useState<"TECHNICAL_SUPPORT" | "GENERAL">(
     "TECHNICAL_SUPPORT",
   );
@@ -61,7 +60,7 @@ export function DraftGuideModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync state whenever editingArticle opens or changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (editingArticle) {
       setTitle(editingArticle.title ?? "");
       setDepartment(editingArticle.department ?? "TECHNICAL_SUPPORT");

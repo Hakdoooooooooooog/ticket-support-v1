@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Card, CardContent } from "@ui/card";
 import { Button } from "@ui/button";
 import { Badge } from "@ui/badge";
@@ -21,7 +20,7 @@ import {
 } from "@components/tickets/ticket-card-header";
 import { TicketAttachmentPreview } from "@components/tickets/ticket-attachment-preview";
 import { TicketCommentThread } from "@components/tickets/ticket-comment-thread";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 
 interface AdminTicketAccordionItemProps {
   ticket: Ticket;
@@ -102,7 +101,7 @@ export function AdminTicketAccordionItem({
   onSetFollowUpAttachment,
   onSendFollowUp,
 }: AdminTicketAccordionItemProps) {
-  const [isInternalNote, setIsInternalNote] = React.useState(false);
+  const [isInternalNote, setIsInternalNote] = useState(false);
   const commentCount = ticket.comments?.length || 0;
   const sla = computeTicketSlaStatus(ticket);
   const assigneeId = resolveTicketAssigneeId(ticket);

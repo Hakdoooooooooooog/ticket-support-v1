@@ -9,6 +9,8 @@ export const notificationTypeEnum = z.enum([
   'TICKET_NOTE_POSTED',
   'TICKET_ASSIGNED',
   'TICKET_STATUS_CHANGED',
+  'SLA_WARNING',
+  'SLA_BREACHED',
 ]);
 
 export const notificationResponseSchema = z.object({

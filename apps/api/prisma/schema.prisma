@@ -19,6 +19,8 @@ enum NotificationType {
   TICKET_NOTE_POSTED
   TICKET_ASSIGNED
   TICKET_STATUS_CHANGED
+  SLA_WARNING
+  SLA_BREACHED
 }
 
 enum TicketStatus {
@@ -143,6 +145,16 @@ model Ticket {
   csatRating    Int?
   csatComment   String?
   csatRatedAt   DateTime?
+
+  firstResponseDueAt       DateTime?
+  resolutionDueAt          DateTime?
+  firstRespondedAt         DateTime?
+  resolvedAt               DateTime?
+  slaPausedAt              DateTime?
+  firstResponseWarnedAt    DateTime?
+  resolutionWarnedAt       DateTime?
+  firstResponseBreachedAt  DateTime?
+  resolutionBreachedAt     DateTime?
 
   @@index([creatorId, status, title])
   @@index([department, status, createdAt])
@@ -322,4 +334,63 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@index([action, createdAt])
   @@map("audit_logs")
+}
+model BusinessCalendar {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  timezone  String   @default("Asia/Manila")
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workingWindows BusinessWindow[]
+  holidays       Holiday[]
+  policies       SlaPolicy[]
+
+  @@map("business_calendars")
+}
+
+model BusinessWindow {
+  id          String           @id @default(cuid())
+  calendarId  String
+  calendar    BusinessCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  weekday     Int              // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startMinute Int              // e.g. 480 = 08:00
+  endMinute   Int              // e.g. 1020 = 17:00
+
+  @@index([calendarId, weekday])
+  @@map("business_windows")
+}
+
+model Holiday {
+  id          String           @id @default(cuid())
+  calendarId  String
+  calendar    BusinessCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  date        String           // YYYY-MM-DD
+  name        String
+  isMovable   Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@unique([calendarId, date])
+  @@index([calendarId, date])
+  @@map("holidays")
+}
+
+model SlaPolicy {
+  id                   String            @id @default(cuid())
+  name                 String
+  priority             TicketPriority
+  department           Department?
+  firstResponseMinutes Int
+  resolutionMinutes    Int
+  warnAtPercent        Int               @default(75)
+  is24x7               Boolean           @default(false)
+  enabled              Boolean           @default(true)
+  calendarId           String?
+  calendar             BusinessCalendar? @relation(fields: [calendarId], references: [id], onDelete: SetNull)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@unique([priority, department])
+  @@map("sla_policies")
 }
