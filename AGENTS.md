@@ -24,3 +24,9 @@ This monorepo is managed with Turborepo and npm workspaces:
 - **TDD & Invariant Testing**: Write failing tests before introducing production changes.
 - **Fail-Fast & Zero Fallbacks on Secrets**: Never use default or fallback values for credentials, JWT secrets, or encryption keys in code.
 - **Theme Hydration & FOUC**: In `apps/web/src/app/layout.tsx`, maintain the synchronous `<script>` in `<head>` to initialize `localStorage` theme preferences before paint without flickering.
+
+## 4. Command Execution & Completion Waiting Gate
+
+- **Synchronous Timeout**: For all commands expected to terminate (tests, builds, linter, migrations, git commands), pass WaitMsBeforeAsync: 10000 (10 seconds) to allow the command sufficient time to complete synchronously.
+- **Strict Waiting Protocol**: When a command is backgrounded into an asynchronous task, agents must **never** immediately read log files, check empty outputs, or take follow-up actions based on partial results in the same turn.
+- **Reactive Notification**: The agent must yield execution and wait for the system completion notification (content=Task id ... finished with result) before inspecting results or executing subsequent dependent operations.
