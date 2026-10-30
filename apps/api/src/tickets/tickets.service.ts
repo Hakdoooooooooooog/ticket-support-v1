@@ -23,6 +23,7 @@ import {
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
 import { StorageService } from '../storage/storage.service.js';
+import { AuditService } from '../audit/audit.service.js';
 
 export interface TicketActorContext {
   id: string;
@@ -44,6 +45,7 @@ export class TicketsService implements OnModuleInit {
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly realtimeService?: RealtimeService,
     @Optional() private readonly storageService?: StorageService,
+    @Optional() private readonly auditService?: AuditService,
   ) {}
 
   /**
@@ -389,6 +391,25 @@ export class TicketsService implements OnModuleInit {
         data: createData,
         include: this.standardTicketInclude,
       });
+
+      if (this.auditService) {
+        await this.auditService.record(tx, {
+          actorId: actor?.id || user.id,
+          actorEmail: actor?.email || user.email,
+          actorRole: actor?.role || (user.role as any) || 'CUSTOMER',
+          action: 'TICKET_CREATED',
+          entityType: 'TICKET',
+          entityId: record.id,
+          summary: `Ticket created: "${record.title.slice(0, 50)}"`,
+          changes: {
+            title: record.title,
+            priority: record.priority,
+            department: record.department,
+            status: record.status,
+            assigneeId: record.assigneeId,
+          },
+        });
+      }
 
       return { record, user, assignedAgent };
     });
@@ -810,6 +831,38 @@ export class TicketsService implements OnModuleInit {
         include: this.standardTicketInclude,
       });
 
+      if (this.auditService) {
+        const changes: Record<string, { from: unknown; to: unknown }> = {};
+        if (dto.status !== undefined && dto.status !== (existingTicket as any).status) {
+          changes.status = { from: (existingTicket as any).status, to: dto.status };
+        }
+        if (dto.priority !== undefined && dto.priority !== (existingTicket as any).priority) {
+          changes.priority = { from: (existingTicket as any).priority, to: dto.priority };
+        }
+        if (dto.assigneeId !== undefined && dto.assigneeId !== (existingTicket as any).assigneeId) {
+          changes.assigneeId = { from: (existingTicket as any).assigneeId, to: dto.assigneeId };
+        }
+        if (dto.department !== undefined && dto.department !== (existingTicket as any).department) {
+          changes.department = { from: (existingTicket as any).department, to: dto.department };
+        }
+        if (dto.title !== undefined && dto.title !== (existingTicket as any).title) {
+          changes.title = { from: (existingTicket as any).title, to: dto.title };
+        }
+
+        if (Object.keys(changes).length > 0 || hasCommentPayload) {
+          await this.auditService.record(tx, {
+            actorId: actor?.id || (existingTicket as any).creatorId,
+            actorEmail: actor?.email || (existingTicket as any).creator?.email || 'user@ticketsupport.local',
+            actorRole: actor?.role || 'CUSTOMER',
+            action: 'TICKET_UPDATED',
+            entityType: 'TICKET',
+            entityId: id,
+            summary: `Ticket updated (${Object.keys(changes).join(', ') || 'note added'})`,
+            changes: Object.keys(changes).length > 0 ? changes : null,
+          });
+        }
+      }
+
       // Dispatch notifications based on update events
       if (this.notificationsService) {
         const creatorId = (existingTicket as any).creatorId;
@@ -1175,6 +1228,23 @@ export class TicketsService implements OnModuleInit {
 
       if (!existingTicket) {
         throw new NotFoundException(`Ticket with ID "${id}" not found`);
+      }
+
+      if (this.auditService) {
+        await this.auditService.record(tx, {
+          actorId: actor?.id,
+          actorEmail: actor?.email || 'admin@ticketsupport.local',
+          actorRole: actor?.role || 'ADMIN',
+          action: 'TICKET_DELETED',
+          entityType: 'TICKET',
+          entityId: id,
+          summary: `Ticket deleted: "${(existingTicket as any).title?.slice(0, 50)}"`,
+          changes: {
+            title: (existingTicket as any).title,
+            status: (existingTicket as any).status,
+            priority: (existingTicket as any).priority,
+          },
+        });
       }
 
       await tx.ticket.delete({

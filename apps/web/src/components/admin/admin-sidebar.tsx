@@ -257,6 +257,30 @@ export function AdminSidebar({
           </button>
         )}
 
+                {/* Admin Exclusive: Audit Logs & Security History */}
+        {user?.role === "ADMIN" && (
+          <button
+            type="button"
+            onClick={() => onSelectSection("AUDIT_LOGS")}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
+              activeSection === "AUDIT_LOGS"
+                ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+                : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
+            }`}
+          >
+            <span>Audit Logs</span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wider ${
+                activeSection === "AUDIT_LOGS"
+                  ? "bg-emerald-500/20 text-emerald-700 dark:bg-spruce-950/20 dark:text-spruce-950"
+                  : "bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300"
+              }`}
+            >
+              Audit
+            </span>
+          </button>
+        )}
+
         <div className="pt-3 border-t border-spruce-200 dark:border-spruce-800">
           <Link
             href="/portal"
