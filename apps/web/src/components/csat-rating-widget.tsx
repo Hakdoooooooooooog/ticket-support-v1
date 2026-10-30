@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ticketsControllerSubmitCsat } from '../api/endpoints/tickets/tickets';
-import { Button } from '@ui/button';
-import { extractApiErrorMessage } from '@lib/helpers';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ticketsControllerSubmitCsat } from "../api/endpoints/tickets/tickets";
+import { Button } from "@ui/button";
+import { extractApiErrorMessage } from "@lib/helpers";
+import { useState, FormEvent } from "react";
 
 interface CsatRatingWidgetProps {
   ticketId: string;
@@ -19,19 +19,19 @@ interface CsatRatingWidgetProps {
 }
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
-  1: '1/5 · Very Dissatisfied',
-  2: '2/5 · Dissatisfied',
-  3: '3/5 · Neutral',
-  4: '4/5 · Satisfied',
-  5: '5/5 · Exceptional Resolution',
+  1: "1/5 · Very Dissatisfied",
+  2: "2/5 · Dissatisfied",
+  3: "3/5 · Neutral",
+  4: "4/5 · Satisfied",
+  5: "5/5 · Exceptional Resolution",
 };
 
 const RATING_COLORS: Record<number, string> = {
-  1: 'bg-rose-600 text-white border-rose-500 shadow-rose-900/40',
-  2: 'bg-orange-600 text-white border-orange-500 shadow-orange-900/40',
-  3: 'bg-amber-500 text-spruce-950 border-amber-400 shadow-amber-900/40 font-bold',
-  4: 'bg-sky-600 text-white border-sky-500 shadow-sky-900/40 font-bold',
-  5: 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/40 font-bold',
+  1: "bg-rose-600 text-white border-rose-500 shadow-rose-900/40",
+  2: "bg-orange-600 text-white border-orange-500 shadow-orange-900/40",
+  3: "bg-amber-500 text-spruce-950 border-amber-400 shadow-amber-900/40 font-bold",
+  4: "bg-sky-600 text-white border-sky-500 shadow-sky-900/40 font-bold",
+  5: "bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/40 font-bold",
 };
 
 export function CsatRatingWidget({
@@ -46,28 +46,31 @@ export function CsatRatingWidget({
   onRated,
 }: CsatRatingWidgetProps) {
   const queryClient = useQueryClient();
-  const [rating, setRating] = React.useState<number>(initialRating || 0);
-  const [hoverRating, setHoverRating] = React.useState<number>(0);
-  const [comment, setComment] = React.useState<string>(initialComment || '');
-  const [isEditing, setIsEditing] = React.useState<boolean>(!initialRating);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [rating, setRating] = useState<number>(initialRating || 0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [comment, setComment] = useState<string>(initialComment || "");
+  const [isEditing, setIsEditing] = useState<boolean>(!initialRating);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Security & Authorization Guard:
   // Only the original customer who reported the ticket may submit or modify CSAT ratings.
   // Support engineers and administrators must never be able to rate tickets they worked on.
   const isTicketReporter =
-    currentUserRole === 'CUSTOMER' &&
+    currentUserRole === "CUSTOMER" &&
     Boolean(currentUserId) &&
     Boolean(creatorId) &&
     currentUserId === creatorId;
 
   const csatMutation = useMutation({
     mutationFn: async (payload: { rating: number; comment?: string }) => {
-      const res = (await ticketsControllerSubmitCsat(ticketId, payload as any)) as any;
+      const res = (await ticketsControllerSubmitCsat(
+        ticketId,
+        payload as any,
+      )) as any;
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
       setIsEditing(false);
       setErrorMessage(null);
       if (onRated) {
@@ -76,19 +79,21 @@ export function CsatRatingWidget({
     },
     onError: (err) => {
       setErrorMessage(
-        extractApiErrorMessage(err, 'Failed to submit satisfaction feedback'),
+        extractApiErrorMessage(err, "Failed to submit satisfaction feedback"),
       );
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!isTicketReporter) {
-      setErrorMessage('Only the customer who reported this ticket can submit satisfaction feedback.');
+      setErrorMessage(
+        "Only the customer who reported this ticket can submit satisfaction feedback.",
+      );
       return;
     }
     if (rating < 1 || rating > 5) {
-      setErrorMessage('Please select a rating between 1 and 5');
+      setErrorMessage("Please select a rating between 1 and 5");
       return;
     }
     setErrorMessage(null);
@@ -109,9 +114,9 @@ export function CsatRatingWidget({
             CSAT PENDING
           </span>
           <span className="text-spruce-600 dark:text-spruce-300 text-xs">
-            {currentUserRole === 'AGENT' || currentUserRole === 'ADMIN'
-              ? 'Awaiting customer rating. Support engineers cannot rate tickets.'
-              : `Awaiting feedback from ${creatorName || 'the reporting customer'}.`}
+            {currentUserRole === "AGENT" || currentUserRole === "ADMIN"
+              ? "Awaiting customer rating. Support engineers cannot rate tickets."
+              : `Awaiting feedback from ${creatorName || "the reporting customer"}.`}
           </span>
         </div>
         <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-spruce-200 dark:bg-spruce-800 text-spruce-800 dark:text-spruce-200 whitespace-nowrap">
@@ -174,7 +179,8 @@ export function CsatRatingWidget({
             How satisfied are you with this resolution?
           </h4>
           <p className="text-xs text-spruce-600 dark:text-spruce-300/90">
-            Your feedback directly impacts support response benchmarks and quality SLA.
+            Your feedback directly impacts support response benchmarks and
+            quality SLA.
           </p>
         </div>
         {initialRating && (
@@ -191,9 +197,13 @@ export function CsatRatingWidget({
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Numbered Score Selection Row */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5" onMouseLeave={() => setHoverRating(0)}>
+          <div
+            className="flex items-center gap-1.5"
+            onMouseLeave={() => setHoverRating(0)}
+          >
             {[1, 2, 3, 4, 5].map((num) => {
-              const isSelectedOrHovered = num === activeStar || (!hoverRating && num === rating);
+              const isSelectedOrHovered =
+                num === activeStar || (!hoverRating && num === rating);
               return (
                 <button
                   key={num}
@@ -204,7 +214,7 @@ export function CsatRatingWidget({
                   className={`h-9 w-9 rounded-lg border text-sm font-extrabold transition-all duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 cursor-pointer ${
                     isSelectedOrHovered
                       ? `${RATING_COLORS[num]} scale-105 shadow-md`
-                      : 'border-spruce-300 dark:border-spruce-700 bg-spruce-50 dark:bg-spruce-950/80 text-spruce-700 dark:text-spruce-400 hover:border-spruce-400 dark:hover:border-spruce-500 hover:text-spruce-950 dark:hover:text-white'
+                      : "border-spruce-300 dark:border-spruce-700 bg-spruce-50 dark:bg-spruce-950/80 text-spruce-700 dark:text-spruce-400 hover:border-spruce-400 dark:hover:border-spruce-500 hover:text-spruce-950 dark:hover:text-white"
                   }`}
                 >
                   {num}
@@ -214,7 +224,9 @@ export function CsatRatingWidget({
           </div>
 
           <span className="text-xs font-semibold text-spruce-800 dark:text-spruce-200">
-            {activeStar > 0 ? RATING_DESCRIPTIONS[activeStar] : 'Select rating (1 to 5)'}
+            {activeStar > 0
+              ? RATING_DESCRIPTIONS[activeStar]
+              : "Select rating (1 to 5)"}
           </span>
         </div>
 
@@ -240,7 +252,9 @@ export function CsatRatingWidget({
             disabled={rating === 0 || csatMutation.isPending}
             className="h-8 px-4 text-xs font-semibold"
           >
-            {csatMutation.isPending ? 'Submitting...' : 'Submit Satisfaction Rating'}
+            {csatMutation.isPending
+              ? "Submitting..."
+              : "Submit Satisfaction Rating"}
           </Button>
         </div>
       </form>

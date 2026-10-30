@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { TicketForm } from '@components/forms/ticket-form';
-import { TicketList } from '@components/ticket-list';
-import { AppHeader } from '@components/navigation/app-header';
-import { ContextualLoader } from '@ui/contextual-loader';
-import { getStoredSession } from '@lib/helpers';
-import { APP_VERSION } from '@lib/constants';
-import { useAuthStore } from '@store/auth.store';
-import { useTicketsStore } from '@store/tickets.store';
-import { usePortalStore } from '@store/portal.store';
-import { useRealtimeEvents } from '@hooks/use-realtime-events';
-import { useMounted } from '@hooks/use-mounted';
-import { PortalQuickStats } from '@components/portal/portal-quick-stats';
-import { PortalKnowledgeBase } from '@components/portal/portal-knowledge-base';
-import { GlobalIncidentBanner } from '@components/incident-banner';
+import { useRouter } from "next/navigation";
+import { TicketForm } from "@components/forms/ticket-form";
+import { TicketList } from "@components/ticket-list";
+import { AppHeader } from "@components/navigation/app-header";
+import { ContextualLoader } from "@ui/contextual-loader";
+import { getStoredSession } from "@lib/helpers";
+import { APP_VERSION } from "@lib/constants";
+import { useAuthStore } from "@store/auth.store";
+import { useTicketsStore } from "@store/tickets.store";
+import { usePortalStore } from "@store/portal.store";
+import { useRealtimeEvents } from "@hooks/use-realtime-events";
+import { useMounted } from "@hooks/use-mounted";
+import { PortalQuickStats } from "@components/portal/portal-quick-stats";
+import { PortalKnowledgeBase } from "@components/portal/portal-knowledge-base";
+import { GlobalIncidentBanner } from "@components/incident-banner";
+import { useCallback, useEffect } from "react";
 
 export default function CustomerPortalPage() {
   const router = useRouter();
@@ -31,18 +31,18 @@ export default function CustomerPortalPage() {
   const { tickets, clearTickets, highlightTicket } = useTicketsStore();
   const { activeTab, setActiveTab } = usePortalStore();
 
-  const handleSelectTicket = React.useCallback(
+  const handleSelectTicket = useCallback(
     (ticketId: string) => {
-      setActiveTab('tickets');
+      setActiveTab("tickets");
       highlightTicket(ticketId);
     },
     [highlightTicket, setActiveTab],
   );
 
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const targetTicketId = params.get('ticketId');
+    const targetTicketId = params.get("ticketId");
     if (targetTicketId) {
       const timer = setTimeout(() => {
         handleSelectTicket(targetTicketId);
@@ -51,20 +51,20 @@ export default function CustomerPortalPage() {
     }
   }, [handleSelectTicket]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isSessionVerified && user) {
       return;
     }
 
     const stored = getStoredSession();
     if (!stored?.accessToken && !user) {
-      router.replace('/');
+      router.replace("/");
       return;
     }
 
     ensureSessionVerified().then((verified) => {
       if (!verified) {
-        router.replace('/');
+        router.replace("/");
       }
     });
   }, [isSessionVerified, user, ensureSessionVerified, router]);
@@ -72,7 +72,7 @@ export default function CustomerPortalPage() {
   const handleSignOut = () => {
     clearSession();
     clearTickets();
-    router.replace('/');
+    router.replace("/");
   };
 
   if (!user?.fullName || isVerifyingSession || !isSessionVerified) {
@@ -80,7 +80,7 @@ export default function CustomerPortalPage() {
   }
 
   const activeTicketsCount = tickets.filter(
-    (t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS',
+    (t) => t.status === "OPEN" || t.status === "IN_PROGRESS",
   ).length;
 
   return (
@@ -91,7 +91,7 @@ export default function CustomerPortalPage() {
         onSignOut={handleSignOut}
         onSelectTicket={handleSelectTicket}
         titleBadge="Customer Portal"
-        showAdminSwitch={user?.role === 'ADMIN' || user?.role === 'AGENT'}
+        showAdminSwitch={user?.role === "ADMIN" || user?.role === "AGENT"}
       />
 
       <main className="flex-1 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
@@ -103,11 +103,12 @@ export default function CustomerPortalPage() {
                 Customer Support Portal
               </h1>
               <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-300">
-                Welcome back,{' '}
+                Welcome back,{" "}
                 <span className="font-semibold" suppressHydrationWarning>
-                  {user?.fullName || 'Customer'}
+                  {user?.fullName || "Customer"}
                 </span>
-                . Submit helpdesk requests, track status in real-time, or resolve common issues instantly.
+                . Submit helpdesk requests, track status in real-time, or
+                resolve common issues instantly.
               </p>
             </div>
 
@@ -115,10 +116,14 @@ export default function CustomerPortalPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setActiveTab(activeTab === 'tickets' ? 'knowledge-base' : 'tickets')}
+                onClick={() =>
+                  setActiveTab(
+                    activeTab === "tickets" ? "knowledge-base" : "tickets",
+                  )
+                }
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-spruce-800 hover:bg-spruce-900 text-white dark:bg-spruce-100 dark:text-spruce-950 dark:hover:bg-white shadow-xs transition-all cursor-pointer"
               >
-                {activeTab === 'tickets' ? (
+                {activeTab === "tickets" ? (
                   <>
                     <span>Browse Self-Service KB</span>
                     <span>&rarr;</span>
@@ -141,14 +146,17 @@ export default function CustomerPortalPage() {
 
           {/* Module Tab Navigation */}
           <div className="border-b border-spruce-200 dark:border-spruce-800">
-            <nav className="-mb-px flex space-x-6 sm:space-x-8" aria-label="Portal Navigation Tabs">
+            <nav
+              className="-mb-px flex space-x-6 sm:space-x-8"
+              aria-label="Portal Navigation Tabs"
+            >
               <button
                 type="button"
-                onClick={() => setActiveTab('tickets')}
+                onClick={() => setActiveTab("tickets")}
                 className={`py-3.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
-                  activeTab === 'tickets'
-                    ? 'border-spruce-800 text-spruce-950 dark:border-spruce-300 dark:text-white font-bold'
-                    : 'border-transparent text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white'
+                  activeTab === "tickets"
+                    ? "border-spruce-800 text-spruce-950 dark:border-spruce-300 dark:text-white font-bold"
+                    : "border-transparent text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white"
                 }`}
               >
                 <span>Tickets & Requests</span>
@@ -164,11 +172,11 @@ export default function CustomerPortalPage() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('knowledge-base')}
+                onClick={() => setActiveTab("knowledge-base")}
                 className={`py-3.5 px-1 border-b-2 text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
-                  activeTab === 'knowledge-base'
-                    ? 'border-spruce-800 text-spruce-950 dark:border-spruce-300 dark:text-white font-bold'
-                    : 'border-transparent text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white'
+                  activeTab === "knowledge-base"
+                    ? "border-spruce-800 text-spruce-950 dark:border-spruce-300 dark:text-white font-bold"
+                    : "border-transparent text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white"
                 }`}
               >
                 <span>Knowledge Base & FAQs</span>
@@ -180,21 +188,23 @@ export default function CustomerPortalPage() {
           </div>
 
           {/* Tab 1: Tickets & Requests */}
-          {activeTab === 'tickets' && (
+          {activeTab === "tickets" && (
             <div className="space-y-6">
               {/* Proactive Knowledge Base Callout Banner */}
               <div className="bg-white dark:bg-spruce-900/90 border border-spruce-200 dark:border-spruce-800 border-l-4 border-l-spruce-600 dark:border-l-spruce-400 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                 <div className="space-y-0.5">
                   <p className="text-xs sm:text-sm font-bold text-spruce-950 dark:text-white">
-                    Need an immediate resolution without waiting for an engineer?
+                    Need an immediate resolution without waiting for an
+                    engineer?
                   </p>
                   <p className="text-xs text-spruce-600 dark:text-spruce-300">
-                    Self-service fixes are available for VPN gateway timeouts, SSO 2FA locks, Outlook sync, and billing receipts.
+                    Self-service fixes are available for VPN gateway timeouts,
+                    SSO 2FA locks, Outlook sync, and billing receipts.
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('knowledge-base')}
+                  onClick={() => setActiveTab("knowledge-base")}
                   className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg border border-spruce-300 dark:border-spruce-700 bg-spruce-50 hover:bg-spruce-100 dark:bg-spruce-800 dark:hover:bg-spruce-700 text-spruce-900 dark:text-spruce-100 transition-colors cursor-pointer"
                 >
                   Explore Knowledge Base &rarr;
@@ -214,7 +224,7 @@ export default function CustomerPortalPage() {
           )}
 
           {/* Tab 2: Knowledge Base & FAQs */}
-          {activeTab === 'knowledge-base' && <PortalKnowledgeBase />}
+          {activeTab === "knowledge-base" && <PortalKnowledgeBase />}
         </div>
       </main>
 

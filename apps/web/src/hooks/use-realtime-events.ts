@@ -1,9 +1,9 @@
 'use client';
 
-import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@store/auth.store';
 import { API_BASE_URL } from '@lib/constants';
+import { useState, useRef, useEffect } from 'react';
 
 export type RealtimeStatus = 'connected' | 'connecting' | 'disconnected';
 
@@ -37,15 +37,15 @@ export interface UseRealtimeEventsOptions {
 export function useRealtimeEvents(options: UseRealtimeEventsOptions = {}) {
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
-  const [status, setStatus] = React.useState<RealtimeStatus>('disconnected');
-  const [lastEvent, setLastEvent] = React.useState<RealtimeMessage | null>(null);
+  const [status, setStatus] =  useState<RealtimeStatus>('disconnected');
+  const [lastEvent, setLastEvent] =  useState<RealtimeMessage | null>(null);
 
-  const optionsRef = React.useRef(options);
-  React.useEffect(() => {
+  const optionsRef =  useRef(options);
+   useEffect(() => {
     optionsRef.current = options;
   });
 
-  React.useEffect(() => {
+   useEffect(() => {
     if (!accessToken || typeof window === 'undefined') {
       return;
     }

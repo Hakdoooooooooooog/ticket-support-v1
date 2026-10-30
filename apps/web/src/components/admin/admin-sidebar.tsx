@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import Link from 'next/link';
-import { Badge } from '@ui/badge';
-import { Button } from '@ui/button';
-import { APP_VERSION } from '@lib/constants';
-import { AuthUser, getUserDisplayName, getUserInitial } from '@lib/helpers';
-import type { AdminSection } from '@store/admin.store';
+import * as React from "react";
+import Link from "next/link";
+import { Badge } from "@ui/badge";
+import { Button } from "@ui/button";
+import { APP_VERSION } from "@lib/constants";
+import { AuthUser, getUserDisplayName, getUserInitial } from "@lib/helpers";
+import type { AdminSection } from "@store/admin.store";
 
 interface AdminSidebarProps {
   user: AuthUser | null;
@@ -16,7 +16,7 @@ interface AdminSidebarProps {
   totalTicketsCount: number;
   myAssignedCount: number;
   isFetching: boolean;
-  realtimeStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  realtimeStatus: "connecting" | "connected" | "disconnected" | "error";
   onRefresh: () => void;
   onSignOut: () => void;
 }
@@ -64,7 +64,7 @@ export function AdminSidebar({
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <Badge
-                    variant={user.role === 'ADMIN' ? 'default' : 'secondary'}
+                    variant={user.role === "ADMIN" ? "default" : "secondary"}
                     className="text-[10px] py-0 px-1.5"
                   >
                     {user.role}
@@ -80,20 +80,20 @@ export function AdminSidebar({
       <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
         <button
           type="button"
-          onClick={() => onSelectSection('DASHBOARD')}
+          onClick={() => onSelectSection("DASHBOARD")}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-            activeSection === 'DASHBOARD'
-              ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+            activeSection === "DASHBOARD"
+              ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+              : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
           }`}
         >
           <span>Dashboard Overview</span>
           {unassignedCount > 0 && (
             <span
               className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
-                activeSection === 'DASHBOARD'
-                  ? 'bg-amber-500/20 text-amber-700 dark:bg-spruce-950/20 dark:text-spruce-950'
-                  : 'bg-amber-500/20 text-amber-600'
+                activeSection === "DASHBOARD"
+                  ? "bg-amber-500/20 text-amber-700 dark:bg-spruce-950/20 dark:text-spruce-950"
+                  : "bg-amber-500/20 text-amber-600"
               }`}
             >
               {unassignedCount}
@@ -103,19 +103,19 @@ export function AdminSidebar({
 
         <button
           type="button"
-          onClick={() => onSelectSection('ALL_TICKETS')}
+          onClick={() => onSelectSection("ALL_TICKETS")}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-            activeSection === 'ALL_TICKETS'
-              ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+            activeSection === "ALL_TICKETS"
+              ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+              : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
           }`}
         >
           <span>All Tickets</span>
           <span
             className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
-              activeSection === 'ALL_TICKETS'
-                ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
-                : 'bg-spruce-200 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300'
+              activeSection === "ALL_TICKETS"
+                ? "bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950"
+                : "bg-spruce-200 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300"
             }`}
           >
             {totalTicketsCount}
@@ -124,19 +124,19 @@ export function AdminSidebar({
 
         <button
           type="button"
-          onClick={() => onSelectSection('ASSIGNED_TICKETS')}
+          onClick={() => onSelectSection("ASSIGNED_TICKETS")}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-            activeSection === 'ASSIGNED_TICKETS'
-              ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+            activeSection === "ASSIGNED_TICKETS"
+              ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+              : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
           }`}
         >
           <span>Assigned Tickets</span>
           <span
             className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
-              activeSection === 'ASSIGNED_TICKETS'
-                ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
-                : 'bg-spruce-100 dark:bg-spruce-700 dark:text-spruce-200 text-spruce-800'
+              activeSection === "ASSIGNED_TICKETS"
+                ? "bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950"
+                : "bg-spruce-100 dark:bg-spruce-700 dark:text-spruce-200 text-spruce-800"
             }`}
           >
             {myAssignedCount}
@@ -146,19 +146,19 @@ export function AdminSidebar({
         {/* Canned Responses Tab (Available to IT Staff & Admins) */}
         <button
           type="button"
-          onClick={() => onSelectSection('CANNED_RESPONSES')}
+          onClick={() => onSelectSection("CANNED_RESPONSES")}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-            activeSection === 'CANNED_RESPONSES'
-              ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+            activeSection === "CANNED_RESPONSES"
+              ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+              : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
           }`}
         >
           <span>Canned Responses</span>
           <span
             className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-              activeSection === 'CANNED_RESPONSES'
-                ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
-                : 'bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300'
+              activeSection === "CANNED_RESPONSES"
+                ? "bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950"
+                : "bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300"
             }`}
           >
             Templates
@@ -168,19 +168,19 @@ export function AdminSidebar({
         {/* Knowledge Base & FAQs Manager (Available to Staff & Admins) */}
         <button
           type="button"
-          onClick={() => onSelectSection('KNOWLEDGE_BASE')}
+          onClick={() => onSelectSection("KNOWLEDGE_BASE")}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-            activeSection === 'KNOWLEDGE_BASE'
-              ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+            activeSection === "KNOWLEDGE_BASE"
+              ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+              : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
           }`}
         >
           <span>Knowledge Base</span>
           <span
             className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-              activeSection === 'KNOWLEDGE_BASE'
-                ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
-                : 'bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300'
+              activeSection === "KNOWLEDGE_BASE"
+                ? "bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950"
+                : "bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300"
             }`}
           >
             Articles
@@ -188,22 +188,22 @@ export function AdminSidebar({
         </button>
 
         {/* Global Incident Outage Banners (Admins) */}
-        {user?.role === 'ADMIN' && (
+        {user?.role === "ADMIN" && (
           <button
             type="button"
-            onClick={() => onSelectSection('INCIDENT_BANNERS')}
+            onClick={() => onSelectSection("INCIDENT_BANNERS")}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-              activeSection === 'INCIDENT_BANNERS'
-                ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-                : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+              activeSection === "INCIDENT_BANNERS"
+                ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+                : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
             }`}
           >
             <span>Outage Banners</span>
             <span
               className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                activeSection === 'INCIDENT_BANNERS'
-                  ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
-                  : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200'
+                activeSection === "INCIDENT_BANNERS"
+                  ? "bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950"
+                  : "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200"
               }`}
             >
               Alerts
@@ -214,19 +214,19 @@ export function AdminSidebar({
         {/* Reports & CSAT Studio */}
         <button
           type="button"
-          onClick={() => onSelectSection('REPORTS')}
+          onClick={() => onSelectSection("REPORTS")}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-            activeSection === 'REPORTS'
-              ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-              : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+            activeSection === "REPORTS"
+              ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+              : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
           }`}
         >
           <span>Reports &amp; CSAT</span>
           <span
             className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-              activeSection === 'REPORTS'
-                ? 'bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950'
-                : 'bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300'
+              activeSection === "REPORTS"
+                ? "bg-spruce-200/90 text-spruce-950 dark:bg-spruce-950/20 dark:text-spruce-950"
+                : "bg-spruce-200/60 dark:bg-spruce-800 text-spruce-700 dark:text-spruce-300"
             }`}
           >
             Export
@@ -234,22 +234,22 @@ export function AdminSidebar({
         </button>
 
         {/* Admin Exclusive: IT Support Team & Staff Invites */}
-        {user?.role === 'ADMIN' && (
+        {user?.role === "ADMIN" && (
           <button
             type="button"
-            onClick={() => onSelectSection('TEAM_MANAGEMENT')}
+            onClick={() => onSelectSection("TEAM_MANAGEMENT")}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-              activeSection === 'TEAM_MANAGEMENT'
-                ? 'bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm'
-                : 'text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium'
+              activeSection === "TEAM_MANAGEMENT"
+                ? "bg-spruce-100/90 text-spruce-950 font-bold border-l-4 border-l-spruce-700 shadow-xs dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0 dark:shadow-sm"
+                : "text-spruce-700 hover:text-spruce-950 hover:bg-spruce-100/70 dark:text-spruce-300 dark:hover:text-white dark:hover:bg-spruce-900 font-medium"
             }`}
           >
             <span>Team &amp; Invites</span>
             <span
               className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wider ${
-                activeSection === 'TEAM_MANAGEMENT'
-                  ? 'bg-emerald-500/20 text-emerald-700 dark:bg-spruce-950/20 dark:text-spruce-950'
-                  : 'bg-emerald-500/20 text-emerald-500'
+                activeSection === "TEAM_MANAGEMENT"
+                  ? "bg-emerald-500/20 text-emerald-700 dark:bg-spruce-950/20 dark:text-spruce-950"
+                  : "bg-emerald-500/20 text-emerald-500"
               }`}
             >
               Admin
@@ -278,50 +278,39 @@ export function AdminSidebar({
               <span
                 className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                   isFetching
-                    ? 'bg-spruce-400'
-                    : realtimeStatus === 'connected'
-                    ? 'bg-emerald-400'
-                    : realtimeStatus === 'connecting'
-                    ? 'bg-amber-400'
-                    : 'bg-rose-400'
+                    ? "bg-spruce-400"
+                    : realtimeStatus === "connected"
+                      ? "bg-emerald-400"
+                      : realtimeStatus === "connecting"
+                        ? "bg-amber-400"
+                        : "bg-rose-400"
                 }`}
               />
               <span
                 className={`relative inline-flex rounded-full h-2 w-2 ${
                   isFetching
-                    ? 'bg-spruce-500'
-                    : realtimeStatus === 'connected'
-                    ? 'bg-emerald-500'
-                    : realtimeStatus === 'connecting'
-                    ? 'bg-amber-500'
-                    : 'bg-rose-500'
+                    ? "bg-spruce-500"
+                    : realtimeStatus === "connected"
+                      ? "bg-emerald-500"
+                      : realtimeStatus === "connecting"
+                        ? "bg-amber-500"
+                        : "bg-rose-500"
                 }`}
               />
             </span>
             <span className="text-[11px] font-medium truncate">
               {isFetching
-                ? 'Syncing...'
-                : realtimeStatus === 'connected'
-                ? 'Live Connected'
-                : realtimeStatus === 'connecting'
-                ? 'Connecting...'
-                : 'Offline'}
+                ? "Syncing..."
+                : realtimeStatus === "connected"
+                  ? "Live Connected"
+                  : realtimeStatus === "connecting"
+                    ? "Connecting..."
+                    : "Offline"}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onRefresh}
-              className="h-6 px-1.5 text-[10px]"
-            >
-              Refresh
-            </Button>
-            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 text-spruce-600 dark:text-spruce-300">
-              {APP_VERSION}
-            </span>
-          </div>
+          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-spruce-100 dark:bg-spruce-900 border border-spruce-200 dark:border-spruce-800 text-spruce-600 dark:text-spruce-300">
+            {APP_VERSION}
+          </span>
         </div>
 
         <Button

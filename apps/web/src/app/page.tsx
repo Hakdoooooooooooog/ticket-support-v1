@@ -1,31 +1,35 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { ContextualLoader } from '@ui/contextual-loader';
-import { ThemeToggle } from '@components/theme-toggle';
-import { AuthCard } from '@components/auth/auth-card';
-import { LoginForm } from '@components/auth/login-form';
-import { RegisterForm, VerifiedInviteInfo } from '@components/auth/register-form';
-import { DemoAccountsBar } from '@components/auth/demo-accounts-bar';
+import { useRouter, useSearchParams } from "next/navigation";
+import { ContextualLoader } from "@ui/contextual-loader";
+import { ThemeToggle } from "@components/theme-toggle";
+import { AuthCard } from "@components/auth/auth-card";
+import { LoginForm } from "@components/auth/login-form";
+import {
+  RegisterForm,
+  VerifiedInviteInfo,
+} from "@components/auth/register-form";
+import { DemoAccountsBar } from "@components/auth/demo-accounts-bar";
 import {
   authControllerVerifyInvite,
   authControllerLogin,
   authControllerRegister,
-} from '../api/endpoints/authentication/authentication';
-import { APP_VERSION } from '@lib/constants';
+} from "../api/endpoints/authentication/authentication";
+import { APP_VERSION } from "@lib/constants";
 import {
   verifyPassportSession,
   getWorkspacePathForRole,
   extractApiErrorMessage,
   AuthUser,
-} from '@lib/helpers';
-import { useAuthStore } from '@store/auth.store';
+} from "@lib/helpers";
+import { useAuthStore } from "@store/auth.store";
+import { useState, useCallback, useEffect, FormEvent, Suspense } from "react";
 
 function AuthContainer() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlInviteCode = searchParams.get('invite') || searchParams.get('inviteCode') || '';
+  const urlInviteCode =
+    searchParams.get("invite") || searchParams.get("inviteCode") || "";
 
   const {
     user: storedUser,
@@ -35,25 +39,27 @@ function AuthContainer() {
     ensureSessionVerified,
   } = useAuthStore();
 
-  const [mode, setMode] = React.useState<'login' | 'register'>('login');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [fullName, setFullName] = React.useState('');
-  const [inviteCode, setInviteCode] = React.useState(urlInviteCode);
-  const [showInviteInput, setShowInviteInput] = React.useState(Boolean(urlInviteCode));
-  const [inviteInfo, setInviteInfo] = React.useState<VerifiedInviteInfo | null>(null);
-  const [isVerifyingInvite, setIsVerifyingInvite] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [inviteCode, setInviteCode] = useState(urlInviteCode);
+  const [showInviteInput, setShowInviteInput] = useState(
+    Boolean(urlInviteCode),
+  );
+  const [inviteInfo, setInviteInfo] = useState<VerifiedInviteInfo | null>(null);
+  const [isVerifyingInvite, setIsVerifyingInvite] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const redirectByUserRole = React.useCallback(
+  const redirectByUserRole = useCallback(
     (user: AuthUser) => {
       router.replace(getWorkspacePathForRole(user.role));
     },
     [router],
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isSessionVerified && storedUser) {
       redirectByUserRole(storedUser);
       return;
@@ -64,11 +70,16 @@ function AuthContainer() {
         redirectByUserRole(verifiedUser);
       }
     });
-  }, [isSessionVerified, storedUser, ensureSessionVerified, redirectByUserRole]);
+  }, [
+    isSessionVerified,
+    storedUser,
+    ensureSessionVerified,
+    redirectByUserRole,
+  ]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (urlInviteCode) {
-      setMode('register');
+      setMode("register");
       setInviteCode(urlInviteCode);
       setShowInviteInput(true);
       verifyCode(urlInviteCode);
@@ -88,7 +99,10 @@ function AuthContainer() {
         setEmail(res.email);
       }
     } catch {
-      setInviteInfo({ valid: false, message: 'Unable to verify invitation code' });
+      setInviteInfo({
+        valid: false,
+        message: "Unable to verify invitation code",
+      });
     } finally {
       setIsVerifyingInvite(false);
     }
@@ -104,13 +118,13 @@ function AuthContainer() {
     );
   }
 
-  const handleAuthSubmit = async (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
     try {
-      if (mode === 'login') {
+      if (mode === "login") {
         const res = (await authControllerLogin({ email, password })) as any;
         const { accessToken, user } = res;
         const verified = (await verifyPassportSession(accessToken)) || user;
@@ -138,7 +152,10 @@ function AuthContainer() {
       }
     } catch (err: unknown) {
       setError(
-        extractApiErrorMessage(err, 'Authentication failed. Check your credentials.'),
+        extractApiErrorMessage(
+          err,
+          "Authentication failed. Check your credentials.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -161,7 +178,7 @@ function AuthContainer() {
         <div
           style={{
             clipPath:
-              'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
+              "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
           }}
           className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-spruce-400/20 to-spruce-600/30 opacity-40 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
         />
@@ -193,7 +210,7 @@ function AuthContainer() {
           isStaffInvite={inviteInfo?.valid}
           staffRole={inviteInfo?.role}
         >
-          {mode === 'login' ? (
+          {mode === "login" ? (
             <LoginForm
               email={email}
               setEmail={setEmail}
@@ -241,7 +258,7 @@ function AuthContainer() {
 
 export default function AuthRootPage() {
   return (
-    <React.Suspense
+    <Suspense
       fallback={
         <ContextualLoader
           context="auth-session"
@@ -251,6 +268,6 @@ export default function AuthRootPage() {
       }
     >
       <AuthContainer />
-    </React.Suspense>
+    </Suspense>
   );
 }

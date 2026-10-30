@@ -1,24 +1,27 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useTicketsStore } from '@store/tickets.store';
-import { usePortalStore } from '@store/portal.store';
+import { useTicketsStore } from "@store/tickets.store";
+import { usePortalStore } from "@store/portal.store";
+import { useMemo } from "react";
 
 export function PortalQuickStats() {
   const { tickets } = useTicketsStore();
   const { deflectionCount, setActiveTab } = usePortalStore();
 
-  const metrics = React.useMemo(() => {
+  const metrics = useMemo(() => {
     let active = 0;
     let actionNeeded = 0;
     let resolved = 0;
 
     for (const ticket of tickets) {
-      if (ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS') {
+      if (ticket.status === "OPEN" || ticket.status === "IN_PROGRESS") {
         active += 1;
-      } else if (ticket.status === 'NEEDS_INFO' || (ticket.status === 'RESOLVED' && !ticket.csatRating)) {
+      } else if (
+        ticket.status === "NEEDS_INFO" ||
+        (ticket.status === "RESOLVED" && !ticket.csatRating)
+      ) {
         actionNeeded += 1;
-      } else if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+      } else if (ticket.status === "RESOLVED" || ticket.status === "CLOSED") {
         resolved += 1;
       }
     }
@@ -50,7 +53,9 @@ export function PortalQuickStats() {
           suppressHydrationWarning
           className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate"
         >
-          {metrics.active === 1 ? '1 request in progress' : `${metrics.active} requests in progress`}
+          {metrics.active === 1
+            ? "1 request in progress"
+            : `${metrics.active} requests in progress`}
         </p>
       </div>
 
@@ -58,8 +63,8 @@ export function PortalQuickStats() {
       <div
         className={`bg-white dark:bg-spruce-900/90 border rounded-xl p-3 sm:p-4 shadow-xs transition-all border-l-4 ${
           metrics.actionNeeded > 0
-            ? 'border-spruce-200 dark:border-spruce-800 border-l-amber-500 dark:border-l-amber-400'
-            : 'border-spruce-200 dark:border-spruce-800 border-l-spruce-500 dark:border-l-spruce-400'
+            ? "border-spruce-200 dark:border-spruce-800 border-l-amber-500 dark:border-l-amber-400"
+            : "border-spruce-200 dark:border-spruce-800 border-l-spruce-500 dark:border-l-spruce-400"
         }`}
       >
         <div className="flex items-center justify-between">
@@ -84,7 +89,9 @@ export function PortalQuickStats() {
           suppressHydrationWarning
           className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate"
         >
-          {metrics.actionNeeded > 0 ? 'Feedback / info requested' : 'Queue clear and current'}
+          {metrics.actionNeeded > 0
+            ? "Feedback / info requested"
+            : "Queue clear and current"}
         </p>
       </div>
 
@@ -119,7 +126,7 @@ export function PortalQuickStats() {
           </p>
           <button
             type="button"
-            onClick={() => setActiveTab('knowledge-base')}
+            onClick={() => setActiveTab("knowledge-base")}
             className="text-[11px] font-semibold text-spruce-700 hover:text-spruce-950 dark:text-spruce-300 dark:hover:text-white hover:underline cursor-pointer"
           >
             Browse &rarr;
@@ -130,7 +137,7 @@ export function PortalQuickStats() {
             suppressHydrationWarning
             className="text-2xl sm:text-3xl font-extrabold font-mono text-spruce-950 dark:text-white"
           >
-            {deflectionCount > 0 ? `${deflectionCount} Solved` : '10 Guides'}
+            {deflectionCount > 0 ? `${deflectionCount} Solved` : "10 Guides"}
           </span>
         </div>
         <p
@@ -138,8 +145,8 @@ export function PortalQuickStats() {
           className="mt-1 text-[11px] sm:text-xs text-spruce-600 dark:text-spruce-400 truncate"
         >
           {deflectionCount > 0
-            ? 'Saved from ticket queue'
-            : 'Instant self-service answers'}
+            ? "Saved from ticket queue"
+            : "Instant self-service answers"}
         </p>
       </div>
     </div>

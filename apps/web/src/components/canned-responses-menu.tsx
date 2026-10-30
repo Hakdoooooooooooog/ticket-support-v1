@@ -1,41 +1,43 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import {
   CANNED_RESPONSES,
   CannedResponseTemplate,
   CannedResponseInterpolationContext,
   interpolateCannedResponse,
-} from '@lib/helpers';
-import { cannedResponsesControllerFindAll } from '../api/endpoints/canned-responses/canned-responses';
+} from "@lib/helpers";
+import { cannedResponsesControllerFindAll } from "../api/endpoints/canned-responses/canned-responses";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 interface CannedResponsesMenuProps {
   onSelect: (content: string) => void;
   className?: string;
   buttonLabel?: string;
-  align?: 'left' | 'right';
-  direction?: 'up' | 'down' | 'auto';
+  align?: "left" | "right";
+  direction?: "up" | "down" | "auto";
   context?: CannedResponseInterpolationContext;
   templates?: CannedResponseTemplate[];
 }
 
 export function CannedResponsesMenu({
   onSelect,
-  className = '',
-  buttonLabel = 'Canned Responses',
-  align = 'right',
-  direction = 'auto',
+  className = "",
+  buttonLabel = "Canned Responses",
+  align = "right",
+  direction = "auto",
   context,
   templates: providedTemplates,
 }: CannedResponsesMenuProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [computedDirection, setComputedDirection] = React.useState<'up' | 'down'>('down');
-  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [computedDirection, setComputedDirection] = useState<"up" | "down">(
+    "down",
+  );
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Fetch organization canned responses from API when not provided via props
   const { data: fetchedTemplates } = useQuery<CannedResponseTemplate[]>({
-    queryKey: ['canned-responses'],
+    queryKey: ["canned-responses"],
     queryFn: async () => {
       try {
         const res = (await cannedResponsesControllerFindAll()) as any;
@@ -48,23 +50,24 @@ export function CannedResponsesMenu({
     staleTime: 60 * 1000,
   });
 
-  const activeTemplates = providedTemplates || fetchedTemplates || CANNED_RESPONSES;
+  const activeTemplates =
+    providedTemplates || fetchedTemplates || CANNED_RESPONSES;
 
-  React.useEffect(() => {
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
 
-  const categories = React.useMemo(() => {
+  const categories = useMemo(() => {
     const map = new Map<string, CannedResponseTemplate[]>();
     for (const item of activeTemplates) {
       const list = map.get(item.category) || [];
@@ -76,15 +79,15 @@ export function CannedResponsesMenu({
 
   const handleToggle = () => {
     if (!isOpen && menuRef.current) {
-      if (direction === 'up') {
-        setComputedDirection('up');
-      } else if (direction === 'down') {
-        setComputedDirection('down');
+      if (direction === "up") {
+        setComputedDirection("up");
+      } else if (direction === "down") {
+        setComputedDirection("down");
       } else {
         // Auto-detect based on remaining viewport space below the button
         const rect = menuRef.current.getBoundingClientRect();
         const spaceBelow = window.innerHeight - rect.bottom;
-        setComputedDirection(spaceBelow < 320 ? 'up' : 'down');
+        setComputedDirection(spaceBelow < 320 ? "up" : "down");
       }
     }
     setIsOpen((prev) => !prev);
@@ -105,23 +108,25 @@ export function CannedResponsesMenu({
       >
         <span>{buttonLabel}</span>
         <span className="text-[9px] text-spruce-500 dark:text-spruce-400">
-          {computedDirection === 'up' && isOpen ? '▴' : '▾'}
+          {computedDirection === "up" && isOpen ? "▴" : "▾"}
         </span>
       </button>
 
       {isOpen && (
         <div
-          className={`absolute ${
-            align === 'left' ? 'left-0' : 'right-0'
-          } ${
-            computedDirection === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          className={`absolute ${align === "left" ? "left-0" : "right-0"} ${
+            computedDirection === "up"
+              ? "bottom-full mb-1.5"
+              : "top-full mt-1.5"
           } w-72 sm:w-80 rounded-xl border border-spruce-200 dark:border-spruce-700/80 bg-white/95 dark:bg-spruce-900/95 backdrop-blur-md shadow-2xl z-50 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-100 divide-y divide-spruce-100 dark:divide-spruce-800/80`}
         >
           <div className="p-2.5 bg-spruce-50/80 dark:bg-spruce-950/60 flex items-center justify-between">
             <span className="text-[11px] font-semibold text-spruce-900 dark:text-spruce-200 uppercase tracking-wider">
               Quick Reply Templates
             </span>
-            <span className="text-[10px] text-spruce-500">Insert technical snippet</span>
+            <span className="text-[10px] text-spruce-500">
+              Insert technical snippet
+            </span>
           </div>
 
           <div className="max-h-64 overflow-y-auto p-1.5 space-y-2">

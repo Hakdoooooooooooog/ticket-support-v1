@@ -1,13 +1,12 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import Link from 'next/link';
-import { Badge } from '@ui/badge';
-import { Button } from '@ui/button';
-import { ThemeToggle } from '@components/theme-toggle';
-import { NotificationCenter } from '@components/notification-center';
-import { AuthUser, getUserDisplayName } from '@lib/helpers';
-import type { AdminSection } from '@store/admin.store';
+import Link from "next/link";
+import { Badge } from "@ui/badge";
+import { Button } from "@ui/button";
+import { ThemeToggle } from "@components/theme-toggle";
+import { NotificationCenter } from "@components/notification-center";
+import { AuthUser, getUserDisplayName } from "@lib/helpers";
+import type { AdminSection } from "@store/admin.store";
 
 interface AdminMobileNavProps {
   user: AuthUser | null;
@@ -42,18 +41,40 @@ export function AdminMobileNav({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-label={
+              isOpen ? "Close navigation menu" : "Open navigation menu"
+            }
             aria-expanded={isOpen}
             onClick={onToggleOpen}
             className="p-2 rounded-lg text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900 border border-spruce-200 dark:border-spruce-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 transition-colors shrink-0"
           >
             {isOpen ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
               </svg>
             )}
           </button>
@@ -71,7 +92,12 @@ export function AdminMobileNav({
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
           <NotificationCenter onSelectTicket={onSelectTicket} />
-          <Button variant="ghost" size="sm" onClick={onSignOut} className="h-8 text-xs px-2.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onSignOut}
+            className="h-8 text-xs px-2.5"
+          >
             Sign Out
           </Button>
         </div>
@@ -95,7 +121,9 @@ export function AdminMobileNav({
                   <div className="w-6 h-6 rounded-md bg-spruce-800 text-spruce-300 dark:bg-spruce-300 dark:text-spruce-950 font-black flex items-center justify-center text-[11px] shadow-sm shrink-0">
                     TS
                   </div>
-                  <span className="font-extrabold text-base tracking-tight">TicketSupport</span>
+                  <span className="font-extrabold text-base tracking-tight">
+                    TicketSupport
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -103,8 +131,18 @@ export function AdminMobileNav({
                   aria-label="Close navigation menu"
                   className="p-1 rounded-md text-spruce-400 hover:text-spruce-700 dark:hover:text-spruce-200 hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -112,7 +150,9 @@ export function AdminMobileNav({
               {user && (
                 <div className="p-2.5 rounded-lg bg-spruce-100/70 dark:bg-spruce-900 text-xs space-y-1">
                   <p className="font-semibold">{getUserDisplayName(user)}</p>
-                  {user.email && <p className="text-spruce-500">{user.email}</p>}
+                  {user.email && (
+                    <p className="text-spruce-500">{user.email}</p>
+                  )}
                   <Badge variant="secondary">{user.role}</Badge>
                 </div>
               )}
@@ -121,13 +161,13 @@ export function AdminMobileNav({
                 <button
                   type="button"
                   onClick={() => {
-                    onSelectSection('DASHBOARD');
+                    onSelectSection("DASHBOARD");
                     onClose();
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
-                    activeSection === 'DASHBOARD'
-                      ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
-                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                    activeSection === "DASHBOARD"
+                      ? "bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0"
+                      : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                   }`}
                 >
                   <span>Dashboard Overview</span>
@@ -141,13 +181,13 @@ export function AdminMobileNav({
                 <button
                   type="button"
                   onClick={() => {
-                    onSelectSection('ALL_TICKETS');
+                    onSelectSection("ALL_TICKETS");
                     onClose();
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
-                    activeSection === 'ALL_TICKETS'
-                      ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
-                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                    activeSection === "ALL_TICKETS"
+                      ? "bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0"
+                      : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                   }`}
                 >
                   <span>All Tickets</span>
@@ -159,13 +199,13 @@ export function AdminMobileNav({
                 <button
                   type="button"
                   onClick={() => {
-                    onSelectSection('ASSIGNED_TICKETS');
+                    onSelectSection("ASSIGNED_TICKETS");
                     onClose();
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
-                    activeSection === 'ASSIGNED_TICKETS'
-                      ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
-                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                    activeSection === "ASSIGNED_TICKETS"
+                      ? "bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0"
+                      : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                   }`}
                 >
                   <span>Assigned Tickets</span>
@@ -177,13 +217,13 @@ export function AdminMobileNav({
                 <button
                   type="button"
                   onClick={() => {
-                    onSelectSection('CANNED_RESPONSES');
+                    onSelectSection("CANNED_RESPONSES");
                     onClose();
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
-                    activeSection === 'CANNED_RESPONSES'
-                      ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
-                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                    activeSection === "CANNED_RESPONSES"
+                      ? "bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0"
+                      : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                   }`}
                 >
                   <span>Canned Responses</span>
@@ -195,13 +235,13 @@ export function AdminMobileNav({
                 <button
                   type="button"
                   onClick={() => {
-                    onSelectSection('KNOWLEDGE_BASE');
+                    onSelectSection("KNOWLEDGE_BASE");
                     onClose();
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
-                    activeSection === 'KNOWLEDGE_BASE'
-                      ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
-                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                    activeSection === "KNOWLEDGE_BASE"
+                      ? "bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0"
+                      : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                   }`}
                 >
                   <span>Knowledge Base</span>
@@ -213,13 +253,13 @@ export function AdminMobileNav({
                 <button
                   type="button"
                   onClick={() => {
-                    onSelectSection('REPORTS');
+                    onSelectSection("REPORTS");
                     onClose();
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
-                    activeSection === 'REPORTS'
-                      ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
-                      : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                    activeSection === "REPORTS"
+                      ? "bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0"
+                      : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                   }`}
                 >
                   <span>Reports &amp; CSAT</span>
@@ -228,17 +268,17 @@ export function AdminMobileNav({
                   </span>
                 </button>
 
-                {user?.role === 'ADMIN' && (
+                {user?.role === "ADMIN" && (
                   <button
                     type="button"
                     onClick={() => {
-                      onSelectSection('TEAM_MANAGEMENT');
+                      onSelectSection("TEAM_MANAGEMENT");
                       onClose();
                     }}
                     className={`w-full flex items-center justify-between p-2.5 rounded-md text-xs font-semibold ${
-                      activeSection === 'TEAM_MANAGEMENT'
-                        ? 'bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0'
-                        : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900'
+                      activeSection === "TEAM_MANAGEMENT"
+                        ? "bg-spruce-100 text-spruce-950 font-bold border-l-4 border-l-spruce-700 dark:bg-spruce-300 dark:text-spruce-950 dark:border-l-0"
+                        : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-100 dark:hover:bg-spruce-900"
                     }`}
                   >
                     <span>Team &amp; Invites</span>

@@ -1,65 +1,70 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = "light" | "dark" | "system";
 
 interface ThemeToggleProps {
   className?: string;
-  align?: 'left' | 'right';
+  align?: "left" | "right";
 }
 
-export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProps) {
-  const [mode, setMode] = React.useState<ThemeMode>('system');
-  const [resolvedTheme, setResolvedTheme] = React.useState<'light' | 'dark'>('light');
-  const [mounted, setMounted] = React.useState(false);
-  const [isOpen, setIsOpen] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
+export function ThemeToggle({
+  className = "",
+  align = "right",
+}: ThemeToggleProps) {
+  const [mode, setMode] = useState<ThemeMode>("system");
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync state with DOM and media query
-  const applyTheme = React.useCallback((targetMode: ThemeMode) => {
-    if (typeof window === 'undefined') return;
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  const applyTheme = useCallback((targetMode: ThemeMode) => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
     const systemDark = mql.matches;
     const isDark =
-      targetMode === 'dark' || (targetMode === 'system' && systemDark);
-    const resolved = isDark ? 'dark' : 'light';
+      targetMode === "dark" || (targetMode === "system" && systemDark);
+    const resolved = isDark ? "dark" : "light";
 
     setResolvedTheme(resolved);
 
     const root = document.documentElement;
     if (isDark) {
-      root.classList.add('dark');
-      root.classList.remove('light');
+      root.classList.add("dark");
+      root.classList.remove("light");
     } else {
-      root.classList.remove('dark');
-      root.classList.add('light');
+      root.classList.remove("dark");
+      root.classList.add("light");
     }
   }, []);
 
   // Initialize and attach listener for real-time `prefers-color-scheme` updates
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem('ts_theme') as ThemeMode | null;
+    const stored = localStorage.getItem("ts_theme") as ThemeMode | null;
     const initialMode: ThemeMode =
-      stored === 'light' || stored === 'dark' || stored === 'system'
+      stored === "light" || stored === "dark" || stored === "system"
         ? stored
-        : 'system';
+        : "system";
 
     setMode(initialMode);
     applyTheme(initialMode);
 
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
     const handleSystemChange = () => {
-      const currentStored = localStorage.getItem('ts_theme') as ThemeMode | null;
-      if (!currentStored || currentStored === 'system') {
-        applyTheme('system');
+      const currentStored = localStorage.getItem(
+        "ts_theme",
+      ) as ThemeMode | null;
+      if (!currentStored || currentStored === "system") {
+        applyTheme("system");
       }
     };
 
     if (mql.addEventListener) {
-      mql.addEventListener('change', handleSystemChange);
-      return () => mql.removeEventListener('change', handleSystemChange);
+      mql.addEventListener("change", handleSystemChange);
+      return () => mql.removeEventListener("change", handleSystemChange);
     } else if (mql.addListener) {
       mql.addListener(handleSystemChange);
       return () => mql.removeListener(handleSystemChange);
@@ -67,7 +72,7 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
   }, [applyTheme]);
 
   // Click outside to close dropdown
-  React.useEffect(() => {
+  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
         containerRef.current &&
@@ -77,35 +82,33 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
       }
     }
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
       return () =>
-        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen]);
 
   const selectMode = (newMode: ThemeMode) => {
     setMode(newMode);
     setIsOpen(false);
-    if (newMode === 'system') {
-      localStorage.removeItem('ts_theme');
+    if (newMode === "system") {
+      localStorage.removeItem("ts_theme");
     } else {
-      localStorage.setItem('ts_theme', newMode);
+      localStorage.setItem("ts_theme", newMode);
     }
     applyTheme(newMode);
   };
 
   if (!mounted) {
-    return (
-      <div className={`w-8 h-8 rounded-lg bg-transparent ${className}`} />
-    );
+    return <div className={`w-8 h-8 rounded-lg bg-transparent ${className}`} />;
   }
 
   const tooltipLabel =
-    mode === 'system'
-      ? `System Theme (${resolvedTheme === 'dark' ? 'Dark' : 'Light'})`
-      : mode === 'dark'
-      ? 'Dark Mode'
-      : 'Light Mode';
+    mode === "system"
+      ? `System Theme (${resolvedTheme === "dark" ? "Dark" : "Light"})`
+      : mode === "dark"
+        ? "Dark Mode"
+        : "Light Mode";
 
   return (
     <div ref={containerRef} className="relative inline-block text-left">
@@ -118,7 +121,7 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
         aria-haspopup="true"
         className={`p-2 rounded-lg text-spruce-700 dark:text-spruce-300 hover:text-spruce-950 dark:hover:text-white hover:bg-spruce-100 dark:hover:bg-spruce-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-spruce-400 ${className}`}
       >
-        {mode === 'system' ? (
+        {mode === "system" ? (
           // Monitor/Laptop icon for system preference
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -134,7 +137,7 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
             <line x1="8" x2="16" y1="21" y2="21" />
             <line x1="12" x2="12" y1="17" y2="21" />
           </svg>
-        ) : resolvedTheme === 'dark' ? (
+        ) : resolvedTheme === "dark" ? (
           // Moon icon
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -179,7 +182,7 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
           role="menu"
           aria-orientation="vertical"
           className={`absolute ${
-            align === 'right' ? 'right-0' : 'left-0'
+            align === "right" ? "right-0" : "left-0"
           } mt-2 w-48 rounded-xl border border-spruce-200 dark:border-spruce-700/80 bg-white/95 dark:bg-spruce-900/95 backdrop-blur-md shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs`}
         >
           <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-spruce-500 border-b border-spruce-100 dark:border-spruce-800">
@@ -189,11 +192,11 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
           <button
             type="button"
             role="menuitem"
-            onClick={() => selectMode('light')}
+            onClick={() => selectMode("light")}
             className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
-              mode === 'light'
-                ? 'bg-spruce-100 text-spruce-950 font-bold dark:bg-spruce-800 dark:text-spruce-300'
-                : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-50 dark:hover:bg-spruce-800/60'
+              mode === "light"
+                ? "bg-spruce-100 text-spruce-950 font-bold dark:bg-spruce-800 dark:text-spruce-300"
+                : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-50 dark:hover:bg-spruce-800/60"
             }`}
           >
             <span className="flex items-center gap-2">
@@ -219,19 +222,21 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
               </svg>
               <span>Light</span>
             </span>
-            {mode === 'light' && (
-              <span className="text-spruce-600 dark:text-spruce-300 font-bold">✓</span>
+            {mode === "light" && (
+              <span className="text-spruce-600 dark:text-spruce-300 font-bold">
+                ✓
+              </span>
             )}
           </button>
 
           <button
             type="button"
             role="menuitem"
-            onClick={() => selectMode('dark')}
+            onClick={() => selectMode("dark")}
             className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
-              mode === 'dark'
-                ? 'bg-spruce-100 text-spruce-950 font-bold dark:bg-spruce-800 dark:text-spruce-300'
-                : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-50 dark:hover:bg-spruce-800/60'
+              mode === "dark"
+                ? "bg-spruce-100 text-spruce-950 font-bold dark:bg-spruce-800 dark:text-spruce-300"
+                : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-50 dark:hover:bg-spruce-800/60"
             }`}
           >
             <span className="flex items-center gap-2">
@@ -249,19 +254,21 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
               </svg>
               <span>Dark</span>
             </span>
-            {mode === 'dark' && (
-              <span className="text-spruce-600 dark:text-spruce-300 font-bold">✓</span>
+            {mode === "dark" && (
+              <span className="text-spruce-600 dark:text-spruce-300 font-bold">
+                ✓
+              </span>
             )}
           </button>
 
           <button
             type="button"
             role="menuitem"
-            onClick={() => selectMode('system')}
+            onClick={() => selectMode("system")}
             className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
-              mode === 'system'
-                ? 'bg-spruce-100 text-spruce-950 font-bold dark:bg-spruce-800 dark:text-spruce-300'
-                : 'text-spruce-700 dark:text-spruce-300 hover:bg-spruce-50 dark:hover:bg-spruce-800/60'
+              mode === "system"
+                ? "bg-spruce-100 text-spruce-950 font-bold dark:bg-spruce-800 dark:text-spruce-300"
+                : "text-spruce-700 dark:text-spruce-300 hover:bg-spruce-50 dark:hover:bg-spruce-800/60"
             }`}
           >
             <span className="flex items-center gap-2">
@@ -281,8 +288,10 @@ export function ThemeToggle({ className = '', align = 'right' }: ThemeToggleProp
               </svg>
               <span>System (Auto)</span>
             </span>
-            {mode === 'system' && (
-              <span className="text-spruce-600 dark:text-spruce-300 font-bold">✓</span>
+            {mode === "system" && (
+              <span className="text-spruce-600 dark:text-spruce-300 font-bold">
+                ✓
+              </span>
             )}
           </button>
         </div>

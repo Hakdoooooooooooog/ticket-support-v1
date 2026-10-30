@@ -1,28 +1,35 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent } from '@ui/card';
-import { Button } from '@ui/button';
-import { Input } from '@ui/input';
-import { ContextualLoader } from '@ui/contextual-loader';
-import { ThemeToggle } from '@components/theme-toggle';
-import { NotificationCenter } from '@components/notification-center';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  FormEvent,
+  ChangeEvent,
+} from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent } from "@ui/card";
+import { Button } from "@ui/button";
+import { Input } from "@ui/input";
+import { ContextualLoader } from "@ui/contextual-loader";
+import { ThemeToggle } from "@components/theme-toggle";
+import { NotificationCenter } from "@components/notification-center";
 import {
   ticketsControllerFindAll,
   ticketsControllerUpdate,
   ticketsControllerAutoAssign,
   ticketsControllerAddComment,
   ticketsControllerRemove,
-} from '../../api/endpoints/tickets/tickets';
+} from "../../api/endpoints/tickets/tickets";
 import {
   authControllerGetAgents,
   authControllerListInvites,
   authControllerCreateInvite,
   authControllerAdminCreateUser,
   authControllerRevokeInvite,
-} from '../../api/endpoints/authentication/authentication';
+} from "../../api/endpoints/authentication/authentication";
 import {
   getStoredSession,
   formatLastUpdatedTimestamp,
@@ -35,13 +42,13 @@ import {
   sanitizeText,
   AuthUser,
   EncryptedAttachmentPayload,
-} from '@lib/helpers';
-import type { Ticket } from '@components/ticket-list';
-import { useRealtimeEvents } from '@hooks/use-realtime-events';
-import { useMounted } from '@hooks/use-mounted';
-import { useAuthStore } from '@store/auth.store';
-import { useTicketsStore } from '@store/tickets.store';
-import { useAdminStore } from '@store/admin.store';
+} from "@lib/helpers";
+import type { Ticket } from "@components/ticket-list";
+import { useRealtimeEvents } from "@hooks/use-realtime-events";
+import { useMounted } from "@hooks/use-mounted";
+import { useAuthStore } from "@store/auth.store";
+import { useTicketsStore } from "@store/tickets.store";
+import { useAdminStore } from "@store/admin.store";
 import {
   AdminSidebar,
   AdminMobileNav,
@@ -56,8 +63,8 @@ import {
   AdminKnowledgeBase,
   AdminIncidentBanners,
   type StaffInviteRecord,
-} from '@components/admin';
-import { GlobalIncidentBanner } from '@components/incident-banner';
+} from "@components/admin";
+import { GlobalIncidentBanner } from "@components/incident-banner";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -125,27 +132,35 @@ export default function AdminDashboardPage() {
   } = useAdminStore();
 
   // Local state
-  const [commentAttachments, setCommentAttachments] = React.useState<
+  const [commentAttachments, setCommentAttachments] = useState<
     Record<string, File | null>
   >({});
-  const [realtimeAlert, setRealtimeAlert] = React.useState<string | null>(null);
-  const [followUpAttachment, setFollowUpAttachment] = React.useState<File | null>(null);
-  const [actionErrors, setActionErrors] = React.useState<Record<string, string>>({});
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const [teamManagementSubtab, setTeamManagementSubtab] = React.useState<
-    'MEMBERS' | 'INVITE' | 'PROVISION'
-  >('MEMBERS');
+  const [realtimeAlert, setRealtimeAlert] = useState<string | null>(null);
+  const [followUpAttachment, setFollowUpAttachment] = useState<File | null>(
+    null,
+  );
+  const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [teamManagementSubtab, setTeamManagementSubtab] = useState<
+    "MEMBERS" | "INVITE" | "PROVISION"
+  >("MEMBERS");
 
   // Invitations local state
-  const [generatedInviteCode, setGeneratedInviteCode] = React.useState<string | null>(null);
-  const [inviteSuccessMessage, setInviteSuccessMessage] = React.useState<string | null>(null);
-  const [inviteError, setInviteError] = React.useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = React.useState(false);
-  const [departmentFilter, setDepartmentFilter] = React.useState<string>('ALL');
+  const [generatedInviteCode, setGeneratedInviteCode] = useState<string | null>(
+    null,
+  );
+  const [inviteSuccessMessage, setInviteSuccessMessage] = useState<
+    string | null
+  >(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState<string>("ALL");
 
   // Direct provisioning local state
-  const [provisionSuccessMessage, setProvisionSuccessMessage] = React.useState<string | null>(null);
-  const [provisionError, setProvisionError] = React.useState<string | null>(null);
+  const [provisionSuccessMessage, setProvisionSuccessMessage] = useState<
+    string | null
+  >(null);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
 
   // Real-time events subscription
   const { status: realtimeStatus } = useRealtimeEvents({
@@ -185,25 +200,25 @@ export default function AdminDashboardPage() {
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!realtimeAlert) return;
     const timer = setTimeout(() => setRealtimeAlert(null), 8000);
     return () => clearTimeout(timer);
   }, [realtimeAlert]);
 
   // Session guard
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const stored = getStoredSession();
     if (!stored) {
       clearSession();
-      router.replace('/');
+      router.replace("/");
       return;
     }
     if (!isSessionVerified) {
       void ensureSessionVerified().then((currentUser) => {
         if (!currentUser) {
-          router.replace('/');
+          router.replace("/");
         }
       });
     }
@@ -216,7 +231,7 @@ export default function AdminDashboardPage() {
     isFetching,
     refetch,
   } = useQuery<Ticket[]>({
-    queryKey: ['tickets'],
+    queryKey: ["tickets"],
     queryFn: async () => {
       const res = (await ticketsControllerFindAll()) as any;
       return res;
@@ -227,12 +242,12 @@ export default function AdminDashboardPage() {
 
   const tickets = queriedTickets ?? storedTickets;
   const showInitialSkeleton = isLoading && !hasLoadedTickets;
-  const formattedLastUpdated = React.useMemo(
+  const formattedLastUpdated = useMemo(
     () => (lastUpdatedAt ? formatLastUpdatedTimestamp(lastUpdatedAt) : null),
     [lastUpdatedAt],
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (queriedTickets) {
       setTickets(queriedTickets);
       initializeDefaultExpansion(queriedTickets);
@@ -241,7 +256,7 @@ export default function AdminDashboardPage() {
 
   // Agents query
   const { data: queriedAgents, refetch: refetchAgents } = useQuery<AuthUser[]>({
-    queryKey: ['agents'],
+    queryKey: ["agents"],
     queryFn: async () => {
       try {
         const res = (await authControllerGetAgents()) as any;
@@ -256,7 +271,7 @@ export default function AdminDashboardPage() {
 
   const agents = queriedAgents ?? storedAgents;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (queriedAgents) {
       setAgents(queriedAgents);
     }
@@ -269,7 +284,7 @@ export default function AdminDashboardPage() {
       payload,
     }: {
       id: string;
-      payload: Partial<Pick<Ticket, 'status' | 'priority' | 'assigneeId'>> & {
+      payload: Partial<Pick<Ticket, "status" | "priority" | "assigneeId">> & {
         amendmentNote?: string;
         actorId?: string;
         encryptedAttachment?: EncryptedAttachmentPayload | null;
@@ -282,14 +297,14 @@ export default function AdminDashboardPage() {
       if (updatedTicket?.id) {
         upsertTicket(updatedTicket);
         void ensureTicketAttachmentsLoaded(updatedTicket);
-        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: '' }));
+        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: "" }));
       }
       closeFollowUpComposer();
       setFollowUpAttachment(null);
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
     onError: (err: unknown, variables) => {
-      const message = extractApiErrorMessage(err, 'Failed to update ticket');
+      const message = extractApiErrorMessage(err, "Failed to update ticket");
       setActionErrors((prev) => ({ ...prev, [variables.id]: message }));
     },
   });
@@ -304,15 +319,18 @@ export default function AdminDashboardPage() {
         upsertTicket(updatedTicket);
         void ensureTicketAttachmentsLoaded(updatedTicket);
         setRealtimeAlert(
-          `Ticket #${updatedTicket.id.slice(0, 8)} automatically assigned to ${updatedTicket.assignee?.fullName || 'Agent'}`,
+          `Ticket #${updatedTicket.id.slice(0, 8)} automatically assigned to ${updatedTicket.assignee?.fullName || "Agent"}`,
         );
-        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: '' }));
+        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: "" }));
       }
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["agents"] });
     },
     onError: (err: unknown, ticketId) => {
-      const message = extractApiErrorMessage(err, 'Failed to auto-assign ticket');
+      const message = extractApiErrorMessage(
+        err,
+        "Failed to auto-assign ticket",
+      );
       setActionErrors((prev) => ({ ...prev, [ticketId]: message }));
     },
   });
@@ -330,22 +348,30 @@ export default function AdminDashboardPage() {
       const res = (await ticketsControllerAddComment(ticketId, {
         content,
         authorId: user?.id,
-        ...(encryptedAttachment ? { encryptedAttachment: encryptedAttachment as any } : {}),
+        ...(encryptedAttachment
+          ? { encryptedAttachment: encryptedAttachment as any }
+          : {}),
       } as any)) as any;
       return res as Ticket;
     },
     onSuccess: (updatedTicket, variables) => {
-      setCommentDraft(variables.ticketId, '');
-      setCommentAttachments((prev) => ({ ...prev, [variables.ticketId]: null }));
+      setCommentDraft(variables.ticketId, "");
+      setCommentAttachments((prev) => ({
+        ...prev,
+        [variables.ticketId]: null,
+      }));
       if (updatedTicket?.id) {
         upsertTicket(updatedTicket);
         void ensureTicketAttachmentsLoaded(updatedTicket);
-        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: '' }));
+        setActionErrors((prev) => ({ ...prev, [updatedTicket.id]: "" }));
       }
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
     onError: (err: unknown, variables) => {
-      const message = extractApiErrorMessage(err, 'Failed to post resolution note');
+      const message = extractApiErrorMessage(
+        err,
+        "Failed to post resolution note",
+      );
       setActionErrors((prev) => ({ ...prev, [variables.ticketId]: message }));
     },
   });
@@ -357,18 +383,20 @@ export default function AdminDashboardPage() {
     },
     onSuccess: (deletedId) => {
       removeTicket(deletedId);
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
     onError: (err: unknown, variables) => {
-      const message = extractApiErrorMessage(err, 'Failed to delete ticket');
+      const message = extractApiErrorMessage(err, "Failed to delete ticket");
       setActionErrors((prev) => ({ ...prev, [variables]: message }));
     },
   });
 
   // Staff Invitations Query (Administrators only)
-  const { data: invites = [], refetch: refetchInvites } = useQuery<StaffInviteRecord[]>({
-    queryKey: ['admin-invites'],
-    enabled: user?.role === 'ADMIN',
+  const { data: invites = [], refetch: refetchInvites } = useQuery<
+    StaffInviteRecord[]
+  >({
+    queryKey: ["admin-invites"],
+    enabled: user?.role === "ADMIN",
     queryFn: async () => {
       try {
         const res = (await authControllerListInvites()) as any;
@@ -380,7 +408,7 @@ export default function AdminDashboardPage() {
   });
 
   const createInviteMutation = useMutation({
-    mutationFn: async (payload: { email: string; role: 'AGENT' | 'ADMIN' }) => {
+    mutationFn: async (payload: { email: string; role: "AGENT" | "ADMIN" }) => {
       const res = (await authControllerCreateInvite(payload as any)) as any;
       return res;
     },
@@ -391,7 +419,9 @@ export default function AdminDashboardPage() {
       setInviteError(null);
     },
     onError: (err) => {
-      setInviteError(extractApiErrorMessage(err, 'Failed to create staff invitation'));
+      setInviteError(
+        extractApiErrorMessage(err, "Failed to create staff invitation"),
+      );
       setInviteSuccessMessage(null);
     },
   });
@@ -401,18 +431,20 @@ export default function AdminDashboardPage() {
       fullName: string;
       email: string;
       password: string;
-      role: 'AGENT' | 'ADMIN';
+      role: "AGENT" | "ADMIN";
     }) => {
       const res = (await authControllerAdminCreateUser(payload as any)) as any;
       return res;
     },
     onSuccess: () => {
       refetchAgents();
-      setProvisionSuccessMessage('Staff account created and active!');
+      setProvisionSuccessMessage("Staff account created and active!");
       setProvisionError(null);
     },
     onError: (err) => {
-      setProvisionError(extractApiErrorMessage(err, 'Failed to provision staff member'));
+      setProvisionError(
+        extractApiErrorMessage(err, "Failed to provision staff member"),
+      );
       setProvisionSuccessMessage(null);
     },
   });
@@ -427,7 +459,7 @@ export default function AdminDashboardPage() {
   });
 
   const handleCopyInviteLink = (code: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     const link = `${origin}?invite=${code}`;
     navigator.clipboard.writeText(link);
     setCopiedLink(true);
@@ -437,16 +469,16 @@ export default function AdminDashboardPage() {
   const handleSignOut = () => {
     clearSession();
     clearTickets();
-    router.replace('/');
+    router.replace("/");
   };
 
-  const handleSelectTicket = React.useCallback(
+  const handleSelectTicket = useCallback(
     (ticketId: string) => {
-      setActiveSection('ALL_TICKETS');
-      setAssignmentFilter('ALL');
-      setStatusFilter('ALL');
-      setPriorityFilter('ALL');
-      setSearchQuery('');
+      setActiveSection("ALL_TICKETS");
+      setAssignmentFilter("ALL");
+      setStatusFilter("ALL");
+      setPriorityFilter("ALL");
+      setSearchQuery("");
       highlightTicket(ticketId);
     },
     [
@@ -459,10 +491,10 @@ export default function AdminDashboardPage() {
     ],
   );
 
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const targetTicketId = params.get('ticketId');
+    const targetTicketId = params.get("ticketId");
     if (targetTicketId) {
       const timer = setTimeout(() => {
         handleSelectTicket(targetTicketId);
@@ -472,12 +504,12 @@ export default function AdminDashboardPage() {
   }, [handleSelectTicket]);
 
   const handleSendFollowUpRequest = async (ticket: Ticket) => {
-    setActionErrors((prev) => ({ ...prev, [ticket.id]: '' }));
+    setActionErrors((prev) => ({ ...prev, [ticket.id]: "" }));
     try {
       const cleanPrompt = sanitizeText(followUpPrompt);
       const followUpNote = cleanPrompt
         ? `[FOLLOW-UP REQUESTED] ${cleanPrompt}`
-        : '[FOLLOW-UP REQUESTED] Additional information or screenshot requested by IT Support.';
+        : "[FOLLOW-UP REQUESTED] Additional information or screenshot requested by IT Support.";
 
       const encryptedAttachment = followUpAttachment
         ? await compressAndEncryptImageFile(followUpAttachment)
@@ -486,7 +518,7 @@ export default function AdminDashboardPage() {
       await updateTicketMutation.mutateAsync({
         id: ticket.id,
         payload: {
-          status: 'NEEDS_INFO',
+          status: "NEEDS_INFO",
           amendmentNote: followUpNote,
           actorId: user?.id,
           ...(encryptedAttachment ? { encryptedAttachment } : {}),
@@ -494,15 +526,15 @@ export default function AdminDashboardPage() {
       });
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Failed to send follow-up request';
+        err instanceof Error ? err.message : "Failed to send follow-up request";
       setActionErrors((prev) => ({ ...prev, [ticket.id]: message }));
     }
   };
 
-  const handlePostResolutionNote = async (ticketId: string, e: React.FormEvent) => {
+  const handlePostResolutionNote = async (ticketId: string, e: FormEvent) => {
     e.preventDefault();
-    setActionErrors((prev) => ({ ...prev, [ticketId]: '' }));
-    const text = sanitizeText(commentDrafts[ticketId] || '');
+    setActionErrors((prev) => ({ ...prev, [ticketId]: "" }));
+    const text = sanitizeText(commentDrafts[ticketId] || "");
     const file = commentAttachments[ticketId] || null;
 
     if (!text && !file) return;
@@ -513,26 +545,26 @@ export default function AdminDashboardPage() {
         : undefined;
       await addCommentMutation.mutateAsync({
         ticketId,
-        content: text || 'Attached reference screenshot.',
+        content: text || "Attached reference screenshot.",
         encryptedAttachment,
       });
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Failed to post resolution note';
+        err instanceof Error ? err.message : "Failed to post resolution note";
       setActionErrors((prev) => ({ ...prev, [ticketId]: message }));
     }
   };
 
   // Counts & Subsets
-  const unassignedTickets = React.useMemo(
+  const unassignedTickets = useMemo(
     () => tickets.filter((t) => !resolveTicketAssigneeId(t)),
     [tickets],
   );
-  const allAssignedTickets = React.useMemo(
+  const allAssignedTickets = useMemo(
     () => tickets.filter((t) => Boolean(resolveTicketAssigneeId(t))),
     [tickets],
   );
-  const myAssignedTickets = React.useMemo(
+  const myAssignedTickets = useMemo(
     () =>
       user?.id
         ? tickets.filter((t) => resolveTicketAssigneeId(t) === user.id)
@@ -541,45 +573,57 @@ export default function AdminDashboardPage() {
   );
 
   // Compute displayed tickets for active section
-  const displayedTickets = React.useMemo(() => {
-    if (activeSection === 'DASHBOARD') {
+  const displayedTickets = useMemo(() => {
+    if (activeSection === "DASHBOARD") {
       return filterTickets(
         tickets.filter(
           (t) =>
             !resolveTicketAssigneeId(t) ||
-            ((t.priority === 'URGENT' || t.priority === 'HIGH') &&
-              t.status !== 'RESOLVED' &&
-              t.status !== 'CLOSED'),
+            ((t.priority === "URGENT" || t.priority === "HIGH") &&
+              t.status !== "RESOLVED" &&
+              t.status !== "CLOSED"),
         ),
-        'ALL',
-        'ALL',
+        "ALL",
+        "ALL",
         searchQuery,
         departmentFilter,
       );
     }
 
-    if (activeSection === 'ASSIGNED_TICKETS') {
+    if (activeSection === "ASSIGNED_TICKETS") {
       const scoped = allAssignedTickets.filter((t) => {
         const assigneeId = resolveTicketAssigneeId(t);
-        if (assignedScope === 'MINE') {
+        if (assignedScope === "MINE") {
           return Boolean(user?.id && assigneeId === user.id);
         }
-        if (assignedScope === 'ALL_ASSIGNED') {
+        if (assignedScope === "ALL_ASSIGNED") {
           return true;
         }
         return assigneeId === assignedScope;
       });
-      return filterTickets(scoped, statusFilter, priorityFilter, searchQuery, departmentFilter);
+      return filterTickets(
+        scoped,
+        statusFilter,
+        priorityFilter,
+        searchQuery,
+        departmentFilter,
+      );
     }
 
-    if (activeSection === 'ALL_TICKETS') {
+    if (activeSection === "ALL_TICKETS") {
       const assignmentScoped = tickets.filter((t) => {
         const hasAssignee = Boolean(resolveTicketAssigneeId(t));
-        if (assignmentFilter === 'UNASSIGNED') return !hasAssignee;
-        if (assignmentFilter === 'ASSIGNED') return hasAssignee;
+        if (assignmentFilter === "UNASSIGNED") return !hasAssignee;
+        if (assignmentFilter === "ASSIGNED") return hasAssignee;
         return true;
       });
-      return filterTickets(assignmentScoped, statusFilter, priorityFilter, searchQuery, departmentFilter);
+      return filterTickets(
+        assignmentScoped,
+        statusFilter,
+        priorityFilter,
+        searchQuery,
+        departmentFilter,
+      );
     }
 
     return [];
@@ -597,7 +641,7 @@ export default function AdminDashboardPage() {
   ]);
 
   // Auto-load attachments when expanded
-  React.useEffect(() => {
+  useEffect(() => {
     displayedTickets.forEach((ticket) => {
       if (expandedTicketIds[ticket.id]) {
         void ensureTicketAttachmentsLoaded(ticket);
@@ -605,7 +649,7 @@ export default function AdminDashboardPage() {
     });
   }, [displayedTickets, expandedTicketIds, ensureTicketAttachmentsLoaded]);
 
-  const kpis = React.useMemo(() => computeTicketKpis(tickets), [tickets]);
+  const kpis = useMemo(() => computeTicketKpis(tickets), [tickets]);
 
   const allExpanded =
     displayedTickets.length > 0 &&
@@ -662,8 +706,8 @@ export default function AdminDashboardPage() {
             id,
             payload: {
               assigneeId,
-              ...(assigneeId && ticket.status === 'OPEN'
-                ? { status: 'IN_PROGRESS' as const }
+              ...(assigneeId && ticket.status === "OPEN"
+                ? { status: "IN_PROGRESS" as const }
                 : {}),
             },
           });
@@ -675,7 +719,8 @@ export default function AdminDashboardPage() {
               id,
               payload: {
                 assigneeId: user.id,
-                status: ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status,
+                status:
+                  ticket.status === "OPEN" ? "IN_PROGRESS" : ticket.status,
               },
             });
           }
@@ -691,7 +736,7 @@ export default function AdminDashboardPage() {
         onOpenLightbox={setLightboxImage}
         isHistoryExpanded={Boolean(expandedCommentHistories[ticket.id])}
         onToggleHistory={toggleCommentHistory}
-        draft={commentDrafts[ticket.id] || ''}
+        draft={commentDrafts[ticket.id] || ""}
         onUpdateDraft={setCommentDraft}
         commentAttachment={commentAttachments[ticket.id]}
         onSetCommentAttachment={(id, file) =>
@@ -759,32 +804,38 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-spruce-200 dark:border-spruce-800 pb-5">
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-spruce-900 dark:text-white">
-                {activeSection === 'DASHBOARD' && 'IT Service Desk Queue'}
-                {activeSection === 'ALL_TICKETS' && 'All Customer Tickets'}
-                {activeSection === 'ASSIGNED_TICKETS' && 'Assigned Incidents Queue'}
-                {activeSection === 'CANNED_RESPONSES' && 'Canned Responses & Templates'}
-                {activeSection === 'TEAM_MANAGEMENT' && 'IT Support Team & Staff Invitations'}
-                {activeSection === 'REPORTS' && 'Reports & CSAT Analytics Studio'}
-                {activeSection === 'KNOWLEDGE_BASE' && 'Knowledge Base & Troubleshooting Guides'}
-                {activeSection === 'INCIDENT_BANNERS' && 'Platform Outage & Maintenance Alerts'}
+                {activeSection === "DASHBOARD" && "IT Service Desk Queue"}
+                {activeSection === "ALL_TICKETS" && "All Customer Tickets"}
+                {activeSection === "ASSIGNED_TICKETS" &&
+                  "Assigned Incidents Queue"}
+                {activeSection === "CANNED_RESPONSES" &&
+                  "Canned Responses & Templates"}
+                {activeSection === "TEAM_MANAGEMENT" &&
+                  "IT Support Team & Staff Invitations"}
+                {activeSection === "REPORTS" &&
+                  "Reports & CSAT Analytics Studio"}
+                {activeSection === "KNOWLEDGE_BASE" &&
+                  "Knowledge Base & Troubleshooting Guides"}
+                {activeSection === "INCIDENT_BANNERS" &&
+                  "Platform Outage & Maintenance Alerts"}
               </h1>
               <p className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-400 mt-1 max-w-xl leading-relaxed">
-                {activeSection === 'DASHBOARD' &&
-                  'Monitor live SLA metrics, triage incoming unassigned tickets, and resolve assigned incidents.'}
-                {activeSection === 'ALL_TICKETS' &&
-                  'Browse, filter, and inspect all incoming customer incidents across priorities and statuses.'}
-                {activeSection === 'ASSIGNED_TICKETS' &&
-                  'Dedicated workspace for support engineers resolving their active queue.'}
-                {activeSection === 'CANNED_RESPONSES' &&
-                  'Create, manage, and interpolate dynamic quick reply templates with variable placeholders.'}
-                {activeSection === 'TEAM_MANAGEMENT' &&
-                  'Invite-only access: invite support engineers, generate secure claim links, and manage staff accounts.'}
-                {activeSection === 'REPORTS' &&
-                  'Executive service desk metrics, technical support vs general department volumes, customer satisfaction (CSAT), and RFC 4180 CSV exports.'}
-                {activeSection === 'KNOWLEDGE_BASE' &&
-                  'Author, preview in Markdown, publish self-service deflection guides, and monitor helpful ratings across departments.'}
-                {activeSection === 'INCIDENT_BANNERS' &&
-                  'Broadcast active outage banners, scheduled downtime notices, and degraded service warnings.'}
+                {activeSection === "DASHBOARD" &&
+                  "Monitor live SLA metrics, triage incoming unassigned tickets, and resolve assigned incidents."}
+                {activeSection === "ALL_TICKETS" &&
+                  "Browse, filter, and inspect all incoming customer incidents across priorities and statuses."}
+                {activeSection === "ASSIGNED_TICKETS" &&
+                  "Dedicated workspace for support engineers resolving their active queue."}
+                {activeSection === "CANNED_RESPONSES" &&
+                  "Create, manage, and interpolate dynamic quick reply templates with variable placeholders."}
+                {activeSection === "TEAM_MANAGEMENT" &&
+                  "Invite-only access: invite support engineers, generate secure claim links, and manage staff accounts."}
+                {activeSection === "REPORTS" &&
+                  "Executive service desk metrics, technical support vs general department volumes, customer satisfaction (CSAT), and RFC 4180 CSV exports."}
+                {activeSection === "KNOWLEDGE_BASE" &&
+                  "Author, preview in Markdown, publish self-service deflection guides, and monitor helpful ratings across departments."}
+                {activeSection === "INCIDENT_BANNERS" &&
+                  "Broadcast active outage banners, scheduled downtime notices, and degraded service warnings."}
               </p>
             </div>
 
@@ -797,17 +848,19 @@ export default function AdminDashboardPage() {
                   <span className="relative flex h-2 w-2">
                     <span
                       className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                        isFetching ? 'bg-spruce-400' : 'bg-emerald-400'
+                        isFetching ? "bg-spruce-400" : "bg-emerald-400"
                       }`}
                     />
                     <span
                       className={`relative inline-flex rounded-full h-2 w-2 ${
-                        isFetching ? 'bg-spruce-500' : 'bg-emerald-500'
+                        isFetching ? "bg-spruce-500" : "bg-emerald-500"
                       }`}
                     />
                   </span>
                   <span>
-                    <span className="hidden sm:inline text-spruce-400">Updated: </span>
+                    <span className="hidden sm:inline text-spruce-400">
+                      Updated:{" "}
+                    </span>
                     <strong
                       suppressHydrationWarning
                       className="font-semibold text-spruce-900 dark:text-spruce-200"
@@ -831,19 +884,28 @@ export default function AdminDashboardPage() {
               <ThemeToggle />
               <NotificationCenter onSelectTicket={handleSelectTicket} />
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => refetch()}
-                className="w-32 shrink-0 text-xs h-8 justify-center text-center font-medium"
+                disabled={isFetching}
+                title={isFetching ? "Syncing tickets..." : "Sync tickets"}
+                aria-label="Sync tickets"
+                className="h-8 w-8 p-0 shrink-0 text-spruce-700 dark:text-spruce-300"
               >
-                {isFetching && hasLoadedTickets ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                    Syncing...
-                  </span>
-                ) : (
-                  'Refresh Queue'
-                )}
+                <svg
+                  className={`w-4 h-4 transition-transform ${isFetching ? "animate-spin text-spruce-500 dark:text-spruce-300" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
               </Button>
             </div>
           </div>
@@ -872,8 +934,8 @@ export default function AdminDashboardPage() {
           )}
 
           {/* Expand / Collapse toggle for ticket sections */}
-          {activeSection !== 'TEAM_MANAGEMENT' &&
-            activeSection !== 'CANNED_RESPONSES' &&
+          {activeSection !== "TEAM_MANAGEMENT" &&
+            activeSection !== "CANNED_RESPONSES" &&
             displayedTickets.length > 0 && (
               <div className="flex justify-end">
                 <Button
@@ -883,13 +945,13 @@ export default function AdminDashboardPage() {
                   onClick={handleToggleAllAccordions}
                   className="h-7 text-xs text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-white"
                 >
-                  {allExpanded ? 'Collapse All Cards' : 'Expand All Cards'}
+                  {allExpanded ? "Collapse All Cards" : "Expand All Cards"}
                 </Button>
               </div>
             )}
 
           {/* SECTION 1: DASHBOARD OVERVIEW */}
-          {activeSection === 'DASHBOARD' && (
+          {activeSection === "DASHBOARD" && (
             <div className="space-y-6">
               <AdminKpiGrid
                 kpis={kpis}
@@ -897,20 +959,20 @@ export default function AdminDashboardPage() {
                 myAssignedCount={myAssignedTickets.length}
                 isLoading={showInitialSkeleton}
                 onFilterUrgent={() => {
-                  setPriorityFilter('URGENT');
-                  setActiveSection('ALL_TICKETS');
+                  setPriorityFilter("URGENT");
+                  setActiveSection("ALL_TICKETS");
                 }}
                 onFilterUnassigned={() => {
-                  setAssignmentFilter('UNASSIGNED');
-                  setActiveSection('ALL_TICKETS');
+                  setAssignmentFilter("UNASSIGNED");
+                  setActiveSection("ALL_TICKETS");
                 }}
                 onFilterMyAssigned={() => {
-                  setAssignedScope('MINE');
-                  setActiveSection('ASSIGNED_TICKETS');
+                  setAssignedScope("MINE");
+                  setActiveSection("ASSIGNED_TICKETS");
                 }}
                 onFilterAllTickets={() => {
-                  setAssignmentFilter('ALL');
-                  setActiveSection('ALL_TICKETS');
+                  setAssignmentFilter("ALL");
+                  setActiveSection("ALL_TICKETS");
                 }}
               />
 
@@ -919,12 +981,12 @@ export default function AdminDashboardPage() {
                 assignedTickets={allAssignedTickets}
                 currentUserId={user?.id}
                 onViewAllAssigned={() => {
-                  setAssignedScope('ALL_ASSIGNED');
-                  setActiveSection('ASSIGNED_TICKETS');
+                  setAssignedScope("ALL_ASSIGNED");
+                  setActiveSection("ASSIGNED_TICKETS");
                 }}
                 onSelectAgentQueue={(scope) => {
                   setAssignedScope(scope);
-                  setActiveSection('ASSIGNED_TICKETS');
+                  setActiveSection("ASSIGNED_TICKETS");
                 }}
               />
 
@@ -933,16 +995,20 @@ export default function AdminDashboardPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h2 className="text-lg font-bold text-spruce-900 dark:text-white">
-                      Immediate Triage &amp; Unassigned Queue ({displayedTickets.length})
+                      Immediate Triage &amp; Unassigned Queue (
+                      {displayedTickets.length})
                     </h2>
                     <p className="text-xs text-spruce-500">
-                      Unassigned customer tickets waiting to be claimed and high-priority active incidents.
+                      Unassigned customer tickets waiting to be claimed and
+                      high-priority active incidents.
                     </p>
                   </div>
                   <Input
                     placeholder="Quick search triage queue..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setSearchQuery(e.target.value)
+                    }
                     className="w-full sm:w-64 text-xs h-8"
                   />
                 </div>
@@ -955,7 +1021,7 @@ export default function AdminDashboardPage() {
           )}
 
           {/* SECTION 2: ALL TICKETS */}
-          {activeSection === 'ALL_TICKETS' && (
+          {activeSection === "ALL_TICKETS" && (
             <div className="space-y-4">
               <AdminTicketFilters
                 mode="ALL_TICKETS"
@@ -975,13 +1041,15 @@ export default function AdminDashboardPage() {
               />
 
               <div className="space-y-3">
-                {renderTicketList('No tickets match the current filter criteria.')}
+                {renderTicketList(
+                  "No tickets match the current filter criteria.",
+                )}
               </div>
             </div>
           )}
 
           {/* SECTION 3: ASSIGNED TICKETS */}
-          {activeSection === 'ASSIGNED_TICKETS' && (
+          {activeSection === "ASSIGNED_TICKETS" && (
             <div className="space-y-4">
               <AdminTicketFilters
                 mode="ASSIGNED_TICKETS"
@@ -1004,21 +1072,21 @@ export default function AdminDashboardPage() {
 
               <div className="space-y-3">
                 {renderTicketList(
-                  assignedScope === 'MINE'
-                    ? 'You do not have any tickets assigned to you matching these filters. Claim a ticket from Dashboard Overview or All Tickets!'
-                    : 'No assigned tickets found matching the selected scope and filters.',
+                  assignedScope === "MINE"
+                    ? "You do not have any tickets assigned to you matching these filters. Claim a ticket from Dashboard Overview or All Tickets!"
+                    : "No assigned tickets found matching the selected scope and filters.",
                 )}
               </div>
             </div>
           )}
 
           {/* SECTION 4: CANNED RESPONSES */}
-          {activeSection === 'CANNED_RESPONSES' && (
+          {activeSection === "CANNED_RESPONSES" && (
             <AdminCannedResponses currentStaffName={user?.fullName} />
           )}
 
           {/* SECTION 5: TEAM & INVITES */}
-          {activeSection === 'TEAM_MANAGEMENT' && user?.role === 'ADMIN' && (
+          {activeSection === "TEAM_MANAGEMENT" && user?.role === "ADMIN" && (
             <AdminTeamManagement
               agents={agents}
               tickets={tickets}
@@ -1041,19 +1109,15 @@ export default function AdminDashboardPage() {
           )}
 
           {/* SECTION 6: REPORTS & CSAT ANALYTICS STUDIO */}
-          {activeSection === 'REPORTS' && (
-            <AdminReports />
-          )}
+          {activeSection === "REPORTS" && <AdminReports />}
 
           {/* SECTION 7: KNOWLEDGE BASE MANAGER */}
-          {activeSection === 'KNOWLEDGE_BASE' && (
+          {activeSection === "KNOWLEDGE_BASE" && (
             <AdminKnowledgeBase user={user} />
           )}
 
           {/* SECTION 8: GLOBAL INCIDENT OUTAGE BANNERS */}
-          {activeSection === 'INCIDENT_BANNERS' && (
-            <AdminIncidentBanners />
-          )}
+          {activeSection === "INCIDENT_BANNERS" && <AdminIncidentBanners />}
         </main>
       </div>
 
@@ -1071,7 +1135,9 @@ export default function AdminDashboardPage() {
           >
             <div className="flex items-center justify-between gap-3 text-xs text-spruce-800 dark:text-spruce-200">
               <div className="flex items-center gap-2 truncate">
-                <span className="font-semibold truncate">{lightboxImage.fileName}</span>
+                <span className="font-semibold truncate">
+                  {lightboxImage.fileName}
+                </span>
                 <span className="text-spruce-500 dark:text-spruce-400">
                   ({formatByteSize(lightboxImage.originalSize)})
                 </span>
@@ -1108,16 +1174,16 @@ export default function AdminDashboardPage() {
         onOpenMobileDrawer={() => setIsMobileMenuOpen(true)}
         onRefresh={() => refetch()}
         onFilterUnassigned={() => {
-          setActiveSection('ALL_TICKETS');
-          setAssignmentFilter('UNASSIGNED');
+          setActiveSection("ALL_TICKETS");
+          setAssignmentFilter("UNASSIGNED");
         }}
         onFilterUrgent={() => {
-          setActiveSection('ALL_TICKETS');
-          setPriorityFilter('URGENT');
+          setActiveSection("ALL_TICKETS");
+          setPriorityFilter("URGENT");
         }}
         onOpenInviteSubtab={() => {
-          setActiveSection('TEAM_MANAGEMENT');
-          setTeamManagementSubtab('INVITE');
+          setActiveSection("TEAM_MANAGEMENT");
+          setTeamManagementSubtab("INVITE");
         }}
       />
     </div>

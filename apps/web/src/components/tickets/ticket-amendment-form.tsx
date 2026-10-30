@@ -1,34 +1,34 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Button } from '@ui/button';
-import { Input } from '@ui/input';
-import { Label } from '@ui/label';
-import { Textarea } from '@ui/textarea';
+import { Button } from "@ui/button";
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import { Textarea } from "@ui/textarea";
 import {
   formatByteSize,
   formatShortTicketId,
   EncryptedAttachmentPayload,
-} from '@lib/helpers';
-import { Ticket } from './ticket-types';
+} from "@lib/helpers";
+import { Ticket } from "./ticket-types";
+import { Dispatch, SetStateAction, ChangeEvent, FormEvent } from "react";
 
 export interface TicketAmendmentFormProps {
   ticket: Ticket;
   showFieldEdit: boolean;
-  setShowFieldEdit: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowFieldEdit: Dispatch<SetStateAction<boolean>>;
   amendTitle: string;
   setAmendTitle: (val: string) => void;
   amendDescription: string;
   setAmendDescription: (val: string) => void;
-  amendPriority: Ticket['priority'];
-  setAmendPriority: (val: Ticket['priority']) => void;
+  amendPriority: Ticket["priority"];
+  setAmendPriority: (val: Ticket["priority"]) => void;
   amendNote: string;
   setAmendNote: (val: string) => void;
   amendAttachment: EncryptedAttachmentPayload | null;
   setAmendAttachment: (val: EncryptedAttachmentPayload | null) => void;
-  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onCancel: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: FormEvent) => void;
   isSubmitting: boolean;
   isPreparingImage: boolean;
   error?: string | null;
@@ -72,7 +72,9 @@ export function TicketAmendmentForm({
             onClick={() => setShowFieldEdit((v) => !v)}
             className="text-xs text-spruce-600 hover:text-spruce-800 dark:text-spruce-300 dark:hover:text-spruce-100 hover:underline font-medium cursor-pointer"
           >
-            {showFieldEdit ? 'Hide Ticket Field Edits' : 'Edit Title / Priority / Description'}
+            {showFieldEdit
+              ? "Hide Ticket Field Edits"
+              : "Edit Title / Priority / Description"}
           </button>
           <button
             type="button"
@@ -102,7 +104,9 @@ export function TicketAmendmentForm({
               <Label className="text-xs">Priority</Label>
               <select
                 value={amendPriority}
-                onChange={(e) => setAmendPriority(e.target.value as Ticket['priority'])}
+                onChange={(e) =>
+                  setAmendPriority(e.target.value as Ticket["priority"])
+                }
                 className="flex h-8 w-full rounded-md border border-spruce-300 bg-white px-2 text-xs text-spruce-900 dark:border-spruce-700 dark:bg-spruce-950 dark:text-spruce-100"
               >
                 <option value="LOW">LOW</option>
@@ -127,7 +131,9 @@ export function TicketAmendmentForm({
       )}
 
       <div className="space-y-1">
-        <Label className="text-xs">Follow-Up Message / Clarification Note</Label>
+        <Label className="text-xs">
+          Follow-Up Message / Clarification Note
+        </Label>
         <Textarea
           rows={2}
           placeholder="Provide the requested details or explain what changed..."
@@ -139,7 +145,9 @@ export function TicketAmendmentForm({
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs">Attach Screenshot to This Message (Optional)</Label>
+        <Label className="text-xs">
+          Attach Screenshot to This Message (Optional)
+        </Label>
         <Input
           type="file"
           accept="image/*"
@@ -179,7 +187,7 @@ export function TicketAmendmentForm({
           disabled={isSubmitting || isPreparingImage}
           className="h-8 text-xs"
         >
-          {isSubmitting ? 'Saving...' : 'Submit Follow-Up'}
+          {isSubmitting ? "Saving..." : "Submit Follow-Up"}
         </Button>
       </div>
     </form>

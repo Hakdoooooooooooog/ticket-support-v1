@@ -1,26 +1,26 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Input } from '@ui/input';
-import { Button } from '@ui/button';
-import { ContextualLoader } from '@ui/contextual-loader';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@ui/input";
+import { Button } from "@ui/button";
+import { ContextualLoader } from "@ui/contextual-loader";
 import {
   ticketsControllerFindAll,
   ticketsControllerUpdate,
-} from '../api/endpoints/tickets/tickets';
+} from "../api/endpoints/tickets/tickets";
 import {
   formatLastUpdatedTimestamp,
   filterTickets,
   compressAndEncryptImageFile,
   extractApiErrorMessage,
   EncryptedAttachmentPayload,
-} from '@lib/helpers';
-import { useAuthStore } from '@store/auth.store';
-import { useTicketsStore } from '@store/tickets.store';
-import { Ticket, TicketComment } from './tickets/ticket-types';
-import { TicketCard } from './tickets/ticket-card';
-import { TicketLightbox } from './tickets/ticket-lightbox';
+} from "@lib/helpers";
+import { useAuthStore } from "@store/auth.store";
+import { useTicketsStore } from "@store/tickets.store";
+import { Ticket, TicketComment } from "./tickets/ticket-types";
+import { TicketCard } from "./tickets/ticket-card";
+import { TicketLightbox } from "./tickets/ticket-lightbox";
+import { useState, useEffect, useMemo, ChangeEvent, FormEvent } from "react";
 
 export type { Ticket, TicketComment };
 
@@ -55,29 +55,31 @@ export function TicketList() {
     setLightboxImage,
   } = useTicketsStore();
 
-  const [amendingTicketId, setAmendingTicketId] = React.useState<string | null>(null);
-  const [showFieldEdit, setShowFieldEdit] = React.useState(false);
-  const [amendTitle, setAmendTitle] = React.useState('');
-  const [amendDescription, setAmendDescription] = React.useState('');
-  const [amendPriority, setAmendPriority] = React.useState<Ticket['priority']>('MEDIUM');
-  const [amendNote, setAmendNote] = React.useState('');
+  const [amendingTicketId, setAmendingTicketId] = useState<string | null>(null);
+  const [showFieldEdit, setShowFieldEdit] = useState(false);
+  const [amendTitle, setAmendTitle] = useState("");
+  const [amendDescription, setAmendDescription] = useState("");
+  const [amendPriority, setAmendPriority] =
+    useState<Ticket["priority"]>("MEDIUM");
+  const [amendNote, setAmendNote] = useState("");
   const [amendAttachment, setAmendAttachment] =
-    React.useState<EncryptedAttachmentPayload | null>(null);
-  const [isPreparingAmendImage, setIsPreparingAmendImage] = React.useState(false);
-  const [amendError, setAmendError] = React.useState<string | null>(null);
+    useState<EncryptedAttachmentPayload | null>(null);
+  const [isPreparingAmendImage, setIsPreparingAmendImage] = useState(false);
+  const [amendError, setAmendError] = useState<string | null>(null);
 
-  const { data, isLoading, isError, refetch, isFetching, dataUpdatedAt } = useQuery<Ticket[]>({
-    queryKey: ['tickets'],
-    queryFn: async () => {
-      const res = (await ticketsControllerFindAll()) as any;
-      return res;
-    },
-    staleTime: 60 * 1000,
-    placeholderData: (previousData) => previousData,
-    refetchInterval: 15000,
-  });
+  const { data, isLoading, isError, refetch, isFetching, dataUpdatedAt } =
+    useQuery<Ticket[]>({
+      queryKey: ["tickets"],
+      queryFn: async () => {
+        const res = (await ticketsControllerFindAll()) as any;
+        return res;
+      },
+      staleTime: 60 * 1000,
+      placeholderData: (previousData) => previousData,
+      refetchInterval: 15000,
+    });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (data) {
       setTickets(data);
       initializeDefaultExpansion(data);
@@ -87,12 +89,19 @@ export function TicketList() {
         }
       }
     }
-  }, [data, dataUpdatedAt, setTickets, initializeDefaultExpansion, expandedTicketIds, ensureTicketAttachmentsLoaded]);
+  }, [
+    data,
+    dataUpdatedAt,
+    setTickets,
+    initializeDefaultExpansion,
+    expandedTicketIds,
+    ensureTicketAttachmentsLoaded,
+  ]);
 
   const tickets = data || (hasLoadedTickets ? storedTickets : []);
   const showInitialSkeleton = isLoading && !hasLoadedTickets;
-  const filteredTickets = React.useMemo(() => {
-    return filterTickets(tickets, 'ALL', 'ALL', portalSearchQuery);
+  const filteredTickets = useMemo(() => {
+    return filterTickets(tickets, "ALL", "ALL", portalSearchQuery);
   }, [tickets, portalSearchQuery]);
 
   const allExpanded =
@@ -109,7 +118,7 @@ export function TicketList() {
     }
   };
 
-  const formattedLastUpdated = React.useMemo(() => {
+  const formattedLastUpdated = useMemo(() => {
     return formatLastUpdatedTimestamp(dataUpdatedAt, lastUpdatedAt);
   }, [dataUpdatedAt, lastUpdatedAt]);
 
@@ -122,8 +131,8 @@ export function TicketList() {
       payload: {
         title?: string;
         description?: string;
-        priority?: Ticket['priority'];
-        status?: Ticket['status'];
+        priority?: Ticket["priority"];
+        status?: Ticket["status"];
         amendmentNote?: string;
         actorId?: string;
         encryptedAttachment?: EncryptedAttachmentPayload;
@@ -136,14 +145,14 @@ export function TicketList() {
       upsertTicket(updated);
       setAmendingTicketId(null);
       setAmendAttachment(null);
-      setAmendNote('');
+      setAmendNote("");
       setShowFieldEdit(false);
       setAmendError(null);
       void ensureTicketAttachmentsLoaded(updated);
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
     onError: (err) => {
-      setAmendError(extractApiErrorMessage(err, 'Failed to submit update.'));
+      setAmendError(extractApiErrorMessage(err, "Failed to submit update."));
     },
   });
 
@@ -154,12 +163,12 @@ export function TicketList() {
     setAmendTitle(ticket.title);
     setAmendDescription(ticket.description);
     setAmendPriority(ticket.priority);
-    setAmendNote('');
+    setAmendNote("");
     setAmendAttachment(null);
     setAmendError(null);
   };
 
-  const handleAmendFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAmendFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setAmendError(null);
     if (!file) {
@@ -171,7 +180,7 @@ export function TicketList() {
       const encrypted = await compressAndEncryptImageFile(file);
       setAmendAttachment(encrypted);
     } catch {
-      setAmendError('Could not attach the selected image.');
+      setAmendError("Could not attach the selected image.");
     } finally {
       setIsPreparingAmendImage(false);
     }
@@ -196,14 +205,14 @@ export function TicketList() {
     }
   };
 
-  const handleSubmitAmend = (e: React.FormEvent, ticket: Ticket) => {
+  const handleSubmitAmend = (e: FormEvent, ticket: Ticket) => {
     e.preventDefault();
     const trimmedNote = amendNote.trim();
     const formattedNote = trimmedNote
       ? `[CUSTOMER AMENDMENT] ${trimmedNote}`
       : amendAttachment
         ? `[CUSTOMER AMENDMENT] Attached ${amendAttachment.fileName}`
-        : '[CUSTOMER AMENDMENT] Updated ticket details.';
+        : "[CUSTOMER AMENDMENT] Updated ticket details.";
 
     amendTicketMutation.mutate({
       id: ticket.id,
@@ -226,7 +235,9 @@ export function TicketList() {
     <div className="w-full space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-2">
         <div className="space-y-0.5">
-          <h2 className="text-xl font-bold tracking-tight text-spruce-900 dark:text-white">Active Tickets</h2>
+          <h2 className="text-xl font-bold tracking-tight text-spruce-900 dark:text-white">
+            Active Tickets
+          </h2>
           {formattedLastUpdated && (
             <p
               data-testid="portal-last-updated"
@@ -235,7 +246,7 @@ export function TicketList() {
             >
               <span
                 className={`inline-block h-1.5 w-1.5 rounded-full ${
-                  isFetching ? 'bg-spruce-400 animate-ping' : 'bg-emerald-500'
+                  isFetching ? "bg-spruce-400 animate-ping" : "bg-emerald-500"
                 }`}
               />
               <span suppressHydrationWarning>
@@ -253,7 +264,7 @@ export function TicketList() {
               onClick={toggleExpandAll}
               className="h-8 px-2.5 text-xs text-spruce-700 dark:text-spruce-300 font-medium"
             >
-              {allExpanded ? 'Collapse All' : 'Expand All'}
+              {allExpanded ? "Collapse All" : "Expand All"}
             </Button>
           )}
           <Button
@@ -262,12 +273,12 @@ export function TicketList() {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            title={isFetching ? 'Refreshing tickets...' : 'Refresh tickets'}
+            title={isFetching ? "Refreshing tickets..." : "Refresh tickets"}
             aria-label="Refresh tickets"
             className="h-8 w-8 p-0 shrink-0 text-spruce-700 dark:text-spruce-300"
           >
             <svg
-              className={`w-4 h-4 transition-transform ${isFetching ? 'animate-spin text-spruce-500 dark:text-spruce-300' : ''}`}
+              className={`w-4 h-4 transition-transform ${isFetching ? "animate-spin text-spruce-500 dark:text-spruce-300" : ""}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -290,7 +301,9 @@ export function TicketList() {
         className="text-xs"
       />
 
-      {showInitialSkeleton && <ContextualLoader context="customer-tickets" count={3} />}
+      {showInitialSkeleton && (
+        <ContextualLoader context="customer-tickets" count={3} />
+      )}
 
       {isError && (
         <div className="p-4 rounded-md text-sm bg-amber-50 text-amber-800 border border-amber-200">
@@ -303,7 +316,7 @@ export function TicketList() {
           <p className="text-sm text-spruce-600 dark:text-spruce-400">
             {portalSearchQuery
               ? `No tickets match "${portalSearchQuery}". Try adjusting your search term.`
-              : 'You have not submitted any tickets yet. Use the form above to submit your first request.'}
+              : "You have not submitted any tickets yet. Use the form above to submit your first request."}
           </p>
         </div>
       )}
@@ -314,7 +327,9 @@ export function TicketList() {
           const isViewed = Boolean(viewedTicketIds[ticket.id]);
           const isHighlighted = highlightedTicketId === ticket.id;
           const isAmending = amendingTicketId === ticket.id;
-          const isHistoryExpanded = Boolean(expandedCommentHistories[ticket.id]);
+          const isHistoryExpanded = Boolean(
+            expandedCommentHistories[ticket.id],
+          );
 
           return (
             <TicketCard
@@ -341,8 +356,9 @@ export function TicketList() {
                 amendTicketMutation.mutate({
                   id,
                   payload: {
-                    status: 'CLOSED',
-                    amendmentNote: '[CUSTOMER CONFIRMATION] Confirmed issue resolved.',
+                    status: "CLOSED",
+                    amendmentNote:
+                      "[CUSTOMER CONFIRMATION] Confirmed issue resolved.",
                     actorId: user?.id,
                   },
                 })
@@ -351,8 +367,9 @@ export function TicketList() {
                 amendTicketMutation.mutate({
                   id,
                   payload: {
-                    status: 'OPEN',
-                    amendmentNote: '[CUSTOMER RE-OPEN] Issue still persists after resolution.',
+                    status: "OPEN",
+                    amendmentNote:
+                      "[CUSTOMER RE-OPEN] Issue still persists after resolution.",
                     actorId: user?.id,
                   },
                 })

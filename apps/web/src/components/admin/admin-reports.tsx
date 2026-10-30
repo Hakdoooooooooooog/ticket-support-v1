@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@ui/card';
-import { Button } from '@ui/button';
-import { Badge } from '@ui/badge';
+import { useQuery } from "@tanstack/react-query";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@ui/card";
+import { Button } from "@ui/button";
+import { Badge } from "@ui/badge";
 import {
   reportsControllerGetSummary,
   reportsControllerExportTicketsCsv,
   reportsControllerExportCsatCsv,
-} from '../../api/endpoints/reports/reports';
-import { formatTicketDate } from '@lib/helpers';
+} from "../../api/endpoints/reports/reports";
+import { formatTicketDate } from "@lib/helpers";
+import { useState } from "react";
 
 interface ReportsSummaryData {
   kpis: {
@@ -53,15 +59,15 @@ interface ReportsSummaryData {
 }
 
 export function AdminReports() {
-  const [departmentFilter, setDepartmentFilter] = React.useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = React.useState<string>('ALL');
-  const [priorityFilter, setPriorityFilter] = React.useState<string>('ALL');
-  const [isExportingTickets, setIsExportingTickets] = React.useState(false);
-  const [isExportingCsat, setIsExportingCsat] = React.useState(false);
-  const [exportError, setExportError] = React.useState<string | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
+  const [isExportingTickets, setIsExportingTickets] = useState(false);
+  const [isExportingCsat, setIsExportingCsat] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<ReportsSummaryData>({
-    queryKey: ['reports-summary'],
+    queryKey: ["reports-summary"],
     queryFn: async () => {
       const res = (await reportsControllerGetSummary()) as any;
       return res;
@@ -73,26 +79,30 @@ export function AdminReports() {
     setExportError(null);
     try {
       const queryParams: Record<string, string> = {};
-      if (departmentFilter !== 'ALL') queryParams.department = departmentFilter;
-      if (statusFilter !== 'ALL') queryParams.status = statusFilter;
-      if (priorityFilter !== 'ALL') queryParams.priority = priorityFilter;
+      if (departmentFilter !== "ALL") queryParams.department = departmentFilter;
+      if (statusFilter !== "ALL") queryParams.status = statusFilter;
+      if (priorityFilter !== "ALL") queryParams.priority = priorityFilter;
 
-      const res = (await reportsControllerExportTicketsCsv(
-        queryParams as any,
-        { responseType: 'blob' as any },
-      )) as any;
+      const res = (await reportsControllerExportTicketsCsv(queryParams as any, {
+        responseType: "blob" as any,
+      })) as any;
 
-      const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([res], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `tickets-export-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute(
+        "download",
+        `tickets-export-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      setExportError('Failed to generate tickets CSV export. Please try again.');
+      setExportError(
+        "Failed to generate tickets CSV export. Please try again.",
+      );
     } finally {
       setIsExportingTickets(false);
     }
@@ -102,21 +112,24 @@ export function AdminReports() {
     setIsExportingCsat(true);
     setExportError(null);
     try {
-      const res = (await reportsControllerExportCsatCsv(
-        { responseType: 'blob' as any },
-      )) as any;
+      const res = (await reportsControllerExportCsatCsv({
+        responseType: "blob" as any,
+      })) as any;
 
-      const blob = new Blob([res], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([res], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `csat-ratings-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute(
+        "download",
+        `csat-ratings-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      setExportError('Failed to generate CSAT CSV export. Please try again.');
+      setExportError("Failed to generate CSAT CSV export. Please try again.");
     } finally {
       setIsExportingCsat(false);
     }
@@ -140,7 +153,8 @@ export function AdminReports() {
       <Card className="border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/30">
         <CardContent className="p-6 text-center space-y-3">
           <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-            Could not load reporting dashboard. Ensure staff authentication credentials are valid.
+            Could not load reporting dashboard. Ensure staff authentication
+            credentials are valid.
           </p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             Retry
@@ -166,7 +180,8 @@ export function AdminReports() {
                 </Badge>
               </CardTitle>
               <CardDescription className="text-spruce-600 dark:text-spruce-300 text-xs mt-1">
-                Download raw audit logs, customer survey feedback, and operational KPI extracts.
+                Download raw audit logs, customer survey feedback, and
+                operational KPI extracts.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -177,7 +192,9 @@ export function AdminReports() {
                 disabled={isExportingTickets}
                 className="text-xs font-semibold"
               >
-                {isExportingTickets ? 'Generating CSV...' : 'Download Tickets CSV'}
+                {isExportingTickets
+                  ? "Generating CSV..."
+                  : "Download Tickets CSV"}
               </Button>
               <Button
                 variant="outline"
@@ -186,14 +203,18 @@ export function AdminReports() {
                 disabled={isExportingCsat}
                 className="text-xs font-semibold"
               >
-                {isExportingCsat ? 'Generating CSV...' : 'Download CSAT Feedback CSV'}
+                {isExportingCsat
+                  ? "Generating CSV..."
+                  : "Download CSAT Feedback CSV"}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex flex-wrap items-center gap-3 text-xs bg-spruce-50/90 dark:bg-spruce-950/60 p-3 rounded-lg border border-spruce-200/90 dark:border-spruce-800">
-            <span className="text-spruce-700 dark:text-spruce-300 font-semibold">Export Filter Presets:</span>
+            <span className="text-spruce-700 dark:text-spruce-300 font-semibold">
+              Export Filter Presets:
+            </span>
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
@@ -228,7 +249,9 @@ export function AdminReports() {
             </select>
           </div>
           {exportError && (
-            <p className="text-xs text-rose-500 mt-2 font-medium">{exportError}</p>
+            <p className="text-xs text-rose-500 mt-2 font-medium">
+              {exportError}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -261,9 +284,12 @@ export function AdminReports() {
             </span>
             <div className="mt-1 flex items-baseline justify-between">
               <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                {csat.average ? `${csat.average} ★` : 'N/A'}
+                {csat.average ? `${csat.average} ★` : "N/A"}
               </span>
-              <Badge variant="outline" className="text-xs font-medium border-emerald-500/30 text-emerald-600">
+              <Badge
+                variant="outline"
+                className="text-xs font-medium border-emerald-500/30 text-emerald-600"
+              >
                 {csat.totalRatings} Reviews
               </Badge>
             </div>
@@ -282,8 +308,13 @@ export function AdminReports() {
               <span className="text-2xl sm:text-3xl font-extrabold text-spruce-700 dark:text-spruce-300">
                 {departments.technicalSupport}
               </span>
-              <Badge variant="outline" className="text-xs font-medium border-spruce-500/30 text-spruce-700 dark:text-spruce-300">
-                {kpis.totalTickets > 0 ? `${Math.round((departments.technicalSupport / kpis.totalTickets) * 100)}%` : '0%'}
+              <Badge
+                variant="outline"
+                className="text-xs font-medium border-spruce-500/30 text-spruce-700 dark:text-spruce-300"
+              >
+                {kpis.totalTickets > 0
+                  ? `${Math.round((departments.technicalSupport / kpis.totalTickets) * 100)}%`
+                  : "0%"}
               </Badge>
             </div>
             <p className="text-[11px] text-spruce-500 mt-1">
@@ -301,8 +332,13 @@ export function AdminReports() {
               <span className="text-2xl sm:text-3xl font-extrabold text-spruce-600 dark:text-spruce-400">
                 {departments.general}
               </span>
-              <Badge variant="outline" className="text-xs font-medium border-spruce-400/30 text-spruce-600 dark:text-spruce-400">
-                {kpis.totalTickets > 0 ? `${Math.round((departments.general / kpis.totalTickets) * 100)}%` : '0%'}
+              <Badge
+                variant="outline"
+                className="text-xs font-medium border-spruce-400/30 text-spruce-600 dark:text-spruce-400"
+              >
+                {kpis.totalTickets > 0
+                  ? `${Math.round((departments.general / kpis.totalTickets) * 100)}%`
+                  : "0%"}
               </Badge>
             </div>
             <p className="text-[11px] text-spruce-500 mt-1">
@@ -316,9 +352,12 @@ export function AdminReports() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-spruce-200 dark:border-spruce-800 shadow-xs">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold">Department Ticket Allocation</CardTitle>
+            <CardTitle className="text-sm font-bold">
+              Department Ticket Allocation
+            </CardTitle>
             <CardDescription className="text-xs">
-              Breakdown of tickets routed through automated round-robin departments.
+              Breakdown of tickets routed through automated round-robin
+              departments.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -356,27 +395,59 @@ export function AdminReports() {
 
         <Card className="border-spruce-200 dark:border-spruce-800 shadow-xs">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold">CSAT Rating Distribution</CardTitle>
+            <CardTitle className="text-sm font-bold">
+              CSAT Rating Distribution
+            </CardTitle>
             <CardDescription className="text-xs">
               Breakdown of customer feedback ratings from 1 to 5 stars.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-xs">
             {[
-              { stars: 5, count: csat.distribution.fiveStar, color: 'bg-emerald-500' },
-              { stars: 4, count: csat.distribution.fourStar, color: 'bg-emerald-400' },
-              { stars: 3, count: csat.distribution.threeStar, color: 'bg-amber-400' },
-              { stars: 2, count: csat.distribution.twoStar, color: 'bg-orange-400' },
-              { stars: 1, count: csat.distribution.oneStar, color: 'bg-rose-500' },
+              {
+                stars: 5,
+                count: csat.distribution.fiveStar,
+                color: "bg-emerald-500",
+              },
+              {
+                stars: 4,
+                count: csat.distribution.fourStar,
+                color: "bg-emerald-400",
+              },
+              {
+                stars: 3,
+                count: csat.distribution.threeStar,
+                color: "bg-amber-400",
+              },
+              {
+                stars: 2,
+                count: csat.distribution.twoStar,
+                color: "bg-orange-400",
+              },
+              {
+                stars: 1,
+                count: csat.distribution.oneStar,
+                color: "bg-rose-500",
+              },
             ].map((rating) => {
-              const pct = csat.totalRatings > 0 ? Math.round((rating.count / csat.totalRatings) * 100) : 0;
+              const pct =
+                csat.totalRatings > 0
+                  ? Math.round((rating.count / csat.totalRatings) * 100)
+                  : 0;
               return (
                 <div key={rating.stars} className="flex items-center gap-2">
-                  <span className="w-12 shrink-0 font-medium">{rating.stars} ★</span>
+                  <span className="w-12 shrink-0 font-medium">
+                    {rating.stars} ★
+                  </span>
                   <div className="flex-1 h-2 rounded-full bg-spruce-100 dark:bg-spruce-800 overflow-hidden">
-                    <div className={`h-full ${rating.color}`} style={{ width: `${pct}%` }} />
+                    <div
+                      className={`h-full ${rating.color}`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
-                  <span className="w-10 text-right text-spruce-500">{rating.count} ({pct}%)</span>
+                  <span className="w-10 text-right text-spruce-500">
+                    {rating.count} ({pct}%)
+                  </span>
                 </div>
               );
             })}
@@ -387,9 +458,12 @@ export function AdminReports() {
       {/* 4. Staff Round-Robin Workload & Resolution Leaderboard */}
       <Card className="border-spruce-200 dark:border-spruce-800 shadow-xs">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold">Staff Round-Robin Workload &amp; Performance</CardTitle>
+          <CardTitle className="text-sm font-bold">
+            Staff Round-Robin Workload &amp; Performance
+          </CardTitle>
           <CardDescription className="text-xs">
-            Automated round-robin distribution metrics and resolution statistics per support engineer.
+            Automated round-robin distribution metrics and resolution statistics
+            per support engineer.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -406,16 +480,26 @@ export function AdminReports() {
             </thead>
             <tbody className="divide-y divide-spruce-100 dark:divide-spruce-800/60">
               {agents.map((agent) => (
-                <tr key={agent.id} className="hover:bg-spruce-50/50 dark:hover:bg-spruce-900/20">
+                <tr
+                  key={agent.id}
+                  className="hover:bg-spruce-50/50 dark:hover:bg-spruce-900/20"
+                >
                   <td className="py-3 px-4">
                     <div className="font-semibold text-spruce-950 dark:text-white">
                       {agent.fullName}
                     </div>
-                    <div className="text-[11px] text-spruce-500">{agent.email}</div>
+                    <div className="text-[11px] text-spruce-500">
+                      {agent.email}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
-                    <Badge variant="outline" className="text-[10px] font-medium border-spruce-300 dark:border-spruce-700">
-                      {agent.department === 'GENERAL' ? 'General Scope' : 'Tech Support'}
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-medium border-spruce-300 dark:border-spruce-700"
+                    >
+                      {agent.department === "GENERAL"
+                        ? "General Scope"
+                        : "Tech Support"}
                     </Badge>
                   </td>
                   <td className="py-3 px-4 font-semibold text-spruce-900 dark:text-spruce-100">
@@ -434,7 +518,9 @@ export function AdminReports() {
                     )}
                   </td>
                   <td className="py-3 px-4 text-spruce-500">
-                    {agent.lastAssignedAt ? formatTicketDate(agent.lastAssignedAt) : 'Awaiting turn'}
+                    {agent.lastAssignedAt
+                      ? formatTicketDate(agent.lastAssignedAt)
+                      : "Awaiting turn"}
                   </td>
                 </tr>
               ))}

@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from "@ui/card";
+import { ReactNode } from "react";
 
 export interface AuthCardProps {
-  mode: 'login' | 'register';
-  onModeChange: (mode: 'login' | 'register') => void;
+  mode: "login" | "register";
+  onModeChange: (mode: "login" | "register") => void;
   isStaffInvite?: boolean;
-  staffRole?: 'ADMIN' | 'AGENT';
-  children: React.ReactNode;
+  staffRole?: "ADMIN" | "AGENT";
+  children: ReactNode;
 }
 
 export function AuthCard({
@@ -25,22 +25,22 @@ export function AuthCard({
         <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-spruce-100/90 dark:bg-spruce-950/90 border border-spruce-200 dark:border-spruce-800/90 shadow-inner">
           <button
             type="button"
-            onClick={() => onModeChange('login')}
+            onClick={() => onModeChange("login")}
             className={`py-2 px-3 text-xs sm:text-sm rounded-lg transition-all duration-150 ${
-              mode === 'login'
-                ? 'bg-white text-spruce-950 shadow-sm border border-spruce-200/60 dark:bg-spruce-800 dark:text-white dark:border dark:border-spruce-600/80 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] font-semibold'
-                : 'text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-spruce-200 font-medium'
+              mode === "login"
+                ? "bg-white text-spruce-950 shadow-sm border border-spruce-200/60 dark:bg-spruce-800 dark:text-white dark:border dark:border-spruce-600/80 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] font-semibold"
+                : "text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-spruce-200 font-medium"
             }`}
           >
             Sign In
           </button>
           <button
             type="button"
-            onClick={() => onModeChange('register')}
+            onClick={() => onModeChange("register")}
             className={`py-2 px-3 text-xs sm:text-sm rounded-lg transition-all duration-150 ${
-              mode === 'register'
-                ? 'bg-white text-spruce-950 shadow-sm border border-spruce-200/60 dark:bg-spruce-800 dark:text-white dark:border dark:border-spruce-600/80 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] font-semibold'
-                : 'text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-spruce-200 font-medium'
+              mode === "register"
+                ? "bg-white text-spruce-950 shadow-sm border border-spruce-200/60 dark:bg-spruce-800 dark:text-white dark:border dark:border-spruce-600/80 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] font-semibold"
+                : "text-spruce-600 hover:text-spruce-950 dark:text-spruce-400 dark:hover:text-spruce-200 font-medium"
             }`}
           >
             Create Account
@@ -49,14 +49,14 @@ export function AuthCard({
 
         <div>
           <CardTitle className="text-xl font-bold tracking-tight text-spruce-950 dark:text-white">
-            {mode === 'login' ? 'Welcome back' : 'Register an account'}
+            {mode === "login" ? "Welcome back" : "Register an account"}
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm text-spruce-600 dark:text-spruce-300/90 mt-1">
-            {mode === 'login'
-              ? 'Enter your email and password to continue.'
+            {mode === "login"
+              ? "Enter your email and password to continue."
               : isStaffInvite
-                ? `Staff Invitation: Registering as ${staffRole === 'ADMIN' ? 'Administrator' : 'Support Engineer'}.`
-                : 'Register as a customer to submit and track support tickets.'}
+                ? `Staff Invitation: Registering as ${staffRole === "ADMIN" ? "Administrator" : "Support Engineer"}.`
+                : "Register as a customer to submit and track support tickets."}
           </CardDescription>
         </div>
       </CardHeader>

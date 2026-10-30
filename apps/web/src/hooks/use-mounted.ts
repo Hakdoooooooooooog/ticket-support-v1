@@ -1,6 +1,7 @@
 'use client';
 
-import * as React from 'react';
+
+import { useSyncExternalStore } from 'react';
 
 const emptySubscribe = () => () => {};
 
@@ -10,7 +11,7 @@ const emptySubscribe = () => () => {};
  * and client-hydrated DOM align perfectly without hydration mismatches.
  */
 export function useMounted(): boolean {
-  return React.useSyncExternalStore(
+  return  useSyncExternalStore(
     emptySubscribe,
     () => true,
     () => false,
