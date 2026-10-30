@@ -178,7 +178,7 @@ export class TicketsService implements OnModuleInit {
       orderBy: { createdAt: 'desc' },
     });
 
-    return TicketMapper.toResponseDtoList(records);
+    return records.map((record) => this.presentTicket(record, filters?.actor));
   }
 
   async findOne(id: string, actor?: TicketActorContext): Promise<TicketResponseDto> {
@@ -193,7 +193,7 @@ export class TicketsService implements OnModuleInit {
 
     this.assertCustomerOwnership(ticket as { creatorId?: string }, actor, 'view this ticket');
 
-    return TicketMapper.toResponseDto(ticket);
+    return this.presentTicket(ticket, actor);
   }
 
   detectUrgency(title: string, description: string): { isUrgent: boolean; reason: string | null } {
@@ -432,7 +432,7 @@ export class TicketsService implements OnModuleInit {
       });
     }
 
-    return TicketMapper.toResponseDto(record);
+    return this.presentTicket(record, actor);
   }
 
   async autoAssignTicket(
@@ -505,7 +505,7 @@ export class TicketsService implements OnModuleInit {
       });
     }
 
-    return TicketMapper.toResponseDto(updatedTicket);
+    return this.presentTicket(updatedTicket, actor);
   }
 
   async addComment(
@@ -514,7 +514,12 @@ export class TicketsService implements OnModuleInit {
     authorId?: string,
     encryptedAttachment?: any,
     actor?: TicketActorContext,
+    isInternal = false,
   ): Promise<TicketResponseDto> {
+    if (isInternal && !this.isStaff(actor)) {
+      throw new ForbiddenException('Only support staff can post internal notes');
+    }
+
     const trimmedContent = content.trim();
     const commentAttachment = encryptedAttachment
       ? TicketMapper.toCommentAttachmentInput(encryptedAttachment)
@@ -582,6 +587,7 @@ export class TicketsService implements OnModuleInit {
         data: {
           ticketId,
           content: trimmedContent,
+          isInternal,
           authorId: author.id,
           ...commentAttachment,
         },
@@ -592,7 +598,8 @@ export class TicketsService implements OnModuleInit {
         include: this.standardTicketInclude,
       });
 
-      if (this.notificationsService && (existingTicket as any).creatorId) {
+      // Internal notes are staff-only: never notify the customer about them.
+      if (!isInternal && this.notificationsService && (existingTicket as any).creatorId) {
         const creatorId = (existingTicket as any).creatorId;
         if (creatorId !== author.id) {
           const isStaff = author.role === 'ADMIN' || author.role === 'AGENT';
@@ -611,11 +618,12 @@ export class TicketsService implements OnModuleInit {
         this.realtimeService.emit({
           type: 'COMMENT_ADDED',
           recipientRoles: ['ADMIN', 'AGENT'],
-          recipientUserIds: creatorId ? [creatorId] : [],
+          ...(isInternal ? {} : { recipientUserIds: creatorId ? [creatorId] : [] }),
           payload: {
             id: ticketId,
             ticketId,
             commentId: newComment.id,
+            isInternal,
             authorId: author.id,
             authorName: author.fullName || 'Support Engineer',
             authorRole: author.role,
@@ -624,7 +632,7 @@ export class TicketsService implements OnModuleInit {
         });
       }
 
-      return TicketMapper.toResponseDto(updatedTicket!);
+      return this.presentTicket(updatedTicket!, actor);
     });
   }
 
@@ -904,7 +912,7 @@ export class TicketsService implements OnModuleInit {
         });
       }
 
-      return TicketMapper.toResponseDto(updated);
+      return this.presentTicket(updated, actor);
     });
   }
 
@@ -988,7 +996,7 @@ export class TicketsService implements OnModuleInit {
         });
       }
 
-      return TicketMapper.toResponseDto(updated);
+      return this.presentTicket(updated, actor);
     });
   }
 
@@ -1009,6 +1017,7 @@ export class TicketsService implements OnModuleInit {
         attachmentStorageType: true,
         comments: {
           where: {
+            ...(this.isStaff(actor) ? {} : { isInternal: false }),
             OR: [
               { attachmentCompressed: { not: null } },
               { attachmentStorageKey: { not: null } },
@@ -1096,7 +1105,11 @@ export class TicketsService implements OnModuleInit {
     }
 
     const comment = await this.prisma.comment.findFirst({
-      where: { id: commentId, ticketId },
+      where: {
+        id: commentId,
+        ticketId,
+        ...(this.isStaff(actor) ? {} : { isInternal: false }),
+      },
       select: {
         id: true,
         ticketId: true,
@@ -1182,6 +1195,34 @@ export class TicketsService implements OnModuleInit {
         });
       }
     });
+  }
+
+  /**
+   * Staff (ADMIN/AGENT) are the only actors allowed to see or post internal notes.
+   * A missing actor is treated as non-staff so visibility fails closed.
+   */
+  protected isStaff(actor?: TicketActorContext): boolean {
+    return actor?.role === 'ADMIN' || actor?.role === 'AGENT';
+  }
+
+  /**
+   * Single exit point for every ticket returned to a client. Removes internal
+   * notes unless the actor is staff, then maps to the response DTO.
+   */
+  protected presentTicket(
+    record: unknown,
+    actor?: TicketActorContext,
+  ): TicketResponseDto {
+    if (!this.isStaff(actor) && record && typeof record === 'object') {
+      const entity = record as { comments?: Array<{ isInternal?: boolean }> };
+      if (Array.isArray(entity.comments)) {
+        return TicketMapper.toResponseDto({
+          ...entity,
+          comments: entity.comments.filter((c) => !c?.isInternal),
+        });
+      }
+    }
+    return TicketMapper.toResponseDto(record);
   }
 
   /**

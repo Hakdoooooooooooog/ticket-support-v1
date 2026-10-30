@@ -1,6 +1,8 @@
 export interface TicketComment {
   id: string;
   content: string;
+  /** Staff-only note. The API never returns these to customers. */
+  isInternal?: boolean;
   createdAt: string;
   hasAttachment?: boolean;
   attachmentName?: string | null;

@@ -187,6 +187,7 @@ export class TicketsController {
       dto.authorId,
       dto.encryptedAttachment,
       actor,
+      dto.isInternal ?? false,
     );
   }
 

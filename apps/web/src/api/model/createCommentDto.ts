@@ -15,6 +15,8 @@ export interface CreateCommentDto {
   content: string;
   /** Optional author User ID */
   authorId?: string;
+  /** When true, the note is only visible to staff (ADMIN/AGENT) */
+  isInternal?: boolean;
   /** Optional image attachment for this comment */
   encryptedAttachment?: CreateCommentDtoEncryptedAttachment;
 }

@@ -143,8 +143,27 @@ describe('TicketsController', () => {
         undefined,
         undefined,
         actor,
+        false,
       );
       expect(result).toEqual(mockResponseDto);
+    });
+
+    it('should forward isInternal to the service for private notes', async () => {
+      service.addComment.mockResolvedValue(mockResponseDto);
+
+      const dto = { content: 'Escalate quietly', isInternal: true };
+      const actor = { id: 'agent-1', email: 'agent@example.com', role: 'AGENT' as const };
+
+      await controller.addComment('ticket-1', dto as any, { user: actor });
+
+      expect(service.addComment).toHaveBeenCalledWith(
+        'ticket-1',
+        'Escalate quietly',
+        undefined,
+        undefined,
+        actor,
+        true,
+      );
     });
   });
 

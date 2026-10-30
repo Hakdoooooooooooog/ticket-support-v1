@@ -52,7 +52,7 @@ interface AdminTicketAccordionItemProps {
   onUpdateDraft: (id: string, val: string) => void;
   commentAttachment?: File | null;
   onSetCommentAttachment: (id: string, file: File | null) => void;
-  onPostNote: (id: string, e: FormEvent) => void;
+  onPostNote: (id: string, e: FormEvent, isInternal?: boolean) => void;
   isPostingNote: boolean;
   isFollowUpOpen: boolean;
   followUpPrompt: string;
@@ -102,6 +102,7 @@ export function AdminTicketAccordionItem({
   onSetFollowUpAttachment,
   onSendFollowUp,
 }: AdminTicketAccordionItemProps) {
+  const [isInternalNote, setIsInternalNote] = React.useState(false);
   const commentCount = ticket.comments?.length || 0;
   const sla = computeTicketSlaStatus(ticket);
   const assigneeId = resolveTicketAssigneeId(ticket);
@@ -641,15 +642,23 @@ export function AdminTicketAccordionItem({
           {/* 4. Post IT Resolution Note Composer */}
           {isTicketAssigned && !isClosed && canManageTicket && (
             <form
-              onSubmit={(e) => onPostNote(ticket.id, e)}
+              onSubmit={(e) => onPostNote(ticket.id, e, isInternalNote)}
               className="pt-2 border-t border-spruce-100 dark:border-spruce-800/80 space-y-2.5"
             >
               <div className="flex flex-col sm:flex-row gap-2">
                 <Input
-                  placeholder="Add an IT resolution note or update for the customer..."
+                  placeholder={
+                    isInternalNote
+                      ? "Add a private note visible to staff only..."
+                      : "Add an IT resolution note or update for the customer..."
+                  }
                   value={draft}
                   onChange={(e) => onUpdateDraft(ticket.id, e.target.value)}
-                  className="text-xs h-9 flex-1"
+                  className={`text-xs h-9 flex-1 ${
+                    isInternalNote
+                      ? "border-amber-400/70 bg-amber-50/60 dark:bg-amber-500/10"
+                      : ""
+                  }`}
                 />
                 <Button
                   type="submit"
@@ -657,9 +666,23 @@ export function AdminTicketAccordionItem({
                   disabled={isPostingNote}
                   className="h-9 text-xs shrink-0"
                 >
-                  {isPostingNote ? "Posting..." : "Post Note"}
+                  {isPostingNote
+                    ? "Posting..."
+                    : isInternalNote
+                      ? "Post Private Note"
+                      : "Post Note"}
                 </Button>
               </div>
+
+              <label className="flex items-center gap-2 text-[11px] text-spruce-600 dark:text-spruce-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isInternalNote}
+                  onChange={(e) => setIsInternalNote(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-amber-500"
+                />
+                Private note (staff only, hidden from the customer)
+              </label>
 
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2">

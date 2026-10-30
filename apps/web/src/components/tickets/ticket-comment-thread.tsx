@@ -53,8 +53,9 @@ export function TicketCommentThread({
     const isLoadingCommentImg = Boolean(loadingAttachmentKeys[commentAttachmentKey]);
     const isCommentImgHidden = Boolean(hiddenAttachmentKeys[commentAttachmentKey]);
 
-    const cardTone =
-      parsed.kind === 'FOLLOW_UP'
+    const cardTone = comment.isInternal
+      ? 'bg-amber-50 dark:bg-amber-500/10 border-dashed border-amber-400/70 text-amber-950 dark:text-amber-100'
+      : parsed.kind === 'FOLLOW_UP'
         ? 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200'
         : parsed.kind === 'AMENDMENT'
           ? 'bg-spruce-100/70 dark:bg-spruce-900/60 border-spruce-300 dark:border-spruce-700/80 text-spruce-950 dark:text-spruce-100'
@@ -72,7 +73,11 @@ export function TicketCommentThread({
                 ({comment.author.role.toLowerCase()})
               </span>
             )}
-            {parsed.kind === 'FOLLOW_UP' ? (
+            {comment.isInternal ? (
+              <Badge variant="warning" className="text-[10px] py-0 px-1.5">
+                Internal
+              </Badge>
+            ) : parsed.kind === 'FOLLOW_UP' ? (
               <Badge variant="warning" className="text-[10px] py-0 px-1.5">
                 Follow-Up
               </Badge>
